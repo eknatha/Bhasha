@@ -11,7 +11,7 @@
       h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'hm-focus', text: t('focusLang') }), (function () { var s = h('select', { id: 'hm-focus' }, B.INDIC.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); s.value = set.focus; s.addEventListener('change', function () { set.focus = s.value; U.saveSet(); B.views.home(app); }); return s; })()])])]));
     var stats = h('div', { class: 'stats' }, [stat(saved, t('statWords')), stat(due, t('statDue')), stat(U.streak(), t('statStreak'))]);
     app.appendChild(stats);
-    var cards = [['/say/', '🗣', 'nav_say', 'cSay'], ['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '💬', 'nav_phrases', 'cPhrases']];
+    var cards = [['/today/', '📅', 'nav_today', 'cToday'], ['/say/', '🗣', 'nav_say', 'cSay'], ['/talk/', '💬', 'nav_talk', 'cTalk'], ['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '📚', 'nav_phrases', 'cPhrases']];
     var grid = h('div', { class: 'cards' });
     cards.forEach(function (c) { grid.appendChild(h('a', { class: 'card', href: B.base + c[0].slice(1), onclick: function (e) { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); U.go(c[0]); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: c[1] }), h('h2', { text: t(c[2]) }), h('p', { text: t(c[3]) }), c[0] === '/review/' && due ? h('span', { class: 'chip lr', text: t('dueCount', { n: due }) }) : null])); });
     app.appendChild(grid);
@@ -60,7 +60,7 @@
       q(); return box;
     }
     function draw() {
-      body.textContent = ''; var S = B.SCRIPTS[SC.lang], rom = function (g) { return B.translit(g, set.scheme) || g; };
+      body.textContent = ''; var S = B.SCRIPTS[SC.lang], rom = function (g) { return B.translit(g, set.scheme, SC.lang) || g; };
       body.appendChild(grid(t('scVowels'), S.vowels, function (g) { return cell(g, rom(g)); }));
       body.appendChild(grid(t('scCons'), S.cons, function (g) { return cell(g, rom(g)); }));
       body.appendChild(h('section', { class: 'panel' }, [h('h2', { text: t('scSigns') }), h('p', { class: 'note', text: t('scSignsNote', { b: S.base }) }), h('div', { class: 'glyphs' }, S.signs.map(function (s) { var g = S.full ? s : S.base + s; return cell(g, rom(g)); }))]));
@@ -86,7 +86,7 @@
       B.PHRASES.filter(function (p) { return p.cat === PH.cat; }).forEach(function (p) {
         var txt = p[PH.lang], tgt = h('div', { class: 'ph-t', lang: PH.lang }); tgt.appendChild(U.renderText(txt, PH.lang, { roman: false }));
         U.bindWords(tgt, function () { return PH.lang; }, function () { return txt; }, function () { draw(); });
-        list.appendChild(h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, h('div', { class: 'ph-r', text: B.translit(txt, set.scheme) }), h('div', { class: 'ph-n', text: p.en })]), h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, PH.lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, PH.lang, null, 0.55); } })])]));
+        list.appendChild(h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, (B.isBrahmic(txt) ? h('div', { class: 'ph-r', text: B.translit(txt, set.scheme, PH.lang) }) : null), h('div', { class: 'ph-n', text: p.en })]), h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, PH.lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, PH.lang, null, 0.55); } })])]));
       });
     }
     draw();

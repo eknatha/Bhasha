@@ -13,7 +13,7 @@
   function jget(k, d) { try { var v = JSON.parse(store.get(k)); return v == null ? d : v; } catch (e) { return d; } }
 
   // ---------- settings
-  var UILANGS = ['en', 'hi', 'te', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko', 'es', 'de'], MAINSITE = ['en', 'hi', 'te', 'kn', 'ta', 'ml'];
+  var UILANGS = ['en', 'hi', 'te', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko', 'es', 'de', 'fr', 'gu', 'as'], MAINSITE = ['en', 'hi', 'te', 'kn', 'ta', 'ml'];
   U.UILANGS = UILANGS; U.MAINSITE = MAINSITE;
   var set = U.set = (function () {
     var s = jget('bh-set', {}), nl = (navigator.language || 'en').toLowerCase().slice(0, 2), sl = store.get('el-lang');
@@ -35,7 +35,7 @@
   var toastT; U.toast = function (m) { var e = $('#toast'); if (!e) return; e.textContent = m; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 2200); };
   U.langName = function (c) { var a = B.allLangs().filter(function (x) { return x[0] === c; })[0]; return a ? a[1] : c; };
   U.langNative = function (c) { var a = B.allLangs().filter(function (x) { return x[0] === c; })[0]; return a ? a[2] : c; };
-  U.roman = function (w, lang) { return B.isBrahmic(w) ? B.translit(w, set.scheme) : ''; };
+  U.roman = function (w, lang) { return B.isBrahmic(w) ? B.translit(w, set.scheme, lang) : ''; };
   U.today = function () { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
   // ---------- speech lives in speech.js (device voices with an offline fallback)
@@ -111,7 +111,7 @@
       if (!tk.w) { frag.appendChild(document.createTextNode(tk.t)); return; }
       var w = tk.t, nw = B.normWord(w), sv = W.get(lang, nw), cls = 'tk' + (sv ? (sv.st >= 2 ? ' known' : ' learn') : ' new');
       var el = h('span', { class: cls, role: 'button', tabindex: '0', 'data-w': w });
-      if (opts && opts.roman && B.isBrahmic(w)) { var ru = h('ruby', null, [document.createTextNode(w), h('rt', { text: B.translit(w, set.scheme) })]); el.appendChild(ru); } else el.textContent = w;
+      if (opts && opts.roman && B.isBrahmic(w)) { var ru = h('ruby', null, [document.createTextNode(w), h('rt', { text: B.translit(w, set.scheme, lang) })]); el.appendChild(ru); } else el.textContent = w;
       frag.appendChild(el);
     });
     return frag;

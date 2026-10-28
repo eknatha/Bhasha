@@ -43,7 +43,7 @@
     function row(text, lang, label, speakNow) {
       var main = h('div', { class: 'ph-t', lang: lang }); main.appendChild(U.renderText(text, lang, { roman: false }));
       U.bindWords(main, function () { return lang; }, function () { return text; }, function () { });
-      var rom = B.isBrahmic(text) ? B.translit(text, set.scheme) : '';
+      var rom = B.isBrahmic(text) ? B.translit(text, set.scheme, lang) : '';
       var el = h('div', { class: 'ph say-row' }, [h('div', { class: 'ph-main' }, [main, rom ? h('div', { class: 'ph-r', text: rom }) : null, label ? h('div', { class: 'ph-n', text: label }) : null]),
         h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak'), text: '🔊', onclick: function () { U.speak(text, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow'), text: '🐢', onclick: function () { U.speak(text, lang, null, 0.55); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('copy'), text: '⧉', onclick: function () { try { navigator.clipboard.writeText(text); U.toast(t('copied')); } catch (e) { } } })])]);
       return el;

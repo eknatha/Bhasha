@@ -77,5 +77,55 @@ const paused=await p.evaluate(()=>document.querySelector('audio').paused);ok(pau
 await p.click('text=🔁 Loop line');await p.evaluate(()=>{const a=document.querySelector('audio');a.currentTime=8.2;return a.play();});await p.waitForTimeout(3500);
 const t2=await p.evaluate(()=>document.querySelector('audio').currentTime);ok(t2<10.2,'watch: loop keeps playhead inside line 3 (t='+t2.toFixed(1)+')');
 await p.keyboard.press('Escape');
+
+// ---- Daily lesson
+{const c=await b.newContext({viewport:{width:1100,height:900}});await c.addInitScript(()=>{if(!localStorage.getItem('__init')){localStorage.setItem('__init','1');localStorage.setItem('bh-set',JSON.stringify({ui:'en',focus:'te',scheme:'simple',roman:true,perDay:10,rate:.9,ov:'no'}));}});
+ const q=await c.newPage();const qe=[];q.on('pageerror',e=>qe.push(e.message));await q.goto(BASE+'/today/');await q.waitForTimeout(300);
+ ok(await q.isVisible('text=Start today'),'today: start button shown');
+ await q.click('text=Start today');await q.waitForTimeout(200);
+ ok((await q.$$('.lesson .ph')).length===5,'today: five new phrases to learn');
+ await q.click('.lesson .abtn.gold');await q.waitForTimeout(250);
+ for(let i=0;i<5;i++){const btns=await q.$$('.lesson .opts .abtn');ok(btns.length===3,'today: listen question '+(i+1)+' has 3 options');await btns[0].click();await q.waitForTimeout(80);await q.click('.lesson .abtn.gold');await q.waitForTimeout(150);}
+ ok(await q.isVisible('text=Today’s lesson is done')||await q.isVisible("text=Today's lesson is done"),'today: lesson finishes');
+ const st=await q.evaluate(()=>JSON.parse(localStorage.getItem('bh-lesson')));ok(Object.keys(st.te.cards).length===5,'today: five phrases stored for spaced repetition');
+ await q.reload();await q.waitForTimeout(250);ok(await q.isVisible('text=Do a bonus lesson'),'today: reload keeps the finished state');
+ await q.click('text=Do a bonus lesson');await q.waitForTimeout(200);const ids2=await q.$$eval('.lesson .ph-n',e=>e.map(x=>x.textContent));ok(ids2.length===5&&!ids2.includes('Hello'),'today: bonus lesson gives different phrases');
+ // next day: due cards come back as a recall round
+ await q.evaluate(()=>{const s=JSON.parse(localStorage.getItem('bh-lesson'));s.te.days={};Object.values(s.te.cards).forEach(c=>c.due=Date.now()-1000);localStorage.setItem('bh-lesson',JSON.stringify(s));});
+ await q.reload();await q.waitForTimeout(250);ok(await q.isVisible('text=/older phrases to recall/'),'today: due phrases offered for recall');
+ await q.click('text=Start today');await q.waitForTimeout(150);await q.click('.lesson .abtn.gold');await q.waitForTimeout(200);
+ for(let i=0;i<5;i++){await (await q.$$('.lesson .opts .abtn'))[0].click();await q.waitForTimeout(60);await q.click('.lesson .abtn.gold');await q.waitForTimeout(120);}
+ ok(await q.isVisible('text=Recall')&&(await q.$$('.lesson .opts .abtn')).length===3,'today: recall round starts after listening');
+ for(let i=0;i<5;i++){await (await q.$$('.lesson .opts .abtn'))[0].click();await q.waitForTimeout(60);await q.click('.lesson .abtn.gold');await q.waitForTimeout(120);}
+ ok(await q.isVisible('text=/Score:/'),'today: finishes with a score');ok(qe.length===0,'today: no page errors '+qe.join(';'));await c.close();}
+// ---- Conversations
+{const c=await b.newContext({viewport:{width:1100,height:900}});await c.addInitScript(()=>{if(!localStorage.getItem('__init')){localStorage.setItem('__init','1');localStorage.setItem('bh-set',JSON.stringify({ui:'en',focus:'hi',scheme:'simple',roman:true,perDay:10,rate:.9,ov:'no'}));}});
+ const q=await c.newPage();const qe=[];q.on('pageerror',e=>qe.push(e.message));await q.goto(BASE+'/talk/');await q.waitForTimeout(300);
+ ok((await q.$$('.cards .card')).length===6,'talk: six conversations listed');
+ await q.click('text=At a restaurant');await q.waitForTimeout(250);
+ let turns=0;for(;;){if(await q.isVisible('text=Conversation complete'))break;const opts=await q.$$('.panel .opts .abtn');if(!opts.length)break;
+  for(const o of opts){await o.click().catch(()=>{});await q.waitForTimeout(40);if(await q.$('.panel .opts .abtn.right'))break;}
+  turns++;ok(!!(await q.$('.panel .opts .abtn.right')),'talk: correct reply found on turn '+turns);
+  await q.click('.panel .abtn.gold');await q.waitForTimeout(150);if(turns>8)break;}
+ ok(turns===5,'talk: restaurant has five turns');ok(await q.isVisible('text=Conversation complete'),'talk: conversation completes');
+ ok((await q.$$('.bubble')).length===10,'talk: transcript shows all ten lines');ok(await q.isVisible('text=/right on the first try/'),'talk: score shown');
+ ok(qe.length===0,'talk: no page errors '+qe.join(';'));await c.close();}
+// ---- new languages: French, Gujarati, Assamese
+{const c=await b.newContext({viewport:{width:1100,height:900}});await c.addInitScript(()=>{localStorage.setItem('bh-set',JSON.stringify({ui:'en',focus:'gu',scheme:'simple',roman:true,perDay:10,rate:.9,ov:'no'}));});
+ const q=await c.newPage();const qe=[];q.on('pageerror',e=>qe.push(e.message));
+ for(const [l,thanks,rom] of [['fr','Merci',false],['gu','આભાર','aabhaar'],['as','ধন্যবাদ','dhonyobad']]){
+  await q.goto(BASE+'/say/');await q.selectOption('#sy-to',l);await q.fill('#sy-text','Thank you');await q.click('text=Translate and speak');await q.waitForTimeout(300);
+  const out=await q.textContent('.say-out');ok(out.includes(thanks),'say: Thank you in '+l);if(rom)ok(out.includes(rom),'say: romanization for '+l+' ('+rom+')');}
+ await q.goto(BASE+'/phrases/');await q.selectOption('#ph-lang','as');
+ const tabs=await q.$$eval('.tabs .tab',e=>e.length);ok(tabs===14,'phrases: 14 categories ('+tabs+')');
+ let total=0;for(let i=0;i<tabs;i++){await q.click('.tabs .tab:nth-child('+(i+1)+')');total+=(await q.$$('.ph-list .ph')).length;}ok(total===200,'phrases: 200 phrases shown for Assamese ('+total+')');
+ await q.goto(BASE+'/scripts/');for(const l of ['gu','as']){await q.selectOption('#sc-lang',l);await q.waitForTimeout(100);const gl=await q.$$eval('.glyphs .gl',e=>e.length);ok(gl>40,'scripts: '+l+' chart has '+gl+' glyphs');}
+ ok(qe.length===0,'new languages: no page errors '+qe.join(';'));await c.close();}
+// ---- every interface language shows its own text
+for(const l of ['en','hi','te','kn','ta','ml','bn','mr','ko','es','de','fr','gu','as']){
+ const c=await b.newContext({viewport:{width:1100,height:900}});await c.addInitScript(l=>{localStorage.setItem('bh-set',JSON.stringify({ui:l,focus:'te',scheme:'simple',roman:true,perDay:10,rate:.9,ov:'no'}));},l);
+ const q=await c.newPage();await q.goto(BASE+'/');await q.waitForTimeout(200);
+ const want=await q.evaluate(l=>B.I18N[l].nav_today,l),got=await q.$eval('#mnav a[data-k=today]',e=>e.textContent.trim());ok(got.includes(want),'ui '+l+': nav shows "'+want+'"');
+ ok((await q.getAttribute('html','lang'))===l,'ui '+l+': html lang set');await c.close();}
 console.log('page errors:',errs);if(errs.length)fails++;
 console.log(fails?'FAILED '+fails:'ALL PASS');await b.close();process.exit(fails?1:0);})();

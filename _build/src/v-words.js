@@ -20,7 +20,7 @@
       sum.textContent = t('wdCount', { n: r.length, d: W.due().length });
       if (!r.length) { listBox.appendChild(h('p', { class: 'empty', text: W.list.length ? t('wdNoMatch') : t('wdEmpty') })); return; }
       r.slice(0, 400).forEach(function (x) {
-        var rm = B.isBrahmic(x.w) ? B.translit(x.w, set.scheme) : '';
+        var rm = B.isBrahmic(x.w) ? B.translit(x.w, set.scheme, x.lang) : '';
         var row = h('div', { class: 'wd-row' }, [
           h('div', { class: 'wd-main' }, [h('span', { class: 'wd-w', lang: x.lang, text: x.w }), rm ? h('span', { class: 'wd-r', text: rm }) : null, h('span', { class: 'wd-m', text: x.m || '—' }), x.c ? h('span', { class: 'wd-c', lang: x.lang, text: x.c }) : null]),
           h('div', { class: 'wd-side' }, [h('span', { class: 'chip ' + (x.st >= 2 ? 'ok' : 'lr'), text: x.st >= 2 ? t('st2') : t('st1') }), h('span', { class: 'wd-due', text: x.st >= 2 ? '' : (x.due <= Date.now() ? t('dueNow') : fmtDue(x.due)) }),
@@ -83,7 +83,7 @@
         return;
       }
       var mode = V.mode, hasCtx = !!(c.c && c.c.indexOf(c.w) >= 0), em = mode === 'cloze' && !hasCtx ? 'w2m' : mode;
-      var rm = B.isBrahmic(c.w) ? B.translit(c.w, set.scheme) : '';
+      var rm = B.isBrahmic(c.w) ? B.translit(c.w, set.scheme, c.lang) : '';
       var front = h('div', { class: 'rv-front' }), back = h('div', { class: 'rv-back' });
       if (em === 'w2m') { front.appendChild(h('div', { class: 'rv-big', lang: c.lang, text: c.w })); if (set.roman && rm) front.appendChild(h('div', { class: 'rv-sub', text: rm })); }
       else if (em === 'm2w') { front.appendChild(h('div', { class: 'rv-big', text: c.m || '—' })); front.appendChild(h('div', { class: 'rv-sub', text: t('rvWhichWord') })); }

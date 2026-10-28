@@ -2,15 +2,15 @@ const {chromium}=require('playwright');
 const BASE=process.env.BASE||'http://localhost:8766';let fails=0;const F=m=>{fails++;console.log('FAIL',m)};
 function lum(c){const a=c.map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*a[0]+.7152*a[1]+.0722*a[2]}
 (async()=>{const b=await chromium.launch();
-const routes=['/','/say/','/read/','/watch/','/words/','/review/','/scripts/','/phrases/'];
+const routes=['/','/say/','/read/','/watch/','/words/','/review/','/scripts/','/phrases/','/today/','/talk/'];
 // seed data so lists render
 const seed=()=>{const now=Date.now();localStorage.setItem('bh-words',JSON.stringify([{id:'te:నమస్తే',w:'నమస్తే',lang:'te',m:'hello',c:'నమస్తే మిత్రమా',n:'',st:1,added:now,iv:0,ef:2.5,reps:0,lapses:0,due:now-1000},{id:'hi:धन्यवाद',w:'धन्यवाद',lang:'hi',m:'thanks',c:'',n:'',st:2,added:now,iv:5,ef:2.5,reps:3,lapses:0,due:now+5*864e5}]));};
 let n=0;
-for(const lang of ['en','hi','te','kn','ta','ml','bn','mr','ko','es','de']){for(const theme of ['light','dark','new']){
+for(const lang of ['en','hi','te','kn','ta','ml','bn','mr','ko','es','de','fr','gu','as']){for(const theme of ['light','dark','new']){
  for(const w of [320,375,768,1280]){
   const ctx=await b.newContext({viewport:{width:w,height:800}});await ctx.addInitScript(([l,t])=>{try{localStorage.setItem('el-theme',t);localStorage.setItem('bh-set',JSON.stringify({ui:l,focus:'te',scheme:'simple',roman:true,perDay:10,rate:.9}));localStorage.setItem('el-lang',l);}catch(e){}},[lang,theme]);
   await ctx.addInitScript(seed);const p=await ctx.newPage();
-  for(const r of routes){await p.goto(BASE+r);await p.waitForTimeout(120);n++;
+  for(const r of routes){await p.goto(BASE+r);await p.waitForTimeout(70);n++;
    if(r==='/read/'||r==='/watch/'){ if(r==='/read/')await p.click('#rd-text~*,#rd-text',{trial:true}).catch(()=>{}); }
    const ov=await p.evaluate(()=>{const de=document.documentElement;return de.scrollWidth-de.clientWidth});
    if(ov>0)F(`overflow ${ov}px ${lang}/${theme}/${w}${r}`);}

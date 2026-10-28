@@ -2,9 +2,9 @@
 (function (B) {
   'use strict';
   // ---------- languages
-  B.LANGS = { te: { name: 'Telugu', native: 'తెలుగు', bcp: 'te-IN', script: 'Telugu' }, hi: { name: 'Hindi', native: 'हिन्दी', bcp: 'hi-IN', script: 'Devanagari' }, kn: { name: 'Kannada', native: 'ಕನ್ನಡ', bcp: 'kn-IN', script: 'Kannada' }, ta: { name: 'Tamil', native: 'தமிழ்', bcp: 'ta-IN', script: 'Tamil' }, ml: { name: 'Malayalam', native: 'മലയാളം', bcp: 'ml-IN', script: 'Malayalam' }, bn: { name: 'Bengali', native: 'বাংলা', bcp: 'bn-IN', script: 'Bengali' }, mr: { name: 'Marathi', native: 'मराठी', bcp: 'mr-IN', script: 'Devanagari' }, ko: { name: 'Korean', native: '한국어', bcp: 'ko-KR', script: 'Hangul' }, es: { name: 'Spanish', native: 'Español', bcp: 'es-ES', script: 'Latin' }, de: { name: 'German', native: 'Deutsch', bcp: 'de-DE', script: 'Latin' } };
-  B.LEARN = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko', 'es', 'de']; // languages with phrasebook, voice and Say it
-  B.SCRIPT_LANGS = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko']; // languages with a script chart
+  B.LANGS = { te: { name: 'Telugu', native: 'తెలుగు', bcp: 'te-IN', script: 'Telugu' }, hi: { name: 'Hindi', native: 'हिन्दी', bcp: 'hi-IN', script: 'Devanagari' }, kn: { name: 'Kannada', native: 'ಕನ್ನಡ', bcp: 'kn-IN', script: 'Kannada' }, ta: { name: 'Tamil', native: 'தமிழ்', bcp: 'ta-IN', script: 'Tamil' }, ml: { name: 'Malayalam', native: 'മലയാളം', bcp: 'ml-IN', script: 'Malayalam' }, bn: { name: 'Bengali', native: 'বাংলা', bcp: 'bn-IN', script: 'Bengali' }, mr: { name: 'Marathi', native: 'मराठी', bcp: 'mr-IN', script: 'Devanagari' }, ko: { name: 'Korean', native: '한국어', bcp: 'ko-KR', script: 'Hangul' }, gu: { name: 'Gujarati', native: 'ગુજરાતી', bcp: 'gu-IN', script: 'Gujarati' }, as: { name: 'Assamese', native: 'অসমীয়া', bcp: 'as-IN', script: 'Bengali' }, fr: { name: 'French', native: 'Français', bcp: 'fr-FR', script: 'Latin' }, es: { name: 'Spanish', native: 'Español', bcp: 'es-ES', script: 'Latin' }, de: { name: 'German', native: 'Deutsch', bcp: 'de-DE', script: 'Latin' } };
+  B.LEARN = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'gu', 'as', 'ko', 'es', 'de', 'fr']; // languages with phrasebook, voice and Say it
+  B.SCRIPT_LANGS = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'gu', 'as', 'ko']; // languages with a script chart
   B.INDIC = B.LEARN;
   // other reading languages: code, English name, native name, BCP 47 for speech
   B.OTHER = [['en', 'English', 'English', 'en-US'], ['es', 'Spanish', 'Español', 'es-ES'], ['fr', 'French', 'Français', 'fr-FR'], ['de', 'German', 'Deutsch', 'de-DE'], ['it', 'Italian', 'Italiano', 'it-IT'], ['pt', 'Portuguese', 'Português', 'pt-PT'], ['ru', 'Russian', 'Русский', 'ru-RU'], ['ja', 'Japanese', '日本語', 'ja-JP'], ['ko', 'Korean', '한국어', 'ko-KR'], ['zh', 'Chinese', '中文', 'zh-CN'], ['ar', 'Arabic', 'العربية', 'ar-SA'], ['bn', 'Bengali', 'বাংলা', 'bn-IN'], ['mr', 'Marathi', 'मराठी', 'mr-IN'], ['gu', 'Gujarati', 'ગુજરાતી', 'gu-IN'], ['pa', 'Punjabi', 'ਪੰਜਾਬੀ', 'pa-IN'], ['ur', 'Urdu', 'اردو', 'ur-PK'], ['tr', 'Turkish', 'Türkçe', 'tr-TR'], ['id', 'Indonesian', 'Bahasa Indonesia', 'id-ID'], ['th', 'Thai', 'ไทย', 'th-TH'], ['vi', 'Vietnamese', 'Tiếng Việt', 'vi-VN']];
@@ -30,12 +30,13 @@
   var CON = { 0x15: ['k', 'k'], 0x16: ['kh', 'kh'], 0x17: ['g', 'g'], 0x18: ['gh', 'gh'], 0x19: ['ng', 'ṅ'], 0x1A: ['ch', 'c'], 0x1B: ['chh', 'ch'], 0x1C: ['j', 'j'], 0x1D: ['jh', 'jh'], 0x1E: ['ny', 'ñ'], 0x1F: ['t', 'ṭ'], 0x20: ['th', 'ṭh'], 0x21: ['d', 'ḍ'], 0x22: ['dh', 'ḍh'], 0x23: ['n', 'ṇ'], 0x24: ['t', 't'], 0x25: ['th', 'th'], 0x26: ['d', 'd'], 0x27: ['dh', 'dh'], 0x28: ['n', 'n'], 0x29: ['n', 'ṉ'], 0x2A: ['p', 'p'], 0x2B: ['ph', 'ph'], 0x2C: ['b', 'b'], 0x2D: ['bh', 'bh'], 0x2E: ['m', 'm'], 0x2F: ['y', 'y'], 0x30: ['r', 'r'], 0x31: ['r', 'ṟ'], 0x32: ['l', 'l'], 0x33: ['l', 'ḷ'], 0x34: ['zh', 'ḻ'], 0x35: ['v', 'v'], 0x36: ['sh', 'ś'], 0x37: ['sh', 'ṣ'], 0x38: ['s', 's'], 0x39: ['h', 'h'] };
   var NUKTA = { 0x58: ['q', 'q'], 0x59: ['kh', 'kh'], 0x5A: ['gh', 'ġ'], 0x5B: ['z', 'z'], 0x5C: ['r', 'ṛ'], 0x5D: ['rh', 'ṛh'], 0x5E: ['f', 'f'], 0x5F: ['y', 'y'] };
   var CHILLU = { 0xD7A: ['n', 'ṇ'], 0xD7B: ['n', 'n'], 0xD7C: ['r', 'r'], 0xD7D: ['l', 'l'], 0xD7E: ['l', 'ḷ'], 0xD7F: ['k', 'k'] };
-  function script(cp) { if (cp >= 0x900 && cp < 0x980) return 'hi'; if (cp >= 0x980 && cp < 0xA00) return 'bn'; if ((cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0x3131 && cp <= 0x3163) || (cp >= 0x1100 && cp <= 0x11FF)) return 'ko'; if (cp >= 0xB80 && cp < 0xC00) return 'ta'; if (cp >= 0xC00 && cp < 0xC80) return 'te'; if (cp >= 0xC80 && cp < 0xD00) return 'kn'; if (cp >= 0xD00 && cp < 0xD80) return 'ml'; return null; }
+  function script(cp) { if (cp >= 0x900 && cp < 0x980) return 'hi'; if (cp >= 0x980 && cp < 0xA00) return 'bn'; if ((cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0x3131 && cp <= 0x3163) || (cp >= 0x1100 && cp <= 0x11FF)) return 'ko'; if (cp >= 0xB80 && cp < 0xC00) return 'ta'; if (cp >= 0xC00 && cp < 0xC80) return 'te'; if (cp >= 0xC80 && cp < 0xD00) return 'kn'; if (cp >= 0xA80 && cp < 0xB00) return 'gu'; if (cp >= 0xD00 && cp < 0xD80) return 'ml'; return null; }
   B.isBrahmic = function (s) { for (var i = 0; i < s.length; i++) if (script(s.charCodeAt(i))) return true; return false; };
 
   // Bengali-specific values (index = offset in the Bengali block): inherent vowel is 'o'
   var BN_V = { 5: ['o', 'ô'], 6: ['a', 'ā'], 7: ['i', 'i'], 8: ['i', 'ī'], 9: ['u', 'u'], 10: ['u', 'ū'], 11: ['ri', 'ṛ'], 12: ['li', 'ḷ'], 15: ['e', 'e'], 16: ['oi', 'ai'], 19: ['o', 'o'], 20: ['ou', 'au'] };
   var BN_S = { 0x3E: 6, 0x3F: 7, 0x40: 8, 0x41: 9, 0x42: 10, 0x43: 11, 0x47: 15, 0x48: 16, 0x4B: 19, 0x4C: 20 };
+  var AS_C = { 0x16: ['kh', 'kh'], 0x1A: ['s', 'c'], 0x1B: ['s', 'ch'], 0x1C: ['z', 'j'], 0x1D: ['z', 'jh'], 0x2F: ['z', 'y'], 0x36: ['x', 'ś'], 0x37: ['x', 'ṣ'], 0x38: ['x', 's'] };
   var BN_C = { 0x1C: ['j', 'j'], 0x1E: ['n', 'ñ'], 0x23: ['n', 'ṇ'], 0x2F: ['j', 'y'], 0x36: ['sh', 'ś'], 0x37: ['sh', 'ṣ'], 0x38: ['sh', 's'] };
   // Korean (Revised Romanization with the common sound rules)
   var HL = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
@@ -62,7 +63,7 @@
     return o;
   }
   // Transliterate one word or a whole string. scheme: 'simple' (default) or 'iast'.
-  B.translit = function (str, scheme) {
+  B.translit = function (str, scheme, lang) {
     var si = scheme === 'iast' ? 1 : 0, out = '', i = 0, n = str.length;
     // split into runs of one script so word-level rules (schwa, Tamil voicing) can apply
     var token = [], res = [];
@@ -71,15 +72,18 @@
     flush(); return res.join('');
     function word(w) {
       if (script(w.charCodeAt(0)) === 'ko') return hangul(w);
-      var units = [], k, cp, sc = script(w.charCodeAt(0)), base = BASES[sc], pendingA = -1, vowelCount = 0, prevVowel = false, prevNasalVir = false;
+      var units = [], k, cp, sc = script(w.charCodeAt(0)), base = BASES[sc], AS = lang === 'as' || /[\u09F0\u09F1]/.test(w), pendingA = -1, vowelCount = 0, prevVowel = false, prevNasalVir = false;
+      if (sc === 'gu') { sc = 'hi'; base = 0xA80; }
       for (k = 0; k < w.length; k++) {
         cp = w.charCodeAt(k); var idx = cp - base;
         if (cp === 0x200C || cp === 0x200D) continue;
         if (sc === 'ml' && CHILLU[cp]) { var ch = CHILLU[cp][si]; units.push({ t: ch, type: 'c', fin: true }); pendingA = -1; vowelCount++; continue; }
         if (idx >= 5 && idx <= 20 && (sc === 'bn' ? BN_V[idx] : VOW[idx])) { units.push({ t: (sc === 'bn' ? BN_V : VOW)[idx][si], type: 'v' }); pendingA = -1; vowelCount++; continue; }
+        if (sc === 'bn' && (cp === 0x9F0 || cp === 0x9F1)) { var c0 = cp === 0x9F0 ? ['r', 'r'] : ['w', 'w']; units.push({ t: c0[si], type: 'c', idx: cp === 0x9F0 ? 0x30 : 0x35, a: true }); pendingA = units.length - 1; vowelCount++; continue; }
         if ((idx >= 0x15 && idx <= 0x39) || NUKTA[idx] && (sc === 'hi' || sc === 'bn')) {
-          var c = ((sc === 'hi' || sc === 'bn') && NUKTA[idx]) ? NUKTA[idx] : (sc === 'bn' && BN_C[idx]) ? BN_C[idx] : CON[idx]; if (!c) continue;
-          if (sc === 'bn' && idx === 0x2F && units.length && units[units.length - 1].vir && units[units.length - 1].type === 'c' && units[units.length - 1].idx !== 0x39) { var pu = units[units.length - 1]; pu.t = pu.t + pu.t; pu.vir = false; pu.a = true; pu.g = true; pendingA = units.length - 1; vowelCount++; continue; }
+          var c = ((sc === 'hi' || sc === 'bn') && NUKTA[idx]) ? NUKTA[idx] : (sc === 'bn' && AS && AS_C[idx]) ? AS_C[idx] : (sc === 'bn' && BN_C[idx]) ? BN_C[idx] : CON[idx]; if (!c) continue;
+          if (sc === 'bn' && AS && idx === 0x37 && units.length && units[units.length - 1].vir && units[units.length - 1].idx === 0x15) { units[units.length - 1].t = ''; c = ['kh', 'kṣ']; }
+          if (sc === 'bn' && !AS && idx === 0x2F && units.length && units[units.length - 1].vir && units[units.length - 1].type === 'c' && units[units.length - 1].idx !== 0x39) { var pu = units[units.length - 1]; pu.t = pu.t + pu.t; pu.vir = false; pu.a = true; pu.g = true; pendingA = units.length - 1; vowelCount++; continue; }
           if (sc === 'bn' && idx === 0x2F && units.length && units[units.length - 1].vir) c = ['y', 'y'];
           var nx = w.charCodeAt(k + 1) - base;
           if (sc === 'te' && idx === 0x15 && false) { }
@@ -292,7 +296,7 @@
   function jget(k, d) { try { var v = JSON.parse(store.get(k)); return v == null ? d : v; } catch (e) { return d; } }
 
   // ---------- settings
-  var UILANGS = ['en', 'hi', 'te', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko', 'es', 'de'], MAINSITE = ['en', 'hi', 'te', 'kn', 'ta', 'ml'];
+  var UILANGS = ['en', 'hi', 'te', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko', 'es', 'de', 'fr', 'gu', 'as'], MAINSITE = ['en', 'hi', 'te', 'kn', 'ta', 'ml'];
   U.UILANGS = UILANGS; U.MAINSITE = MAINSITE;
   var set = U.set = (function () {
     var s = jget('bh-set', {}), nl = (navigator.language || 'en').toLowerCase().slice(0, 2), sl = store.get('el-lang');
@@ -314,7 +318,7 @@
   var toastT; U.toast = function (m) { var e = $('#toast'); if (!e) return; e.textContent = m; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 2200); };
   U.langName = function (c) { var a = B.allLangs().filter(function (x) { return x[0] === c; })[0]; return a ? a[1] : c; };
   U.langNative = function (c) { var a = B.allLangs().filter(function (x) { return x[0] === c; })[0]; return a ? a[2] : c; };
-  U.roman = function (w, lang) { return B.isBrahmic(w) ? B.translit(w, set.scheme) : ''; };
+  U.roman = function (w, lang) { return B.isBrahmic(w) ? B.translit(w, set.scheme, lang) : ''; };
   U.today = function () { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
   // ---------- speech lives in speech.js (device voices with an offline fallback)
@@ -390,7 +394,7 @@
       if (!tk.w) { frag.appendChild(document.createTextNode(tk.t)); return; }
       var w = tk.t, nw = B.normWord(w), sv = W.get(lang, nw), cls = 'tk' + (sv ? (sv.st >= 2 ? ' known' : ' learn') : ' new');
       var el = h('span', { class: cls, role: 'button', tabindex: '0', 'data-w': w });
-      if (opts && opts.roman && B.isBrahmic(w)) { var ru = h('ruby', null, [document.createTextNode(w), h('rt', { text: B.translit(w, set.scheme) })]); el.appendChild(ru); } else el.textContent = w;
+      if (opts && opts.roman && B.isBrahmic(w)) { var ru = h('ruby', null, [document.createTextNode(w), h('rt', { text: B.translit(w, set.scheme, lang) })]); el.appendChild(ru); } else el.textContent = w;
       frag.appendChild(el);
     });
     return frag;
@@ -582,7 +586,7 @@
     "cWords": "Everything you saved, with export to CSV, Anki and a backup file.",
     "cReview": "Flashcards that come back just before you forget.",
     "cScripts": "Letters, vowel signs and digits. Hear, quiz and trace them.",
-    "cPhrases": "100 everyday phrases in ten languages, with romanization and voice.",
+    "cPhrases": "200 everyday phrases in thirteen languages, with romanization and voice.",
     "dueCount": "{n} due",
     "howH": "How it works",
     "how1": "Open a subtitle file with your video, or paste a text.",
@@ -717,7 +721,7 @@
     "cat_num": "Numbers",
     "slow": "Slow",
     "nav_say": "Say it",
-    "cSay": "Type an English sentence and hear it in Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Korean, Spanish or German.",
+    "cSay": "Type an English sentence and hear it in Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Gujarati, Assamese, Korean, Spanish, German or French.",
     "sayLede": "Type a sentence in English. Get it in another language with romanization and a voice.",
     "sayPlaceholder": "Type an English sentence, for example: How are you?",
     "sayInput": "English sentence",
@@ -754,7 +758,47 @@
     "ovYes": "Download",
     "ovNo": "Not now",
     "ovLoading": "Loading the offline voice…",
-    "ovFail": "Could not play the offline voice."
+    "ovFail": "Could not play the offline voice.",
+    "nav_today": "Today",
+    "nav_talk": "Conversations",
+    "cToday": "A short lesson every day: five new phrases, a listening quiz and a recall round.",
+    "cTalk": "Practise real conversations: restaurant, directions, shopping, doctor, hotel. Hear a line, then choose your reply.",
+    "tdLede": "Five new phrases a day. Learn them, hear them, then recall older ones just before you forget.",
+    "tdStart": "Start today's lesson",
+    "tdDone": "Today's lesson is done. Come back tomorrow.",
+    "tdLearn": "Learn",
+    "tdListen": "Listen",
+    "tdRecall": "Recall",
+    "tdNext": "Next",
+    "tdFinish": "Finish",
+    "tdListenQ": "Listen, then pick the meaning",
+    "tdRecallQ": "Pick the phrase that means:",
+    "tdScore": "Score: {n} of {m}",
+    "tdBonus": "Do a bonus lesson",
+    "tdProgress": "{n} of {m} phrases learned",
+    "tdRecallN": "{n} older phrases to recall today",
+    "drLede": "Pick a conversation. Hear what they say, then choose your reply.",
+    "drPick": "Conversations",
+    "drTurns": "{n} turns",
+    "drThem": "They say",
+    "drYou": "Your turn. Say:",
+    "drHide": "Listening mode: hide what they say",
+    "drTry": "Not quite. Try again.",
+    "drDone": "Conversation complete",
+    "drScore": "{n} of {m} right on the first try",
+    "drReplay": "Play again",
+    "drTranscript": "Full conversation",
+    "drAnother": "Another conversation",
+    "d_meet": "Meeting someone",
+    "d_rest": "At a restaurant",
+    "d_dir": "Asking directions",
+    "d_shop": "Shopping",
+    "d_doc": "At the doctor",
+    "d_hotel": "At a hotel",
+    "cat_talk": "Conversation",
+    "cat_feel": "Feelings",
+    "cat_work": "Work and phone",
+    "cat_home": "Home and weather"
   };
   I.hi = {
     "skip": "सामग्री पर जाएँ",
@@ -799,7 +843,7 @@
     "cWords": "आपके सहेजे सभी शब्द, CSV, Anki और बैकअप फ़ाइल में निर्यात के साथ।",
     "cReview": "फ़्लैशकार्ड जो भूलने से ठीक पहले लौटते हैं।",
     "cScripts": "अक्षर, मात्राएँ और अंक। सुनें, क्विज़ खेलें और लिखकर अभ्यास करें।",
-    "cPhrases": "दस भाषाओं में 100 रोज़मर्रा के वाक्यांश, रोमन उच्चारण और आवाज़ के साथ।",
+    "cPhrases": "तेरह भाषाओं में 200 रोज़मर्रा के वाक्यांश, रोमन उच्चारण और आवाज़ के साथ।",
     "dueCount": "{n} बाकी",
     "howH": "यह कैसे काम करता है",
     "how1": "अपने वीडियो के साथ उपशीर्षक फ़ाइल खोलें, या पाठ चिपकाएँ।",
@@ -934,7 +978,7 @@
     "cat_num": "संख्याएँ",
     "slow": "धीरे",
     "nav_say": "बोलें",
-    "cSay": "अंग्रेज़ी में वाक्य लिखें और उसे तेलुगु, हिन्दी, कन्नड़, तमिल, मलयालम, बांग्ला, मराठी, कोरियाई, स्पेनिश या जर्मन में सुनें।",
+    "cSay": "अंग्रेज़ी में वाक्य लिखें और उसे तेलुगु, हिन्दी, कन्नड़, तमिल, मलयालम, बांग्ला, मराठी, गुजराती, असमिया, कोरियाई, स्पैनिश, जर्मन या फ़्रेंच में सुनें।",
     "sayLede": "अंग्रेज़ी में वाक्य लिखें। उसे दूसरी भाषा में रोमन उच्चारण और आवाज़ के साथ पाएँ।",
     "sayPlaceholder": "अंग्रेज़ी में वाक्य लिखें, जैसे: How are you?",
     "sayInput": "अंग्रेज़ी वाक्य",
@@ -971,7 +1015,47 @@
     "ovYes": "डाउनलोड करें",
     "ovNo": "अभी नहीं",
     "ovLoading": "ऑफ़लाइन आवाज़ लोड हो रही है…",
-    "ovFail": "ऑफ़लाइन आवाज़ चला नहीं सके।"
+    "ovFail": "ऑफ़लाइन आवाज़ चला नहीं सके।",
+    "nav_today": "आज",
+    "nav_talk": "बातचीत",
+    "cToday": "हर दिन एक छोटा पाठ: पाँच नए वाक्यांश, सुनकर जवाब देना और दोहराई।",
+    "cTalk": "असली बातचीत का अभ्यास करें: रेस्तराँ, रास्ता पूछना, खरीदारी, डॉक्टर, होटल। एक पंक्ति सुनें, फिर अपना जवाब चुनें।",
+    "tdLede": "रोज़ पाँच नए वाक्यांश। उन्हें सीखें, सुनें, और पुराने वाक्यांश भूलने से ठीक पहले दोहराएँ।",
+    "tdStart": "आज का पाठ शुरू करें",
+    "tdDone": "आज का पाठ पूरा हुआ। कल फिर आइए।",
+    "tdLearn": "सीखें",
+    "tdListen": "सुनें",
+    "tdRecall": "याद करें",
+    "tdNext": "आगे",
+    "tdFinish": "समाप्त",
+    "tdListenQ": "सुनिए, फिर अर्थ चुनिए",
+    "tdRecallQ": "वह वाक्यांश चुनिए जिसका अर्थ है:",
+    "tdScore": "अंक: {m} में से {n}",
+    "tdBonus": "एक और पाठ करें",
+    "tdProgress": "{m} में से {n} वाक्यांश सीखे",
+    "tdRecallN": "आज दोहराने के लिए {n} पुराने वाक्यांश",
+    "drLede": "एक बातचीत चुनें। सुनें कि वे क्या कहते हैं, फिर अपना जवाब चुनें।",
+    "drPick": "बातचीत",
+    "drTurns": "{n} बारी",
+    "drThem": "वे कहते हैं",
+    "drYou": "आपकी बारी। कहिए:",
+    "drHide": "सुनने का मोड: उनकी बात छिपाएँ",
+    "drTry": "ठीक नहीं। फिर कोशिश कीजिए।",
+    "drDone": "बातचीत पूरी हुई",
+    "drScore": "पहली कोशिश में {m} में से {n} सही",
+    "drReplay": "फिर से चलाएँ",
+    "drTranscript": "पूरी बातचीत",
+    "drAnother": "दूसरी बातचीत",
+    "d_meet": "किसी से मिलना",
+    "d_rest": "रेस्तराँ में",
+    "d_dir": "रास्ता पूछना",
+    "d_shop": "खरीदारी",
+    "d_doc": "डॉक्टर के पास",
+    "d_hotel": "होटल में",
+    "cat_talk": "बातचीत",
+    "cat_feel": "भावनाएँ",
+    "cat_work": "काम और फ़ोन",
+    "cat_home": "घर और मौसम"
   };
   I.te = {
     "skip": "కంటెంట్‌కు వెళ్లండి",
@@ -1016,7 +1100,7 @@
     "cWords": "మీరు సేవ్ చేసినవన్నీ, CSV, Anki, బ్యాకప్ ఫైల్‌కు ఎగుమతితో.",
     "cReview": "మరచిపోయే ముందే తిరిగి వచ్చే ఫ్లాష్‌కార్డులు.",
     "cScripts": "అక్షరాలు, గుణింతాలు, అంకెలు. వినండి, క్విజ్ చేయండి, రాసి చూడండి.",
-    "cPhrases": "పది భాషల్లో 100 రోజువారీ వాక్యాలు, రోమన్ ఉచ్చారణ, స్వరంతో.",
+    "cPhrases": "పదమూడు భాషల్లో 200 రోజువారీ వాక్యాలు, రోమన్ ఉచ్చారణ మరియు స్వరంతో.",
     "dueCount": "{n} మిగిలాయి",
     "howH": "ఇది ఎలా పనిచేస్తుంది",
     "how1": "మీ వీడియోతో పాటు సబ్‌టైటిల్ ఫైల్ తెరవండి, లేదా టెక్స్ట్ పేస్ట్ చేయండి.",
@@ -1151,7 +1235,7 @@
     "cat_num": "సంఖ్యలు",
     "slow": "నెమ్మదిగా",
     "nav_say": "చెప్పండి",
-    "cSay": "ఇంగ్లీష్ వాక్యం రాసి తెలుగు, హిందీ, కన్నడ, తమిళం, మలయాళం, బెంగాలీ, మరాఠీ, కొరియన్, స్పానిష్ లేదా జర్మన్‌లో వినండి.",
+    "cSay": "ఇంగ్లీషులో వాక్యం రాసి, తెలుగు, హిందీ, కన్నడ, తమిళం, మలయాళం, బెంగాలీ, మరాఠీ, గుజరాతీ, అస్సామీ, కొరియన్, స్పానిష్, జర్మన్ లేదా ఫ్రెంచ్‌లో వినండి.",
     "sayLede": "ఇంగ్లీష్‌లో వాక్యం రాయండి. మరో భాషలో రోమన్ ఉచ్చారణ, స్వరంతో పొందండి.",
     "sayPlaceholder": "ఇంగ్లీష్ వాక్యం రాయండి, ఉదాహరణకు: How are you?",
     "sayInput": "ఇంగ్లీష్ వాక్యం",
@@ -1188,7 +1272,47 @@
     "ovYes": "డౌన్‌లోడ్",
     "ovNo": "ఇప్పుడు కాదు",
     "ovLoading": "ఆఫ్‌లైన్ స్వరం లోడ్ అవుతోంది…",
-    "ovFail": "ఆఫ్‌లైన్ స్వరం ప్లే చేయలేకపోయాం."
+    "ovFail": "ఆఫ్‌లైన్ స్వరం ప్లే చేయలేకపోయాం.",
+    "nav_today": "ఈ రోజు",
+    "nav_talk": "సంభాషణలు",
+    "cToday": "ప్రతిరోజూ ఒక చిన్న పాఠం: ఐదు కొత్త వాక్యాలు, వినే క్విజ్, గుర్తుచేసుకునే రౌండ్.",
+    "cTalk": "నిజమైన సంభాషణలను సాధన చేయండి: రెస్టారెంట్, దారి అడగడం, షాపింగ్, డాక్టర్, హోటల్. ఒక వాక్యం విని, మీ జవాబు ఎంచుకోండి.",
+    "tdLede": "రోజుకు ఐదు కొత్త వాక్యాలు. నేర్చుకోండి, వినండి, మర్చిపోయే ముందు పాత వాటిని గుర్తుచేసుకోండి.",
+    "tdStart": "ఈ రోజు పాఠం మొదలుపెట్టండి",
+    "tdDone": "ఈ రోజు పాఠం పూర్తయింది. రేపు మళ్ళీ రండి.",
+    "tdLearn": "నేర్చుకోండి",
+    "tdListen": "వినండి",
+    "tdRecall": "గుర్తుచేసుకోండి",
+    "tdNext": "తదుపరి",
+    "tdFinish": "ముగించు",
+    "tdListenQ": "విని, అర్థం ఎంచుకోండి",
+    "tdRecallQ": "ఈ అర్థం ఇచ్చే వాక్యాన్ని ఎంచుకోండి:",
+    "tdScore": "స్కోరు: {m}లో {n}",
+    "tdBonus": "మరో పాఠం చేయండి",
+    "tdProgress": "{m}లో {n} వాక్యాలు నేర్చుకున్నారు",
+    "tdRecallN": "ఈ రోజు గుర్తుచేసుకోవాల్సిన {n} పాత వాక్యాలు",
+    "drLede": "ఒక సంభాషణ ఎంచుకోండి. వారు ఏమంటారో విని, మీ జవాబు ఎంచుకోండి.",
+    "drPick": "సంభాషణలు",
+    "drTurns": "{n} మలుపులు",
+    "drThem": "వారు అంటారు",
+    "drYou": "మీ వంతు. చెప్పండి:",
+    "drHide": "వినే మోడ్: వారి మాటలు దాచు",
+    "drTry": "సరిగ్గా లేదు. మళ్ళీ ప్రయత్నించండి.",
+    "drDone": "సంభాషణ పూర్తయింది",
+    "drScore": "మొదటి ప్రయత్నంలో {m}లో {n} సరైనవి",
+    "drReplay": "మళ్ళీ ఆడండి",
+    "drTranscript": "పూర్తి సంభాషణ",
+    "drAnother": "మరో సంభాషణ",
+    "d_meet": "ఒకరిని కలవడం",
+    "d_rest": "రెస్టారెంట్‌లో",
+    "d_dir": "దారి అడగడం",
+    "d_shop": "షాపింగ్",
+    "d_doc": "డాక్టర్ దగ్గర",
+    "d_hotel": "హోటల్‌లో",
+    "cat_talk": "సంభాషణ",
+    "cat_feel": "భావాలు",
+    "cat_work": "పని మరియు ఫోన్",
+    "cat_home": "ఇల్లు మరియు వాతావరణం"
   };
   I.kn = {
     "skip": "ವಿಷಯಕ್ಕೆ ಹೋಗಿ",
@@ -1233,7 +1357,7 @@
     "cWords": "ನೀವು ಉಳಿಸಿದ್ದೆಲ್ಲವೂ, CSV, Anki ಮತ್ತು ಬ್ಯಾಕಪ್ ಫೈಲ್‌ಗೆ ರಫ್ತು ಸಹಿತ.",
     "cReview": "ಮರೆಯುವ ಮೊದಲೇ ಮರಳಿ ಬರುವ ಫ್ಲ್ಯಾಶ್‌ಕಾರ್ಡ್‌ಗಳು.",
     "cScripts": "ಅಕ್ಷರಗಳು, ಸ್ವರ ಚಿಹ್ನೆಗಳು, ಅಂಕೆಗಳು. ಕೇಳಿ, ರಸಪ್ರಶ್ನೆ ಆಡಿ, ಬರೆದು ಅಭ್ಯಾಸ ಮಾಡಿ.",
-    "cPhrases": "ಹತ್ತು ಭಾಷೆಗಳಲ್ಲಿ 100 ದಿನನಿತ್ಯದ ವಾಕ್ಯಗಳು, ರೋಮನ್ ಉಚ್ಚಾರಣೆ ಮತ್ತು ಧ್ವನಿಯೊಂದಿಗೆ.",
+    "cPhrases": "ಹದಿಮೂರು ಭಾಷೆಗಳಲ್ಲಿ 200 ದಿನನಿತ್ಯದ ವಾಕ್ಯಗಳು, ರೋಮನ್ ಉಚ್ಚಾರಣೆ ಮತ್ತು ಧ್ವನಿಯೊಂದಿಗೆ.",
     "dueCount": "{n} ಬಾಕಿ",
     "howH": "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
     "how1": "ನಿಮ್ಮ ವೀಡಿಯೊದೊಂದಿಗೆ ಉಪಶೀರ್ಷಿಕೆ ಫೈಲ್ ತೆರೆಯಿರಿ, ಅಥವಾ ಪಠ್ಯ ಅಂಟಿಸಿ.",
@@ -1368,7 +1492,7 @@
     "cat_num": "ಸಂಖ್ಯೆಗಳು",
     "slow": "ನಿಧಾನ",
     "nav_say": "ಹೇಳಿ",
-    "cSay": "ಇಂಗ್ಲಿಷ್ ವಾಕ್ಯ ಬರೆದು ತೆಲುಗು, ಹಿಂದಿ, ಕನ್ನಡ, ತಮಿಳು, ಮಲಯಾಳಂ, ಬಂಗಾಳಿ, ಮರಾಠಿ, ಕೊರಿಯನ್, ಸ್ಪ್ಯಾನಿಷ್ ಅಥವಾ ಜರ್ಮನ್‌ನಲ್ಲಿ ಕೇಳಿ.",
+    "cSay": "ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ವಾಕ್ಯ ಬರೆದು ತೆಲುಗು, ಹಿಂದಿ, ಕನ್ನಡ, ತಮಿಳು, ಮಲಯಾಳಂ, ಬಂಗಾಳಿ, ಮರಾಠಿ, ಗುಜರಾತಿ, ಅಸ್ಸಾಮಿ, ಕೊರಿಯನ್, ಸ್ಪ್ಯಾನಿಷ್, ಜರ್ಮನ್ ಅಥವಾ ಫ್ರೆಂಚ್‌ನಲ್ಲಿ ಕೇಳಿ.",
     "sayLede": "ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ವಾಕ್ಯ ಬರೆಯಿರಿ. ಬೇರೆ ಭಾಷೆಯಲ್ಲಿ ರೋಮನ್ ಉಚ್ಚಾರಣೆ ಮತ್ತು ಧ್ವನಿಯೊಂದಿಗೆ ಪಡೆಯಿರಿ.",
     "sayPlaceholder": "ಇಂಗ್ಲಿಷ್ ವಾಕ್ಯ ಬರೆಯಿರಿ, ಉದಾಹರಣೆಗೆ: How are you?",
     "sayInput": "ಇಂಗ್ಲಿಷ್ ವಾಕ್ಯ",
@@ -1405,7 +1529,47 @@
     "ovYes": "ಡೌನ್‌ಲೋಡ್",
     "ovNo": "ಈಗ ಬೇಡ",
     "ovLoading": "ಆಫ್‌ಲೈನ್ ಧ್ವನಿ ಲೋಡ್ ಆಗುತ್ತಿದೆ…",
-    "ovFail": "ಆಫ್‌ಲೈನ್ ಧ್ವನಿ ಪ್ಲೇ ಮಾಡಲಾಗಲಿಲ್ಲ."
+    "ovFail": "ಆಫ್‌ಲೈನ್ ಧ್ವನಿ ಪ್ಲೇ ಮಾಡಲಾಗಲಿಲ್ಲ.",
+    "nav_today": "ಇಂದು",
+    "nav_talk": "ಸಂಭಾಷಣೆಗಳು",
+    "cToday": "ಪ್ರತಿದಿನ ಒಂದು ಚಿಕ್ಕ ಪಾಠ: ಐದು ಹೊಸ ವಾಕ್ಯಗಳು, ಕೇಳುವ ರಸಪ್ರಶ್ನೆ ಮತ್ತು ನೆನಪಿಸಿಕೊಳ್ಳುವ ಸುತ್ತು.",
+    "cTalk": "ನಿಜವಾದ ಸಂಭಾಷಣೆಗಳನ್ನು ಅಭ್ಯಾಸ ಮಾಡಿ: ರೆಸ್ಟೋರೆಂಟ್, ದಾರಿ ಕೇಳುವುದು, ಶಾಪಿಂಗ್, ವೈದ್ಯರು, ಹೋಟೆಲ್. ಒಂದು ವಾಕ್ಯ ಕೇಳಿ, ನಿಮ್ಮ ಉತ್ತರ ಆರಿಸಿ.",
+    "tdLede": "ದಿನಕ್ಕೆ ಐದು ಹೊಸ ವಾಕ್ಯಗಳು. ಕಲಿಯಿರಿ, ಕೇಳಿ, ಮರೆಯುವ ಮೊದಲು ಹಳೆಯವನ್ನು ನೆನಪಿಸಿಕೊಳ್ಳಿ.",
+    "tdStart": "ಇಂದಿನ ಪಾಠ ಆರಂಭಿಸಿ",
+    "tdDone": "ಇಂದಿನ ಪಾಠ ಮುಗಿಯಿತು. ನಾಳೆ ಮತ್ತೆ ಬನ್ನಿ.",
+    "tdLearn": "ಕಲಿಯಿರಿ",
+    "tdListen": "ಕೇಳಿ",
+    "tdRecall": "ನೆನಪಿಸಿಕೊಳ್ಳಿ",
+    "tdNext": "ಮುಂದೆ",
+    "tdFinish": "ಮುಗಿಸಿ",
+    "tdListenQ": "ಕೇಳಿ, ನಂತರ ಅರ್ಥ ಆರಿಸಿ",
+    "tdRecallQ": "ಈ ಅರ್ಥದ ವಾಕ್ಯವನ್ನು ಆರಿಸಿ:",
+    "tdScore": "ಅಂಕ: {m}ರಲ್ಲಿ {n}",
+    "tdBonus": "ಇನ್ನೊಂದು ಪಾಠ ಮಾಡಿ",
+    "tdProgress": "{m}ರಲ್ಲಿ {n} ವಾಕ್ಯಗಳನ್ನು ಕಲಿತಿದ್ದೀರಿ",
+    "tdRecallN": "ಇಂದು ನೆನಪಿಸಿಕೊಳ್ಳಬೇಕಾದ {n} ಹಳೆಯ ವಾಕ್ಯಗಳು",
+    "drLede": "ಒಂದು ಸಂಭಾಷಣೆ ಆರಿಸಿ. ಅವರು ಏನು ಹೇಳುತ್ತಾರೆ ಕೇಳಿ, ನಂತರ ನಿಮ್ಮ ಉತ್ತರ ಆರಿಸಿ.",
+    "drPick": "ಸಂಭಾಷಣೆಗಳು",
+    "drTurns": "{n} ಸರದಿಗಳು",
+    "drThem": "ಅವರು ಹೇಳುತ್ತಾರೆ",
+    "drYou": "ನಿಮ್ಮ ಸರದಿ. ಹೇಳಿ:",
+    "drHide": "ಕೇಳುವ ಮೋಡ್: ಅವರ ಮಾತು ಮರೆಮಾಡಿ",
+    "drTry": "ಸರಿಯಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    "drDone": "ಸಂಭಾಷಣೆ ಮುಗಿಯಿತು",
+    "drScore": "ಮೊದಲ ಪ್ರಯತ್ನದಲ್ಲಿ {m}ರಲ್ಲಿ {n} ಸರಿ",
+    "drReplay": "ಮತ್ತೆ ಪ್ಲೇ ಮಾಡಿ",
+    "drTranscript": "ಪೂರ್ಣ ಸಂಭಾಷಣೆ",
+    "drAnother": "ಇನ್ನೊಂದು ಸಂಭಾಷಣೆ",
+    "d_meet": "ಒಬ್ಬರನ್ನು ಭೇಟಿಯಾಗುವುದು",
+    "d_rest": "ರೆಸ್ಟೋರೆಂಟ್‌ನಲ್ಲಿ",
+    "d_dir": "ದಾರಿ ಕೇಳುವುದು",
+    "d_shop": "ಶಾಪಿಂಗ್",
+    "d_doc": "ವೈದ್ಯರ ಬಳಿ",
+    "d_hotel": "ಹೋಟೆಲ್‌ನಲ್ಲಿ",
+    "cat_talk": "ಸಂಭಾಷಣೆ",
+    "cat_feel": "ಭಾವನೆಗಳು",
+    "cat_work": "ಕೆಲಸ ಮತ್ತು ಫೋನ್",
+    "cat_home": "ಮನೆ ಮತ್ತು ಹವಾಮಾನ"
   };
   I.ta = {
     "skip": "உள்ளடக்கத்துக்குச் செல்லவும்",
@@ -1450,7 +1614,7 @@
     "cWords": "நீங்கள் சேமித்தவை அனைத்தும், CSV, Anki, காப்புக் கோப்பாக ஏற்றுமதியுடன்.",
     "cReview": "மறப்பதற்கு முன்பே திரும்பி வரும் ஃபிளாஷ் கார்டுகள்.",
     "cScripts": "எழுத்துகள், உயிர்மெய் குறிகள், எண்கள். கேளுங்கள், வினாடி வினா, எழுதிப் பழகுங்கள்.",
-    "cPhrases": "பத்து மொழிகளில் 100 அன்றாடச் சொற்றொடர்கள், ரோமன் உச்சரிப்பு, குரலுடன்.",
+    "cPhrases": "பதின்மூன்று மொழிகளில் 200 அன்றாட வாக்கியங்கள், ரோமன் உச்சரிப்பு மற்றும் குரலுடன்.",
     "dueCount": "{n} நிலுவை",
     "howH": "இது எப்படி வேலை செய்கிறது",
     "how1": "உங்கள் வீடியோவுடன் வசனக் கோப்பைத் திறக்கவும், அல்லது உரையை ஒட்டவும்.",
@@ -1585,7 +1749,7 @@
     "cat_num": "எண்கள்",
     "slow": "மெதுவாக",
     "nav_say": "சொல்",
-    "cSay": "ஆங்கில வாக்கியத்தை எழுதி தெலுங்கு, இந்தி, கன்னடம், தமிழ், மலையாளம், வங்காளம், மராத்தி, கொரியன், ஸ்பானிஷ் அல்லது ஜெர்மனில் கேளுங்கள்.",
+    "cSay": "ஆங்கிலத்தில் வாக்கியம் எழுதி தெலுங்கு, இந்தி, கன்னடம், தமிழ், மலையாளம், வங்காளம், மராத்தி, குஜராத்தி, அசாமி, கொரியன், ஸ்பானிஷ், ஜெர்மன் அல்லது பிரெஞ்சில் கேளுங்கள்.",
     "sayLede": "ஆங்கிலத்தில் வாக்கியம் எழுதுங்கள். வேறொரு மொழியில் ரோமன் உச்சரிப்பு, குரலுடன் பெறுங்கள்.",
     "sayPlaceholder": "ஆங்கில வாக்கியத்தை எழுதுங்கள், எ.கா: How are you?",
     "sayInput": "ஆங்கில வாக்கியம்",
@@ -1622,7 +1786,47 @@
     "ovYes": "பதிவிறக்கு",
     "ovNo": "இப்போது வேண்டாம்",
     "ovLoading": "இணையமில்லாக் குரல் ஏற்றப்படுகிறது…",
-    "ovFail": "இணையமில்லாக் குரலை இயக்க முடியவில்லை."
+    "ovFail": "இணையமில்லாக் குரலை இயக்க முடியவில்லை.",
+    "nav_today": "இன்று",
+    "nav_talk": "உரையாடல்கள்",
+    "cToday": "தினமும் ஒரு சிறிய பாடம்: ஐந்து புதிய வாக்கியங்கள், கேட்டு பதிலளிக்கும் வினாடி வினா, நினைவுகூரும் சுற்று.",
+    "cTalk": "உண்மையான உரையாடல்களைப் பயிற்சி செய்யுங்கள்: உணவகம், வழி கேட்பது, ஷாப்பிங், மருத்துவர், ஹோட்டல். ஒரு வரியைக் கேட்டு உங்கள் பதிலைத் தேர்ந்தெடுங்கள்.",
+    "tdLede": "தினமும் ஐந்து புதிய வாக்கியங்கள். கற்று, கேட்டு, மறப்பதற்கு முன் பழையவற்றை நினைவுகூருங்கள்.",
+    "tdStart": "இன்றைய பாடத்தைத் தொடங்குங்கள்",
+    "tdDone": "இன்றைய பாடம் முடிந்தது. நாளை மீண்டும் வாருங்கள்.",
+    "tdLearn": "கற்க",
+    "tdListen": "கேட்க",
+    "tdRecall": "நினைவுகூர்",
+    "tdNext": "அடுத்து",
+    "tdFinish": "முடி",
+    "tdListenQ": "கேட்டு, பொருளைத் தேர்ந்தெடுங்கள்",
+    "tdRecallQ": "இந்தப் பொருள் தரும் வாக்கியத்தைத் தேர்ந்தெடுங்கள்:",
+    "tdScore": "மதிப்பெண்: {m}-இல் {n}",
+    "tdBonus": "கூடுதல் பாடம் செய்",
+    "tdProgress": "{m}-இல் {n} வாக்கியங்கள் கற்றுள்ளீர்கள்",
+    "tdRecallN": "இன்று நினைவுகூர வேண்டிய {n} பழைய வாக்கியங்கள்",
+    "drLede": "ஒரு உரையாடலைத் தேர்ந்தெடுங்கள். அவர்கள் சொல்வதைக் கேட்டு, உங்கள் பதிலைத் தேர்ந்தெடுங்கள்.",
+    "drPick": "உரையாடல்கள்",
+    "drTurns": "{n} முறைகள்",
+    "drThem": "அவர்கள் சொல்வது",
+    "drYou": "உங்கள் முறை. சொல்லுங்கள்:",
+    "drHide": "கேட்கும் முறை: அவர்கள் சொல்வதை மறை",
+    "drTry": "சரியில்லை. மீண்டும் முயலுங்கள்.",
+    "drDone": "உரையாடல் முடிந்தது",
+    "drScore": "முதல் முயற்சியில் {m}-இல் {n} சரி",
+    "drReplay": "மீண்டும் இயக்கு",
+    "drTranscript": "முழு உரையாடல்",
+    "drAnother": "மற்றொரு உரையாடல்",
+    "d_meet": "ஒருவரைச் சந்தித்தல்",
+    "d_rest": "உணவகத்தில்",
+    "d_dir": "வழி கேட்டல்",
+    "d_shop": "ஷாப்பிங்",
+    "d_doc": "மருத்துவரிடம்",
+    "d_hotel": "ஹோட்டலில்",
+    "cat_talk": "உரையாடல்",
+    "cat_feel": "உணர்வுகள்",
+    "cat_work": "வேலை மற்றும் தொலைபேசி",
+    "cat_home": "வீடு மற்றும் வானிலை"
   };
   I.ml = {
     "skip": "ഉള്ളടക്കത്തിലേക്ക് പോകുക",
@@ -1667,7 +1871,7 @@
     "cWords": "നിങ്ങൾ സേവ് ചെയ്തതെല്ലാം, CSV, Anki, ബാക്കപ്പ് ഫയൽ എന്നിവയിലേക്ക് എക്സ്പോർട്ട് സഹിതം.",
     "cReview": "മറക്കുന്നതിന് തൊട്ടുമുമ്പ് തിരികെ വരുന്ന ഫ്ലാഷ്‌കാർഡുകൾ.",
     "cScripts": "അക്ഷരങ്ങൾ, സ്വരചിഹ്നങ്ങൾ, അക്കങ്ങൾ. കേൾക്കൂ, ക്വിസ് ചെയ്യൂ, എഴുതി പഠിക്കൂ.",
-    "cPhrases": "പത്ത് ഭാഷകളിൽ 100 ദൈനംദിന വാക്യങ്ങൾ, റോമൻ ഉച്ചാരണവും ശബ്ദവും സഹിതം.",
+    "cPhrases": "പതിമൂന്ന് ഭാഷകളിൽ 200 ദൈനംദിന വാക്യങ്ങൾ, റോമൻ ഉച്ചാരണവും ശബ്ദവും സഹിതം.",
     "dueCount": "{n} ബാക്കി",
     "howH": "ഇത് എങ്ങനെ പ്രവർത്തിക്കുന്നു",
     "how1": "നിങ്ങളുടെ വീഡിയോയ്ക്കൊപ്പം സബ്‌ടൈറ്റിൽ ഫയൽ തുറക്കുക, അല്ലെങ്കിൽ ടെക്സ്റ്റ് പേസ്റ്റ് ചെയ്യുക.",
@@ -1802,7 +2006,7 @@
     "cat_num": "സംഖ്യകൾ",
     "slow": "പതുക്കെ",
     "nav_say": "പറയൂ",
-    "cSay": "ഇംഗ്ലീഷ് വാക്യം ടൈപ്പ് ചെയ്ത് തെലുങ്ക്, ഹിന്ദി, കന്നഡ, തമിഴ്, മലയാളം, ബംഗാളി, മറാത്തി, കൊറിയൻ, സ്പാനിഷ് അല്ലെങ്കിൽ ജർമ്മനിൽ കേൾക്കൂ.",
+    "cSay": "ഇംഗ്ലീഷിൽ ഒരു വാക്യം എഴുതി തെലുഗു, ഹിന്ദി, കന്നഡ, തമിഴ്, മലയാളം, ബംഗാളി, മറാത്തി, ഗുജറാത്തി, അസമീസ്, കൊറിയൻ, സ്പാനിഷ്, ജർമ്മൻ അല്ലെങ്കിൽ ഫ്രഞ്ചിൽ കേൾക്കുക.",
     "sayLede": "ഇംഗ്ലീഷിൽ വാക്യം ടൈപ്പ് ചെയ്യൂ. മറ്റൊരു ഭാഷയിൽ റോമൻ ഉച്ചാരണവും ശബ്ദവും സഹിതം നേടൂ.",
     "sayPlaceholder": "ഇംഗ്ലീഷ് വാക്യം ടൈപ്പ് ചെയ്യൂ, ഉദാ: How are you?",
     "sayInput": "ഇംഗ്ലീഷ് വാക്യം",
@@ -1839,7 +2043,47 @@
     "ovYes": "ഡൗൺലോഡ്",
     "ovNo": "ഇപ്പോൾ വേണ്ട",
     "ovLoading": "ഓഫ്‌ലൈൻ ശബ്ദം ലോഡ് ചെയ്യുന്നു…",
-    "ovFail": "ഓഫ്‌ലൈൻ ശബ്ദം പ്ലേ ചെയ്യാനായില്ല."
+    "ovFail": "ഓഫ്‌ലൈൻ ശബ്ദം പ്ലേ ചെയ്യാനായില്ല.",
+    "nav_today": "ഇന്ന്",
+    "nav_talk": "സംഭാഷണങ്ങൾ",
+    "cToday": "ദിവസവും ഒരു ചെറിയ പാഠം: അഞ്ച് പുതിയ വാക്യങ്ങൾ, കേൾക്കൽ ക്വിസ്, ഓർമ്മിക്കൽ റൗണ്ട്.",
+    "cTalk": "യഥാർത്ഥ സംഭാഷണങ്ങൾ പരിശീലിക്കുക: റസ്റ്റോറന്റ്, വഴി ചോദിക്കൽ, ഷോപ്പിംഗ്, ഡോക്ടർ, ഹോട്ടൽ. ഒരു വരി കേട്ട് നിങ്ങളുടെ മറുപടി തിരഞ്ഞെടുക്കുക.",
+    "tdLede": "ദിവസം അഞ്ച് പുതിയ വാക്യങ്ങൾ. പഠിക്കുക, കേൾക്കുക, മറക്കുന്നതിന് മുമ്പ് പഴയവ ഓർമ്മിക്കുക.",
+    "tdStart": "ഇന്നത്തെ പാഠം തുടങ്ങുക",
+    "tdDone": "ഇന്നത്തെ പാഠം കഴിഞ്ഞു. നാളെ വീണ്ടും വരൂ.",
+    "tdLearn": "പഠിക്കുക",
+    "tdListen": "കേൾക്കുക",
+    "tdRecall": "ഓർമ്മിക്കുക",
+    "tdNext": "അടുത്തത്",
+    "tdFinish": "പൂർത്തിയാക്കുക",
+    "tdListenQ": "കേട്ട് അർത്ഥം തിരഞ്ഞെടുക്കുക",
+    "tdRecallQ": "ഈ അർത്ഥമുള്ള വാക്യം തിരഞ്ഞെടുക്കുക:",
+    "tdScore": "സ്കോർ: {m}-ൽ {n}",
+    "tdBonus": "ഒരു അധിക പാഠം ചെയ്യുക",
+    "tdProgress": "{m}-ൽ {n} വാക്യങ്ങൾ പഠിച്ചു",
+    "tdRecallN": "ഇന്ന് ഓർമ്മിക്കേണ്ട {n} പഴയ വാക്യങ്ങൾ",
+    "drLede": "ഒരു സംഭാഷണം തിരഞ്ഞെടുക്കുക. അവർ പറയുന്നത് കേട്ട് നിങ്ങളുടെ മറുപടി തിരഞ്ഞെടുക്കുക.",
+    "drPick": "സംഭാഷണങ്ങൾ",
+    "drTurns": "{n} ഊഴങ്ങൾ",
+    "drThem": "അവർ പറയുന്നു",
+    "drYou": "നിങ്ങളുടെ ഊഴം. പറയുക:",
+    "drHide": "കേൾക്കൽ മോഡ്: അവർ പറയുന്നത് മറയ്ക്കുക",
+    "drTry": "ശരിയായില്ല. വീണ്ടും ശ്രമിക്കുക.",
+    "drDone": "സംഭാഷണം പൂർത്തിയായി",
+    "drScore": "ആദ്യ ശ്രമത്തിൽ {m}-ൽ {n} ശരി",
+    "drReplay": "വീണ്ടും പ്ലേ ചെയ്യുക",
+    "drTranscript": "മുഴുവൻ സംഭാഷണം",
+    "drAnother": "മറ്റൊരു സംഭാഷണം",
+    "d_meet": "ഒരാളെ പരിചയപ്പെടൽ",
+    "d_rest": "റസ്റ്റോറന്റിൽ",
+    "d_dir": "വഴി ചോദിക്കൽ",
+    "d_shop": "ഷോപ്പിംഗ്",
+    "d_doc": "ഡോക്ടറുടെ അടുത്ത്",
+    "d_hotel": "ഹോട്ടലിൽ",
+    "cat_talk": "സംഭാഷണം",
+    "cat_feel": "വികാരങ്ങൾ",
+    "cat_work": "ജോലിയും ഫോണും",
+    "cat_home": "വീടും കാലാവസ്ഥയും"
   };
   I.bn = {
     "skip": "মূল বিষয়ে যান",
@@ -1885,8 +2129,8 @@
     "cWords": "আপনার সংরক্ষিত সবকিছু, CSV, Anki ও ব্যাকআপ ফাইলে রপ্তানিসহ।",
     "cReview": "ফ্ল্যাশকার্ড যা ভুলে যাওয়ার ঠিক আগে ফিরে আসে।",
     "cScripts": "অক্ষর, স্বরচিহ্ন ও সংখ্যা। শুনুন, কুইজ করুন, লিখে অভ্যাস করুন।",
-    "cPhrases": "দশটি ভাষায় ১০০টি দৈনন্দিন বাক্যাংশ, রোমান উচ্চারণ ও কণ্ঠস্বরসহ।",
-    "cSay": "ইংরেজিতে বাক্য লিখুন এবং তেলুগু, হিন্দি, কন্নড়, তামিল, মালায়ালম, বাংলা, মারাঠি, কোরিয়ান, স্প্যানিশ বা জার্মানে শুনুন।",
+    "cPhrases": "তেরোটি ভাষায় ২০০টি দৈনন্দিন বাক্যাংশ, রোমান উচ্চারণ ও কণ্ঠস্বরসহ।",
+    "cSay": "ইংরেজিতে বাক্য লিখুন এবং তেলুগু, হিন্দি, কন্নড়, তামিল, মালায়ালম, বাংলা, মারাঠি, গুজরাটি, অসমীয়া, কোরিয়ান, স্প্যানিশ, জার্মান বা ফরাসিতে শুনুন।",
     "dueCount": "{n}টি বাকি",
     "howH": "এটি কীভাবে কাজ করে",
     "how1": "আপনার ভিডিওর সঙ্গে সাবটাইটেল ফাইল খুলুন, অথবা লেখা পেস্ট করুন।",
@@ -2056,7 +2300,47 @@
     "ovYes": "ডাউনলোড",
     "ovNo": "এখন নয়",
     "ovLoading": "অফলাইন কণ্ঠস্বর লোড হচ্ছে…",
-    "ovFail": "অফলাইন কণ্ঠস্বর চালানো গেল না।"
+    "ovFail": "অফলাইন কণ্ঠস্বর চালানো গেল না।",
+    "nav_today": "আজ",
+    "nav_talk": "কথোপকথন",
+    "cToday": "প্রতিদিন একটি ছোট পাঠ: পাঁচটি নতুন বাক্যাংশ, শোনার কুইজ ও মনে করার রাউন্ড।",
+    "cTalk": "বাস্তব কথোপকথনের অনুশীলন করুন: রেস্টুরেন্ট, পথ জিজ্ঞাসা, কেনাকাটা, ডাক্তার, হোটেল। একটি লাইন শুনে আপনার উত্তর বেছে নিন।",
+    "tdLede": "প্রতিদিন পাঁচটি নতুন বাক্যাংশ। শিখুন, শুনুন, তারপর ভুলে যাওয়ার আগেই পুরোনোগুলো মনে করুন।",
+    "tdStart": "আজকের পাঠ শুরু করুন",
+    "tdDone": "আজকের পাঠ শেষ। কাল আবার আসুন।",
+    "tdLearn": "শিখুন",
+    "tdListen": "শুনুন",
+    "tdRecall": "মনে করুন",
+    "tdNext": "পরবর্তী",
+    "tdFinish": "শেষ",
+    "tdListenQ": "শুনুন, তারপর অর্থ বেছে নিন",
+    "tdRecallQ": "এই অর্থের বাক্যাংশটি বেছে নিন:",
+    "tdScore": "স্কোর: {m}-এর মধ্যে {n}",
+    "tdBonus": "আরেকটি পাঠ করুন",
+    "tdProgress": "{m}-এর মধ্যে {n}টি বাক্যাংশ শেখা হয়েছে",
+    "tdRecallN": "আজ মনে করার জন্য {n}টি পুরোনো বাক্যাংশ",
+    "drLede": "একটি কথোপকথন বেছে নিন। তারা কী বলে শুনুন, তারপর আপনার উত্তর বেছে নিন।",
+    "drPick": "কথোপকথন",
+    "drTurns": "{n}টি পালা",
+    "drThem": "তারা বলে",
+    "drYou": "আপনার পালা। বলুন:",
+    "drHide": "শোনার মোড: তাদের কথা লুকান",
+    "drTry": "ঠিক হয়নি। আবার চেষ্টা করুন।",
+    "drDone": "কথোপকথন শেষ",
+    "drScore": "প্রথমবারেই {m}-এর মধ্যে {n}টি ঠিক",
+    "drReplay": "আবার চালান",
+    "drTranscript": "পুরো কথোপকথন",
+    "drAnother": "আরেকটি কথোপকথন",
+    "d_meet": "কারও সঙ্গে পরিচয়",
+    "d_rest": "রেস্টুরেন্টে",
+    "d_dir": "পথ জিজ্ঞাসা",
+    "d_shop": "কেনাকাটা",
+    "d_doc": "ডাক্তারের কাছে",
+    "d_hotel": "হোটেলে",
+    "cat_talk": "কথোপকথন",
+    "cat_feel": "অনুভূতি",
+    "cat_work": "কাজ ও ফোন",
+    "cat_home": "বাড়ি ও আবহাওয়া"
   };
   I.mr = {
     "skip": "मुख्य मजकुराकडे जा",
@@ -2102,8 +2386,8 @@
     "cWords": "तुम्ही साठवलेले सर्व काही, CSV, Anki आणि बॅकअप फाइलमध्ये निर्यातीसह.",
     "cReview": "विसरण्याआधीच परत येणारी फ्लॅशकार्ड्स.",
     "cScripts": "अक्षरे, स्वरचिन्हे आणि अंक. ऐका, प्रश्नमंजुषा खेळा, गिरवून सराव करा.",
-    "cPhrases": "दहा भाषांमध्ये रोजचे १०० वाक्प्रचार, रोमन उच्चार आणि आवाजासह.",
-    "cSay": "इंग्रजीत वाक्य लिहा आणि ते तेलुगू, हिंदी, कन्नड, तमिळ, मल्याळम, बंगाली, मराठी, कोरियन, स्पॅनिश किंवा जर्मनमध्ये ऐका.",
+    "cPhrases": "तेरा भाषांमध्ये २०० रोजचे वाक्प्रचार, रोमन उच्चार आणि आवाजासह.",
+    "cSay": "इंग्रजीत वाक्य लिहा आणि ते तेलुगू, हिंदी, कन्नड, तमिळ, मल्याळम, बंगाली, मराठी, गुजराती, आसामी, कोरियन, स्पॅनिश, जर्मन किंवा फ्रेंचमध्ये ऐका.",
     "dueCount": "{n} बाकी",
     "howH": "हे कसे चालते",
     "how1": "तुमच्या व्हिडिओसोबत उपशीर्षक फाइल उघडा, किंवा मजकूर पेस्ट करा.",
@@ -2273,7 +2557,47 @@
     "ovYes": "डाउनलोड",
     "ovNo": "आत्ता नको",
     "ovLoading": "ऑफलाइन आवाज लोड होत आहे…",
-    "ovFail": "ऑफलाइन आवाज वाजवता आला नाही."
+    "ovFail": "ऑफलाइन आवाज वाजवता आला नाही.",
+    "nav_today": "आज",
+    "nav_talk": "संभाषणे",
+    "cToday": "दररोज एक छोटा धडा: पाच नवे वाक्प्रचार, ऐकून उत्तर देणे आणि उजळणी.",
+    "cTalk": "खऱ्या संभाषणांचा सराव करा: रेस्टॉरंट, रस्ता विचारणे, खरेदी, डॉक्टर, हॉटेल. एक ओळ ऐका, मग तुमचे उत्तर निवडा.",
+    "tdLede": "रोज पाच नवे वाक्प्रचार. शिका, ऐका, आणि विसरण्याआधी जुने आठवा.",
+    "tdStart": "आजचा धडा सुरू करा",
+    "tdDone": "आजचा धडा पूर्ण झाला. उद्या पुन्हा या.",
+    "tdLearn": "शिका",
+    "tdListen": "ऐका",
+    "tdRecall": "आठवा",
+    "tdNext": "पुढे",
+    "tdFinish": "संपवा",
+    "tdListenQ": "ऐका, मग अर्थ निवडा",
+    "tdRecallQ": "हा अर्थ असलेला वाक्प्रचार निवडा:",
+    "tdScore": "गुण: {m} पैकी {n}",
+    "tdBonus": "आणखी एक धडा करा",
+    "tdProgress": "{m} पैकी {n} वाक्प्रचार शिकले",
+    "tdRecallN": "आज आठवायचे {n} जुने वाक्प्रचार",
+    "drLede": "एक संभाषण निवडा. ते काय म्हणतात ते ऐका, मग तुमचे उत्तर निवडा.",
+    "drPick": "संभाषणे",
+    "drTurns": "{n} फेऱ्या",
+    "drThem": "ते म्हणतात",
+    "drYou": "तुमची पाळी. म्हणा:",
+    "drHide": "ऐकण्याचा मोड: त्यांचे बोलणे लपवा",
+    "drTry": "बरोबर नाही. पुन्हा प्रयत्न करा.",
+    "drDone": "संभाषण पूर्ण झाले",
+    "drScore": "पहिल्या प्रयत्नात {m} पैकी {n} बरोबर",
+    "drReplay": "पुन्हा वाजवा",
+    "drTranscript": "संपूर्ण संभाषण",
+    "drAnother": "दुसरे संभाषण",
+    "d_meet": "कोणाला भेटणे",
+    "d_rest": "रेस्टॉरंटमध्ये",
+    "d_dir": "रस्ता विचारणे",
+    "d_shop": "खरेदी",
+    "d_doc": "डॉक्टरकडे",
+    "d_hotel": "हॉटेलमध्ये",
+    "cat_talk": "संभाषण",
+    "cat_feel": "भावना",
+    "cat_work": "काम आणि फोन",
+    "cat_home": "घर आणि हवामान"
   };
   I.ko = {
     "skip": "본문으로 건너뛰기",
@@ -2319,8 +2643,8 @@
     "cWords": "저장한 모든 단어를 CSV, Anki, 백업 파일로 내보낼 수 있습니다.",
     "cReview": "잊기 직전에 다시 나타나는 플래시카드.",
     "cScripts": "글자, 모음 기호, 숫자. 듣고, 퀴즈를 풀고, 쓰기를 연습하세요.",
-    "cPhrases": "열 가지 언어의 일상 표현 100개, 로마자 발음과 음성 포함.",
-    "cSay": "영어로 문장을 쓰고 텔루구어, 힌디어, 칸나다어, 타밀어, 말라얄람어, 벵골어, 마라티어, 한국어, 스페인어, 독일어로 들어 보세요.",
+    "cPhrases": "13개 언어의 일상 표현 200개, 로마자 발음과 음성 포함.",
+    "cSay": "영어로 문장을 쓰고 텔루구어, 힌디어, 칸나다어, 타밀어, 말라얄람어, 벵골어, 마라티어, 구자라트어, 아삼어, 한국어, 스페인어, 독일어, 프랑스어로 들어 보세요.",
     "dueCount": "{n}개 남음",
     "howH": "사용 방법",
     "how1": "영상과 함께 자막 파일을 열거나 글을 붙여넣으세요.",
@@ -2490,7 +2814,47 @@
     "ovYes": "내려받기",
     "ovNo": "나중에",
     "ovLoading": "오프라인 음성을 불러오는 중…",
-    "ovFail": "오프라인 음성을 재생할 수 없습니다."
+    "ovFail": "오프라인 음성을 재생할 수 없습니다.",
+    "nav_today": "오늘",
+    "nav_talk": "대화",
+    "cToday": "매일 짧은 수업: 새 표현 5개, 듣기 퀴즈, 복습 라운드.",
+    "cTalk": "실전 대화를 연습하세요: 식당, 길 묻기, 쇼핑, 병원, 호텔. 한 문장을 듣고 답변을 고르세요.",
+    "tdLede": "하루 새 표현 5개. 배우고, 듣고, 잊기 전에 이전 표현을 떠올려 보세요.",
+    "tdStart": "오늘의 수업 시작",
+    "tdDone": "오늘의 수업을 마쳤어요. 내일 또 오세요.",
+    "tdLearn": "배우기",
+    "tdListen": "듣기",
+    "tdRecall": "떠올리기",
+    "tdNext": "다음",
+    "tdFinish": "마치기",
+    "tdListenQ": "듣고 뜻을 고르세요",
+    "tdRecallQ": "이 뜻의 표현을 고르세요:",
+    "tdScore": "점수: {m}개 중 {n}개",
+    "tdBonus": "보너스 수업 하기",
+    "tdProgress": "{m}개 중 {n}개 표현 학습",
+    "tdRecallN": "오늘 복습할 이전 표현 {n}개",
+    "drLede": "대화를 고르세요. 상대의 말을 듣고 답변을 고르세요.",
+    "drPick": "대화",
+    "drTurns": "{n}번 주고받기",
+    "drThem": "상대의 말",
+    "drYou": "당신 차례. 말해 보세요:",
+    "drHide": "듣기 모드: 상대의 말 숨기기",
+    "drTry": "아쉬워요. 다시 해 보세요.",
+    "drDone": "대화 완료",
+    "drScore": "첫 시도에 {m}개 중 {n}개 정답",
+    "drReplay": "다시 하기",
+    "drTranscript": "전체 대화",
+    "drAnother": "다른 대화",
+    "d_meet": "처음 만났을 때",
+    "d_rest": "식당에서",
+    "d_dir": "길 묻기",
+    "d_shop": "쇼핑",
+    "d_doc": "병원에서",
+    "d_hotel": "호텔에서",
+    "cat_talk": "대화",
+    "cat_feel": "감정",
+    "cat_work": "일과 전화",
+    "cat_home": "집과 날씨"
   };
   I.es = {
     "skip": "Saltar al contenido",
@@ -2536,8 +2900,8 @@
     "cWords": "Todo lo que has guardado, con exportación a CSV, Anki y archivo de copia.",
     "cReview": "Tarjetas que vuelven justo antes de que las olvides.",
     "cScripts": "Letras, signos vocálicos y números. Escucha, haz un test y practica el trazo.",
-    "cPhrases": "100 frases cotidianas en diez idiomas, con pronunciación y voz.",
-    "cSay": "Escribe una frase en inglés y escúchala en telugu, hindi, canarés, tamil, malayalam, bengalí, maratí, coreano, español o alemán.",
+    "cPhrases": "200 frases cotidianas en trece idiomas, con pronunciación y voz.",
+    "cSay": "Escribe una frase en inglés y escúchala en telugu, hindi, canarés, tamil, malayalam, bengalí, maratí, guyaratí, asamés, coreano, español, alemán o francés.",
     "dueCount": "{n} pendientes",
     "howH": "Cómo funciona",
     "how1": "Abre un archivo de subtítulos junto a tu vídeo, o pega un texto.",
@@ -2707,7 +3071,47 @@
     "ovYes": "Descargar",
     "ovNo": "Ahora no",
     "ovLoading": "Cargando la voz sin conexión…",
-    "ovFail": "No se pudo reproducir la voz sin conexión."
+    "ovFail": "No se pudo reproducir la voz sin conexión.",
+    "nav_today": "Hoy",
+    "nav_talk": "Conversaciones",
+    "cToday": "Una lección corta cada día: cinco frases nuevas, un test de escucha y una ronda de repaso.",
+    "cTalk": "Practica conversaciones reales: restaurante, indicaciones, compras, médico, hotel. Escucha una frase y elige tu respuesta.",
+    "tdLede": "Cinco frases nuevas al día. Apréndelas, escúchalas y repasa las antiguas justo antes de olvidarlas.",
+    "tdStart": "Empezar la lección de hoy",
+    "tdDone": "La lección de hoy está hecha. Vuelve mañana.",
+    "tdLearn": "Aprender",
+    "tdListen": "Escuchar",
+    "tdRecall": "Repasar",
+    "tdNext": "Siguiente",
+    "tdFinish": "Terminar",
+    "tdListenQ": "Escucha y elige el significado",
+    "tdRecallQ": "Elige la frase que significa:",
+    "tdScore": "Puntuación: {n} de {m}",
+    "tdBonus": "Hacer una lección extra",
+    "tdProgress": "{n} de {m} frases aprendidas",
+    "tdRecallN": "{n} frases antiguas para repasar hoy",
+    "drLede": "Elige una conversación. Escucha lo que dicen y elige tu respuesta.",
+    "drPick": "Conversaciones",
+    "drTurns": "{n} turnos",
+    "drThem": "Dicen",
+    "drYou": "Tu turno. Di:",
+    "drHide": "Modo escucha: ocultar lo que dicen",
+    "drTry": "No exactamente. Inténtalo de nuevo.",
+    "drDone": "Conversación completa",
+    "drScore": "{n} de {m} bien al primer intento",
+    "drReplay": "Repetir",
+    "drTranscript": "Conversación completa",
+    "drAnother": "Otra conversación",
+    "d_meet": "Conocer a alguien",
+    "d_rest": "En un restaurante",
+    "d_dir": "Pedir indicaciones",
+    "d_shop": "De compras",
+    "d_doc": "En el médico",
+    "d_hotel": "En un hotel",
+    "cat_talk": "Conversación",
+    "cat_feel": "Sentimientos",
+    "cat_work": "Trabajo y teléfono",
+    "cat_home": "Casa y tiempo"
   };
   I.de = {
     "skip": "Zum Inhalt springen",
@@ -2753,8 +3157,8 @@
     "cWords": "Alles, was du gespeichert hast, mit Export als CSV, Anki und Sicherungsdatei.",
     "cReview": "Karteikarten, die kurz vor dem Vergessen wiederkommen.",
     "cScripts": "Buchstaben, Vokalzeichen und Ziffern. Anhören, Quiz machen, Schreiben üben.",
-    "cPhrases": "100 Alltagssätze in zehn Sprachen, mit Umschrift und Sprachausgabe.",
-    "cSay": "Schreibe einen Satz auf Englisch und höre ihn auf Telugu, Hindi, Kannada, Tamil, Malayalam, Bengalisch, Marathi, Koreanisch, Spanisch oder Deutsch.",
+    "cPhrases": "200 Alltagssätze in dreizehn Sprachen, mit Umschrift und Sprachausgabe.",
+    "cSay": "Schreibe einen Satz auf Englisch und höre ihn auf Telugu, Hindi, Kannada, Tamil, Malayalam, Bengalisch, Marathi, Gujarati, Assamesisch, Koreanisch, Spanisch, Deutsch oder Französisch.",
     "dueCount": "{n} fällig",
     "howH": "So funktioniert es",
     "how1": "Öffne eine Untertiteldatei zu deinem Video oder füge einen Text ein.",
@@ -2924,8 +3328,848 @@
     "ovYes": "Laden",
     "ovNo": "Jetzt nicht",
     "ovLoading": "Offline-Stimme wird geladen…",
-    "ovFail": "Die Offline-Stimme konnte nicht abgespielt werden."
+    "ovFail": "Die Offline-Stimme konnte nicht abgespielt werden.",
+    "nav_today": "Heute",
+    "nav_talk": "Gespräche",
+    "cToday": "Jeden Tag eine kurze Lektion: fünf neue Sätze, ein Hörquiz und eine Wiederholungsrunde.",
+    "cTalk": "Übe echte Gespräche: Restaurant, Wegbeschreibung, Einkaufen, Arzt, Hotel. Höre eine Zeile und wähle deine Antwort.",
+    "tdLede": "Fünf neue Sätze pro Tag. Lerne sie, höre sie und wiederhole ältere, kurz bevor du sie vergisst.",
+    "tdStart": "Heutige Lektion starten",
+    "tdDone": "Die heutige Lektion ist geschafft. Komm morgen wieder.",
+    "tdLearn": "Lernen",
+    "tdListen": "Hören",
+    "tdRecall": "Wiederholen",
+    "tdNext": "Weiter",
+    "tdFinish": "Fertig",
+    "tdListenQ": "Hören und die Bedeutung wählen",
+    "tdRecallQ": "Wähle den Satz mit dieser Bedeutung:",
+    "tdScore": "Ergebnis: {n} von {m}",
+    "tdBonus": "Bonuslektion machen",
+    "tdProgress": "{n} von {m} Sätzen gelernt",
+    "tdRecallN": "{n} ältere Sätze zum Wiederholen heute",
+    "drLede": "Wähle ein Gespräch. Höre, was gesagt wird, und wähle deine Antwort.",
+    "drPick": "Gespräche",
+    "drTurns": "{n} Runden",
+    "drThem": "Die andere Person sagt",
+    "drYou": "Du bist dran. Sage:",
+    "drHide": "Hörmodus: Gesagtes verbergen",
+    "drTry": "Nicht ganz. Versuche es nochmal.",
+    "drDone": "Gespräch abgeschlossen",
+    "drScore": "{n} von {m} beim ersten Versuch richtig",
+    "drReplay": "Nochmal spielen",
+    "drTranscript": "Ganzes Gespräch",
+    "drAnother": "Anderes Gespräch",
+    "d_meet": "Jemanden kennenlernen",
+    "d_rest": "Im Restaurant",
+    "d_dir": "Nach dem Weg fragen",
+    "d_shop": "Einkaufen",
+    "d_doc": "Beim Arzt",
+    "d_hotel": "Im Hotel",
+    "cat_talk": "Gespräch",
+    "cat_feel": "Gefühle",
+    "cat_work": "Arbeit und Telefon",
+    "cat_home": "Zuhause und Wetter"
   };
+  I.fr = {
+    "skip": "Aller au contenu",
+    "settings": "Réglages",
+    "part": "Fait partie d’EknathaLabs",
+    "privacyNote": "Fonctionne dans votre navigateur. Vos fichiers et vos mots restent sur votre appareil.",
+    "mainNav": "Principal",
+    "uiLang": "Langue de l’interface",
+    "focusLang": "Langue que j’apprends",
+    "scheme": "Style de romanisation",
+    "schSimple": "Simple",
+    "schIast": "Savant",
+    "showRoman": "Afficher la romanisation",
+    "on": "Oui",
+    "off": "Non",
+    "voiceSpeed": "Vitesse de la voix",
+    "perDay": "Révisions par séance",
+    "unlimited": "Illimité",
+    "theme": "Thème",
+    "light": "Clair",
+    "dark": "Sombre",
+    "new": "Nouveau",
+    "language": "Langue",
+    "allLangs": "Toutes les langues",
+    "allStatus": "Tous",
+    "auto": "Détecter automatiquement",
+    "indianLangs": "Langues de l’Inde",
+    "otherLangs": "Autres langues",
+    "nav_watch": "Regarder",
+    "nav_read": "Lire",
+    "nav_words": "Mes mots",
+    "nav_review": "Réviser",
+    "nav_scripts": "Écritures",
+    "nav_phrases": "Phrases",
+    "nav_say": "Dire",
+    "homeH": "Apprenez la langue parlée avec ce que vous regardez et lisez déjà",
+    "homeSub": "Apportez votre propre vidéo, audio ou texte. Touchez un mot pour l’entendre, voir sa prononciation en lettres latines et l’enregistrer. Révisez à intervalles pour le retenir. Gratuit, privé et hors ligne.",
+    "statWords": "Mots enregistrés",
+    "statDue": "Pour aujourd’hui",
+    "statStreak": "Jours de suite",
+    "cWatch": "Lisez votre vidéo ou audio avec des sous-titres sur deux lignes. Touchez les mots, répétez les lignes, ralentissez et imitez le locuteur.",
+    "cRead": "Collez ou ouvrez n’importe quel texte. Chaque mot est cliquable, avec romanisation et lecture à voix haute.",
+    "cWords": "Tout ce que vous avez enregistré, avec export en CSV, Anki et fichier de sauvegarde.",
+    "cReview": "Des fiches qui reviennent juste avant que vous les oubliiez.",
+    "cScripts": "Lettres, signes vocaliques et chiffres. Écoutez, faites un quiz et entraînez-vous à tracer.",
+    "cPhrases": "200 phrases du quotidien en treize langues, avec romanisation et voix.",
+    "cSay": "Écrivez une phrase en anglais et écoutez-la en télougou, hindi, kannada, tamoul, malayalam, bengali, marathi, gujarati, assamais, coréen, espagnol, allemand ou français.",
+    "dueCount": "{n} à réviser",
+    "howH": "Comment ça marche",
+    "how1": "Ouvrez un fichier de sous-titres avec votre vidéo, ou collez un texte.",
+    "how2": "Touchez un mot que vous ne connaissez pas. Écoutez-le et enregistrez-le avec son sens.",
+    "how3": "Revenez réviser. Les fiches reviennent au bon moment.",
+    "how4": "Tout reste sur cet appareil. Exportez quand vous voulez.",
+    "homeNote": "Les voix viennent de votre appareil. Les voix des langues indiennes varient selon le téléphone et le navigateur. Si vous n’entendez rien, ouvrez le test de voix dans les Réglages.",
+    "noTts": "Ce navigateur ne peut pas lire le texte à voix haute.",
+    "noVoice": "Cet appareil n’a pas de voix pour {l}. Installez-en une dans les réglages du système.",
+    "storageFull": "Enregistrement impossible. Le stockage du navigateur est plein ou désactivé.",
+    "meaning": "Sens",
+    "status": "Statut",
+    "st0": "Nouveau",
+    "st1": "En cours",
+    "st2": "Connu",
+    "seenIn": "Aussi dans les phrases",
+    "speak": "Dire",
+    "close": "Fermer",
+    "update": "Mettre à jour",
+    "save": "Enregistrer le mot",
+    "saved": "Enregistré",
+    "remove": "Retirer",
+    "speakSentence": "Lire la phrase",
+    "translateDevice": "Traduire sur l’appareil",
+    "trFail": "Traduction indisponible.",
+    "lookup": "Rechercher",
+    "opensTab": "Ouvre un nouvel onglet",
+    "wordDetails": "Détails du mot",
+    "rdLede": "Collez ou ouvrez un texte. Touchez n’importe quel mot.",
+    "rdPlaceholder": "Collez ici un texte dans n’importe quelle langue",
+    "rdText": "Texte à lire",
+    "rdEmpty": "Rien à afficher pour l’instant. Collez un texte ou chargez l’exemple.",
+    "rdStats": "{n} mots, {u} distincts. {k} connus, {l} en cours. Langue : {lang}",
+    "textLang": "Langue du texte",
+    "colorWords": "Colorer les mots selon le statut",
+    "fontSize": "Taille du texte",
+    "readAloud": "Lire à voix haute",
+    "stop": "Arrêter",
+    "sample": "Charger l’exemple",
+    "importTxt": "Ouvrir un fichier texte",
+    "clear": "Effacer",
+    "clickWord": "Touchez un mot pour voir les détails",
+    "wtLede": "Utilisez votre propre vidéo ou audio avec un fichier de sous-titres. Rien n’est envoyé.",
+    "wtSetup": "Choisissez vos fichiers",
+    "wtDrop": "Déposez ici la vidéo ou l’audio et les sous-titres, ou utilisez les boutons.",
+    "wtMedia": "Vidéo ou audio",
+    "wtSub1": "Sous-titres (langue apprise)",
+    "wtSub2": "Sous-titres (votre langue)",
+    "subLang": "Langue des sous-titres",
+    "wtStart": "Commencer",
+    "wtSample": "Essayer un exemple (lecture à voix haute)",
+    "noSubs": "Aucun sous-titre trouvé dans {f}. Utilisez .srt ou .vtt.",
+    "wtPrivacy": "Les fichiers s’ouvrent dans le navigateur et ne quittent pas votre appareil. Sans vidéo ni audio, les lignes sont lues avec la voix de votre appareil.",
+    "wtListenMode": "Mode écoute : les lignes sont lues à voix haute",
+    "wtTranscript": "Transcription",
+    "playPause": "Lecture ou pause",
+    "prevLine": "Ligne précédente",
+    "nextLine": "Ligne suivante",
+    "replay": "Répéter la ligne",
+    "loopLine": "Ligne en boucle",
+    "autoPause": "Pause après chaque ligne",
+    "hideTarget": "Masquer les sous-titres de la langue apprise",
+    "hideNative": "Masquer les sous-titres de ma langue",
+    "blurNative": "Flouter ma langue",
+    "speed": "Vitesse",
+    "subEarlier": "Sous-titres plus tôt",
+    "subLater": "Sous-titres plus tard",
+    "shadow": "Imiter",
+    "stopRec": "Arrêter",
+    "yourVoice": "Votre voix",
+    "orig": "Original",
+    "noMic": "L’enregistrement n’est pas pris en charge ici.",
+    "micDenied": "L’accès au micro a été refusé.",
+    "wtChange": "Changer de fichiers",
+    "wtKeys": "Touches : Espace lecture/pause, A/D ou flèches précédent/suivant, R répéter, L boucle, P pause après chaque ligne.",
+    "wdLede": "Vos mots enregistrés. Conservés uniquement dans ce navigateur.",
+    "wdCount": "{n} affichés, {d} à réviser maintenant",
+    "wdNoMatch": "Aucun mot ne correspond.",
+    "wdEmpty": "Aucun mot enregistré pour l’instant.",
+    "wdEmptySub": "Ouvrez Lire ou Regarder, touchez un mot et enregistrez-le.",
+    "wdMore": "{n} de plus non affichés. Utilisez la recherche.",
+    "wdNothing": "Rien à exporter.",
+    "wdImported": "{n} nouveaux mots importés.",
+    "wdImportFail": "Ce fichier n’a pas pu être lu.",
+    "wdPrivacy": "Si vous effacez les données du navigateur, la liste disparaît : exportez une sauvegarde de temps en temps.",
+    "search": "Rechercher",
+    "edit": "Modifier",
+    "dueNow": "Maintenant",
+    "dueToday": "Aujourd’hui",
+    "dueIn": "Dans {n} j",
+    "backup": "Sauvegarde",
+    "importWords": "Importer",
+    "rvLede": "Retournez la fiche, puis dites ce dont vous vous souveniez.",
+    "rvMode": "Type d’exercice",
+    "rvW2M": "Mot vers sens",
+    "rvM2W": "Sens vers mot",
+    "rvListen": "Écoute",
+    "rvCloze": "Texte à trous",
+    "rvStreak": "Jours de suite : {n}",
+    "rvDone": "Terminé : {n} fiches",
+    "rvDoneSub": "Revenez plus tard. Les fiches ratées reviennent en quelques minutes, les autres en quelques jours.",
+    "rvNone": "Rien à réviser",
+    "rvNoneSub": "Vous êtes à jour. Lisez ou regardez davantage pour trouver de nouveaux mots.",
+    "rvWhichWord": "Quel est ce mot ?",
+    "rvPlay": "Écouter le mot",
+    "rvListenQ": "Écoutez, puis rappelez-vous le sens",
+    "rvHint": "Sens",
+    "rvShow": "Voir la réponse",
+    "rvProgress": "Progression de la séance",
+    "again": "Encore",
+    "hard": "Difficile",
+    "good": "Bien",
+    "easy": "Facile",
+    "scLede": "Apprenez les lettres. Touchez-en une pour l’entendre et vous entraîner à la tracer.",
+    "scVowels": "Voyelles",
+    "scCons": "Consonnes",
+    "scSigns": "Signes vocaliques",
+    "scSignsNote": "Affichés sur la lettre {b}",
+    "scDigits": "Chiffres",
+    "scQuiz": "Mini-quiz",
+    "scQuizQ": "Comment lit-on cette lettre ?",
+    "scTrace": "Tracer",
+    "scTraceHint": "Touchez une lettre ci-dessus, puis tracez-la ici.",
+    "correct": "Correct !",
+    "wrongIs": "Raté. C’est {a}.",
+    "next": "Suivant",
+    "phLede": "Phrases du quotidien. Touchez un mot pour l’enregistrer.",
+    "phNote": "Ces phrases sont une base de départ. Faites-les relire par un locuteur natif avant de vous y fier.",
+    "cat_greet": "Salutations",
+    "cat_intro": "Présentations",
+    "cat_daily": "Vie quotidienne",
+    "cat_num": "Nombres",
+    "slow": "Lent",
+    "sayLede": "Écrivez une phrase en anglais. Obtenez-la dans une autre langue avec romanisation et voix.",
+    "sayPlaceholder": "Écrivez une phrase en anglais, par exemple : How are you?",
+    "sayInput": "Phrase en anglais",
+    "sayTo": "Dire en",
+    "sayGo": "Traduire et dire",
+    "sayEnglish": "Dire en anglais",
+    "sayResult": "Résultat",
+    "sayMatch": "Recueil de phrases",
+    "sayDevice": "Traduit sur votre appareil",
+    "sayClosest": "Phrases les plus proches du recueil",
+    "sayNone": "Traduire des phrases libres demande un navigateur avec traducteur intégré (Chrome récent). Voici les phrases les plus proches du recueil.",
+    "sayWorking": "Traduction sur votre appareil…",
+    "sayFail": "Le traducteur de l’appareil n’a pas fonctionné pour cette paire de langues. Voici les phrases les plus proches du recueil.",
+    "sayNote": "Rien n’est envoyé à un serveur. La traduction automatique peut se tromper : faites vérifier les phrases importantes par un locuteur natif.",
+    "copy": "Copier",
+    "copied": "Copié",
+    "cat_food": "Nourriture",
+    "cat_travel": "Voyage",
+    "cat_shop": "Achats",
+    "cat_health": "Santé",
+    "cat_people": "Personnes",
+    "cat_time": "Jours et heure",
+    "voiceCheck": "Test de voix",
+    "vcLede": "Quelles voix fonctionnent sur cet appareil. Appuyez sur Tester pour entendre chacune. Si une langue n’a pas de voix d’appareil, Bhasha peut utiliser une petite voix hors ligne.",
+    "vcDevice": "Voix de l’appareil",
+    "vcOffline": "Voix hors ligne prête",
+    "vcOfflineAvail": "Pas de voix d’appareil. Voix hors ligne disponible",
+    "vcNone": "Pas de voix",
+    "vcTest": "Tester",
+    "ovLabel": "Voix hors ligne de secours",
+    "ovAsk": "Demander",
+    "ovNote": "La voix hors ligne (eSpeak NG) pèse environ 18 Mo, se télécharge une fois, puis fonctionne sans internet. Elle sonne plus robotique que les voix d’appareil.",
+    "ovAskQ": "Cet appareil n’a pas de voix pour {l}. Télécharger une voix hors ligne (environ 18 Mo, une seule fois) ?",
+    "ovYes": "Télécharger",
+    "ovNo": "Pas maintenant",
+    "ovLoading": "Chargement de la voix hors ligne…",
+    "ovFail": "La voix hors ligne n’a pas pu être lue.",
+    "nav_today": "Aujourd’hui",
+    "nav_talk": "Conversations",
+    "cToday": "Une courte leçon chaque jour : cinq nouvelles phrases, un quiz d’écoute et un tour de rappel.",
+    "cTalk": "Entraînez-vous à de vraies conversations : restaurant, itinéraire, achats, médecin, hôtel. Écoutez une réplique, puis choisissez votre réponse.",
+    "tdLede": "Cinq nouvelles phrases par jour. Apprenez-les, écoutez-les, puis rappelez-vous les anciennes juste avant de les oublier.",
+    "tdStart": "Commencer la leçon du jour",
+    "tdDone": "La leçon du jour est terminée. Revenez demain.",
+    "tdLearn": "Apprendre",
+    "tdListen": "Écouter",
+    "tdRecall": "Rappel",
+    "tdNext": "Suivant",
+    "tdFinish": "Terminer",
+    "tdListenQ": "Écoutez, puis choisissez le sens",
+    "tdRecallQ": "Choisissez la phrase qui signifie :",
+    "tdScore": "Score : {n} sur {m}",
+    "tdBonus": "Faire une leçon bonus",
+    "tdProgress": "{n} phrases apprises sur {m}",
+    "tdRecallN": "{n} anciennes phrases à revoir aujourd’hui",
+    "drLede": "Choisissez une conversation. Écoutez ce qu’on vous dit, puis choisissez votre réponse.",
+    "drPick": "Conversations",
+    "drTurns": "{n} répliques",
+    "drThem": "Ils disent",
+    "drYou": "À vous. Dites :",
+    "drHide": "Mode écoute : masquer ce qu’ils disent",
+    "drTry": "Pas tout à fait. Réessayez.",
+    "drDone": "Conversation terminée",
+    "drScore": "{n} sur {m} justes du premier coup",
+    "drReplay": "Rejouer",
+    "drTranscript": "Conversation complète",
+    "drAnother": "Une autre conversation",
+    "d_meet": "Faire connaissance",
+    "d_rest": "Au restaurant",
+    "d_dir": "Demander son chemin",
+    "d_shop": "Faire des achats",
+    "d_doc": "Chez le médecin",
+    "d_hotel": "À l’hôtel",
+    "cat_talk": "Conversation",
+    "cat_feel": "Sentiments",
+    "cat_work": "Travail et téléphone",
+    "cat_home": "Maison et météo"
+  };
+  I.gu = {
+    "skip": "મુખ્ય સામગ્રી પર જાઓ",
+    "settings": "સેટિંગ્સ",
+    "part": "EknathaLabs નો ભાગ",
+    "privacyNote": "તમારા બ્રાઉઝરમાં જ ચાલે છે. તમારી ફાઇલો અને શબ્દો તમારા ડિવાઇસ પર જ રહે છે.",
+    "mainNav": "મુખ્ય",
+    "uiLang": "ઇન્ટરફેસની ભાષા",
+    "focusLang": "હું જે ભાષા શીખું છું",
+    "scheme": "રોમન લખાણની શૈલી",
+    "schSimple": "સરળ",
+    "schIast": "વિદ્વત્",
+    "showRoman": "રોમન ઉચ્ચાર બતાવો",
+    "on": "ચાલુ",
+    "off": "બંધ",
+    "voiceSpeed": "અવાજની ગતિ",
+    "perDay": "દરેક સત્રમાં પુનરાવર્તન",
+    "unlimited": "અમર્યાદિત",
+    "theme": "થીમ",
+    "light": "આછી",
+    "dark": "ઘેરી",
+    "new": "નવી",
+    "language": "ભાષા",
+    "allLangs": "બધી ભાષાઓ",
+    "allStatus": "બધા",
+    "auto": "આપોઆપ ઓળખો",
+    "indianLangs": "ભારતીય ભાષાઓ",
+    "otherLangs": "અન્ય ભાષાઓ",
+    "nav_watch": "જુઓ",
+    "nav_read": "વાંચો",
+    "nav_words": "મારા શબ્દો",
+    "nav_review": "પુનરાવર્તન",
+    "nav_scripts": "લિપિઓ",
+    "nav_phrases": "વાક્યો",
+    "nav_say": "બોલો",
+    "homeH": "તમે જે જુઓ અને વાંચો છો તેમાંથી જ બોલાતી ભાષા શીખો",
+    "homeSub": "તમારો પોતાનો વીડિયો, ઑડિયો કે લખાણ લાવો. કોઈપણ શબ્દ પર ટૅપ કરીને સાંભળો, અંગ્રેજી અક્ષરોમાં ઉચ્ચાર જુઓ અને સાચવો. અંતરાલે પુનરાવર્તન કરીને યાદ રાખો. મફત, ખાનગી અને ઑફલાઇન.",
+    "statWords": "સાચવેલા શબ્દો",
+    "statDue": "આજ માટે",
+    "statStreak": "સળંગ દિવસો",
+    "cWatch": "તમારો વીડિયો કે ઑડિયો બે લીટીના સબટાઇટલ સાથે ચલાવો. શબ્દો પર ટૅપ કરો, લીટી ફરી સાંભળો, ગતિ ધીમી કરો, વક્તાની નકલ કરો.",
+    "cRead": "કોઈપણ લખાણ પેસ્ટ કરો કે ખોલો. દરેક શબ્દ ટૅપ થઈ શકે છે, રોમન ઉચ્ચાર અને મોટેથી વાંચન સાથે.",
+    "cWords": "તમે સાચવેલું બધું, CSV, Anki અને બેકઅપ ફાઇલમાં નિકાસ સાથે.",
+    "cReview": "ભૂલી જાઓ તે પહેલાં પાછા આવતા ફ્લૅશકાર્ડ.",
+    "cScripts": "અક્ષરો, સ્વરચિહ્નો અને અંકો. સાંભળો, ક્વિઝ કરો, લખીને પ્રૅક્ટિસ કરો.",
+    "cPhrases": "તેર ભાષાઓમાં 200 રોજિંદા વાક્યો, રોમન ઉચ્ચાર અને અવાજ સાથે.",
+    "cSay": "અંગ્રેજીમાં વાક્ય લખો અને તેને તેલુગુ, હિન્દી, કન્નડ, તમિલ, મલયાલમ, બંગાળી, મરાઠી, ગુજરાતી, આસામી, કોરિયન, સ્પૅનિશ, જર્મન કે ફ્રેન્ચમાં સાંભળો.",
+    "dueCount": "{n} બાકી",
+    "howH": "આ કેવી રીતે કામ કરે છે",
+    "how1": "તમારા વીડિયો સાથે સબટાઇટલ ફાઇલ ખોલો, અથવા લખાણ પેસ્ટ કરો.",
+    "how2": "ન આવડતા શબ્દ પર ટૅપ કરો. સાંભળો અને અર્થ સાથે સાચવો.",
+    "how3": "પુનરાવર્તન માટે પાછા આવો. કાર્ડ યોગ્ય સમયે પાછા આવે છે.",
+    "how4": "બધું આ ડિવાઇસ પર જ રહે છે. જ્યારે ઇચ્છો ત્યારે નિકાસ કરો.",
+    "homeNote": "અવાજ તમારા ડિવાઇસમાંથી આવે છે. ભારતીય ભાષાઓના અવાજ ફોન અને બ્રાઉઝર પ્રમાણે જુદા હોય છે. કંઈ ન સંભળાય તો સેટિંગ્સમાંથી અવાજ ચકાસણી ખોલો.",
+    "noTts": "આ બ્રાઉઝર લખાણ મોટેથી વાંચી શકતું નથી.",
+    "noVoice": "આ ડિવાઇસ પર {l} અવાજ નથી. સિસ્ટમ સેટિંગ્સમાં એક ઇન્સ્ટૉલ કરો.",
+    "storageFull": "સાચવી શકાયું નથી. બ્રાઉઝરનો સ્ટોરેજ ભરેલો છે કે બંધ છે.",
+    "meaning": "અર્થ",
+    "status": "સ્થિતિ",
+    "st0": "નવો",
+    "st1": "શીખું છું",
+    "st2": "આવડે છે",
+    "seenIn": "વાક્યોની યાદીમાં પણ છે",
+    "speak": "બોલો",
+    "close": "બંધ કરો",
+    "update": "અપડેટ",
+    "save": "શબ્દ સાચવો",
+    "saved": "સાચવ્યો",
+    "remove": "કાઢી નાખો",
+    "speakSentence": "વાક્ય વાંચો",
+    "translateDevice": "ડિવાઇસ પર અનુવાદ",
+    "trFail": "અનુવાદ ઉપલબ્ધ નથી.",
+    "lookup": "શોધો",
+    "opensTab": "નવું ટૅબ ખૂલે છે",
+    "wordDetails": "શબ્દની વિગત",
+    "rdLede": "લખાણ પેસ્ટ કરો કે ખોલો. કોઈપણ શબ્દ પર ટૅપ કરો.",
+    "rdPlaceholder": "અહીં કોઈપણ ભાષાનું લખાણ પેસ્ટ કરો",
+    "rdText": "વાંચવાનું લખાણ",
+    "rdEmpty": "હજી બતાવવા જેવું કંઈ નથી. લખાણ પેસ્ટ કરો કે નમૂનો લોડ કરો.",
+    "rdStats": "{n} શબ્દો, {u} અલગ. {k} આવડે છે, {l} શીખું છું. ભાષા: {lang}",
+    "textLang": "લખાણની ભાષા",
+    "colorWords": "સ્થિતિ પ્રમાણે શબ્દોને રંગ",
+    "fontSize": "અક્ષરનું કદ",
+    "readAloud": "મોટેથી વાંચો",
+    "stop": "અટકાવો",
+    "sample": "નમૂનો લોડ કરો",
+    "importTxt": "લખાણ ફાઇલ ખોલો",
+    "clear": "ભૂંસો",
+    "clickWord": "વિગત માટે શબ્દ પર ટૅપ કરો",
+    "wtLede": "તમારો પોતાનો વીડિયો કે ઑડિયો સબટાઇટલ ફાઇલ સાથે વાપરો. કંઈ અપલોડ થતું નથી.",
+    "wtSetup": "તમારી ફાઇલો પસંદ કરો",
+    "wtDrop": "વીડિયો કે ઑડિયો અને સબટાઇટલ ફાઇલો અહીં મૂકો, અથવા બટનો વાપરો.",
+    "wtMedia": "વીડિયો કે ઑડિયો",
+    "wtSub1": "સબટાઇટલ (શીખવાની ભાષા)",
+    "wtSub2": "સબટાઇટલ (તમારી ભાષા)",
+    "subLang": "સબટાઇટલની ભાષા",
+    "wtStart": "શરૂ કરો",
+    "wtSample": "નમૂનો અજમાવો (મોટેથી વાંચે છે)",
+    "noSubs": "{f} માં સબટાઇટલ મળ્યા નથી. .srt કે .vtt વાપરો.",
+    "wtPrivacy": "ફાઇલો તમારા બ્રાઉઝરમાં જ ખૂલે છે અને ડિવાઇસની બહાર જતી નથી. વીડિયો કે ઑડિયો ન હોય તો લીટીઓ તમારા ડિવાઇસના અવાજમાં વંચાય છે.",
+    "wtListenMode": "સાંભળવાનો મોડ: લીટીઓ મોટેથી વંચાય છે",
+    "wtTranscript": "લિખિત લખાણ",
+    "playPause": "ચલાવો કે થોભાવો",
+    "prevLine": "પાછલી લીટી",
+    "nextLine": "આગલી લીટી",
+    "replay": "લીટી ફરી",
+    "loopLine": "લીટી વારંવાર",
+    "autoPause": "દરેક લીટી પછી થોભો",
+    "hideTarget": "શીખવાની ભાષાના સબટાઇટલ છુપાવો",
+    "hideNative": "મારી ભાષાના સબટાઇટલ છુપાવો",
+    "blurNative": "મારી ભાષા ઝાંખી કરો",
+    "speed": "ગતિ",
+    "subEarlier": "સબટાઇટલ વહેલા",
+    "subLater": "સબટાઇટલ મોડા",
+    "shadow": "નકલ કરો",
+    "stopRec": "અટકાવો",
+    "yourVoice": "તમારો અવાજ",
+    "orig": "મૂળ",
+    "noMic": "અહીં રેકૉર્ડિંગ સપોર્ટેડ નથી.",
+    "micDenied": "માઇક્રોફોનની પરવાનગી મળી નથી.",
+    "wtChange": "ફાઇલો બદલો",
+    "wtKeys": "કી: Space ચલાવો/થોભો, A/D કે તીર પાછળ/આગળ, R ફરી, L વારંવાર, P દરેક લીટી પછી થોભો.",
+    "wdLede": "તમારા સાચવેલા શબ્દો. ફક્ત આ બ્રાઉઝરમાં રહે છે.",
+    "wdCount": "{n} બતાવ્યા, {d} હમણાં બાકી",
+    "wdNoMatch": "કોઈ શબ્દ મળતો નથી.",
+    "wdEmpty": "હજી કોઈ શબ્દ સાચવ્યો નથી.",
+    "wdEmptySub": "વાંચો કે જુઓ ખોલીને શબ્દ પર ટૅપ કરી સાચવો.",
+    "wdMore": "બીજા {n} બતાવ્યા નથી. શોધ વાપરો.",
+    "wdNothing": "નિકાસ કરવા જેવું કંઈ નથી.",
+    "wdImported": "{n} નવા શબ્દો આયાત થયા.",
+    "wdImportFail": "એ ફાઇલ વાંચી શકાઈ નહીં.",
+    "wdPrivacy": "બ્રાઉઝર ડેટા સાફ કરશો તો યાદી જતી રહેશે, એટલે વચ્ચે વચ્ચે બેકઅપ નિકાસ કરો.",
+    "search": "શોધ",
+    "edit": "સંપાદન",
+    "dueNow": "હમણાં",
+    "dueToday": "આજે",
+    "dueIn": "{n} દિવસમાં",
+    "backup": "બેકઅપ",
+    "importWords": "આયાત",
+    "rvLede": "કાર્ડ ફેરવો, પછી કહો કે કેટલું યાદ હતું.",
+    "rvMode": "પ્રૅક્ટિસનો પ્રકાર",
+    "rvW2M": "શબ્દથી અર્થ",
+    "rvM2W": "અર્થથી શબ્દ",
+    "rvListen": "સાંભળવું",
+    "rvCloze": "ખાલી જગ્યા પૂરો",
+    "rvStreak": "સળંગ દિવસો: {n}",
+    "rvDone": "પૂર્ણ: {n} કાર્ડ",
+    "rvDoneSub": "પછી પાછા આવજો. ખોટા કાર્ડ થોડી મિનિટોમાં અને બાકીના થોડા દિવસોમાં પાછા આવશે.",
+    "rvNone": "કંઈ બાકી નથી",
+    "rvNoneSub": "તમે અદ્યતન છો. નવા શબ્દો માટે વધુ વાંચો કે જુઓ.",
+    "rvWhichWord": "આ કયો શબ્દ છે?",
+    "rvPlay": "શબ્દ સાંભળો",
+    "rvListenQ": "સાંભળો, પછી અર્થ યાદ કરો",
+    "rvHint": "અર્થ",
+    "rvShow": "જવાબ બતાવો",
+    "rvProgress": "સત્રની પ્રગતિ",
+    "again": "ફરી",
+    "hard": "અઘરું",
+    "good": "સારું",
+    "easy": "સહેલું",
+    "scLede": "અક્ષરો શીખો. કોઈપણ અક્ષર પર ટૅપ કરીને સાંભળો અને લખવાની પ્રૅક્ટિસ કરો.",
+    "scVowels": "સ્વર",
+    "scCons": "વ્યંજન",
+    "scSigns": "સ્વરચિહ્નો",
+    "scSignsNote": "અક્ષર {b} પર બતાવ્યા છે",
+    "scDigits": "અંક",
+    "scQuiz": "નાની ક્વિઝ",
+    "scQuizQ": "આ અક્ષર કેવી રીતે વંચાય?",
+    "scTrace": "લખીને જુઓ",
+    "scTraceHint": "ઉપર એક અક્ષર પર ટૅપ કરો, પછી અહીં લખો.",
+    "correct": "સાચું!",
+    "wrongIs": "ખોટું. આ {a} છે.",
+    "next": "આગળ",
+    "phLede": "રોજિંદા વાક્યો. કોઈપણ શબ્દ પર ટૅપ કરીને સાચવો.",
+    "phNote": "આ વાક્યો શરૂઆતનો સંગ્રહ છે. તેના પર આધાર રાખતાં પહેલાં માતૃભાષીને બતાવીને ચકાસો.",
+    "cat_greet": "અભિવાદન",
+    "cat_intro": "પરિચય",
+    "cat_daily": "રોજિંદું જીવન",
+    "cat_num": "સંખ્યાઓ",
+    "slow": "ધીમે",
+    "sayLede": "અંગ્રેજીમાં વાક્ય લખો. તેને બીજી ભાષામાં રોમન ઉચ્ચાર અને અવાજ સાથે મેળવો.",
+    "sayPlaceholder": "અંગ્રેજી વાક્ય લખો, જેમ કે: How are you?",
+    "sayInput": "અંગ્રેજી વાક્ય",
+    "sayTo": "આ ભાષામાં બોલો",
+    "sayGo": "અનુવાદ કરીને બોલો",
+    "sayEnglish": "અંગ્રેજીમાં બોલો",
+    "sayResult": "પરિણામ",
+    "sayMatch": "વાક્ય સંગ્રહ",
+    "sayDevice": "તમારા ડિવાઇસ પર અનુવાદિત",
+    "sayClosest": "વાક્ય સંગ્રહના સૌથી નજીકના વાક્યો",
+    "sayNone": "કોઈપણ વાક્યનો અનુવાદ કરવા ડિવાઇસ પર અનુવાદક ધરાવતું બ્રાઉઝર (તાજેતરનું Chrome) જોઈએ. વાક્ય સંગ્રહના સૌથી નજીકના વાક્યો અહીં છે.",
+    "sayWorking": "તમારા ડિવાઇસ પર અનુવાદ થઈ રહ્યો છે…",
+    "sayFail": "ડિવાઇસનો અનુવાદક આ ભાષાજોડી માટે ચાલ્યો નહીં. વાક્ય સંગ્રહના સૌથી નજીકના વાક્યો અહીં છે.",
+    "sayNote": "કંઈ સર્વરને મોકલાતું નથી. યંત્ર-અનુવાદ ખોટો હોઈ શકે, એટલે મહત્ત્વના વાક્યો માતૃભાષી પાસે ચકાસાવો.",
+    "copy": "કૉપી",
+    "copied": "કૉપી થયું",
+    "cat_food": "ભોજન",
+    "cat_travel": "પ્રવાસ",
+    "cat_shop": "ખરીદી",
+    "cat_health": "આરોગ્ય",
+    "cat_people": "લોકો",
+    "cat_time": "દિવસો અને સમય",
+    "voiceCheck": "અવાજ ચકાસણી",
+    "vcLede": "આ ડિવાઇસ પર કયા અવાજ ચાલે છે. દરેક સાંભળવા ચકાસો દબાવો. કોઈ ભાષાનો ડિવાઇસ અવાજ ન હોય તો Bhasha નાનો ઑફલાઇન અવાજ વાપરી શકે છે.",
+    "vcDevice": "ડિવાઇસનો અવાજ",
+    "vcOffline": "ઑફલાઇન અવાજ તૈયાર",
+    "vcOfflineAvail": "ડિવાઇસનો અવાજ નથી. ઑફલાઇન અવાજ ઉપલબ્ધ",
+    "vcNone": "અવાજ નથી",
+    "vcTest": "ચકાસો",
+    "ovLabel": "ઑફલાઇન અવાજનો બેકઅપ",
+    "ovAsk": "પૂછો",
+    "ovNote": "ઑફલાઇન અવાજ (eSpeak NG) આશરે 18 MB નો છે, એક વાર ડાઉનલોડ થયા પછી ઇન્ટરનેટ વિના ચાલે છે. તે ડિવાઇસના અવાજ કરતાં વધુ યાંત્રિક લાગે છે.",
+    "ovAskQ": "આ ડિવાઇસ પર {l} અવાજ નથી. ઑફલાઇન અવાજ ડાઉનલોડ કરવો (આશરે 18 MB, એક વાર)?",
+    "ovYes": "ડાઉનલોડ",
+    "ovNo": "હમણાં નહીં",
+    "ovLoading": "ઑફલાઇન અવાજ લોડ થઈ રહ્યો છે…",
+    "ovFail": "ઑફલાઇન અવાજ વગાડી શકાયો નહીં.",
+    "nav_today": "આજે",
+    "nav_talk": "વાતચીત",
+    "cToday": "દરરોજ એક ટૂંકો પાઠ: પાંચ નવા વાક્યો, સાંભળવાની ક્વિઝ અને યાદ કરવાનો રાઉન્ડ.",
+    "cTalk": "સાચી વાતચીતની પ્રૅક્ટિસ કરો: રેસ્ટોરાં, રસ્તો પૂછવો, ખરીદી, ડૉક્ટર, હોટેલ. એક લીટી સાંભળો, પછી તમારો જવાબ પસંદ કરો.",
+    "tdLede": "રોજ પાંચ નવા વાક્યો. શીખો, સાંભળો, અને ભૂલી જાઓ તે પહેલાં જૂના યાદ કરો.",
+    "tdStart": "આજનો પાઠ શરૂ કરો",
+    "tdDone": "આજનો પાઠ પૂરો થયો. કાલે ફરી આવજો.",
+    "tdLearn": "શીખો",
+    "tdListen": "સાંભળો",
+    "tdRecall": "યાદ કરો",
+    "tdNext": "આગળ",
+    "tdFinish": "પૂરું",
+    "tdListenQ": "સાંભળો, પછી અર્થ પસંદ કરો",
+    "tdRecallQ": "આ અર્થવાળું વાક્ય પસંદ કરો:",
+    "tdScore": "ગુણ: {m} માંથી {n}",
+    "tdBonus": "એક વધુ પાઠ કરો",
+    "tdProgress": "{m} માંથી {n} વાક્યો શીખ્યા",
+    "tdRecallN": "આજે યાદ કરવાના {n} જૂના વાક્યો",
+    "drLede": "એક વાતચીત પસંદ કરો. તેઓ શું કહે છે તે સાંભળો, પછી તમારો જવાબ પસંદ કરો.",
+    "drPick": "વાતચીત",
+    "drTurns": "{n} વારા",
+    "drThem": "તેઓ કહે છે",
+    "drYou": "તમારો વારો. કહો:",
+    "drHide": "સાંભળવાનો મોડ: તેમની વાત છુપાવો",
+    "drTry": "બરાબર નથી. ફરી પ્રયાસ કરો.",
+    "drDone": "વાતચીત પૂરી થઈ",
+    "drScore": "પહેલા પ્રયાસે {m} માંથી {n} સાચા",
+    "drReplay": "ફરી ચલાવો",
+    "drTranscript": "આખી વાતચીત",
+    "drAnother": "બીજી વાતચીત",
+    "d_meet": "કોઈને મળવું",
+    "d_rest": "રેસ્ટોરાંમાં",
+    "d_dir": "રસ્તો પૂછવો",
+    "d_shop": "ખરીદી",
+    "d_doc": "ડૉક્ટર પાસે",
+    "d_hotel": "હોટેલમાં",
+    "cat_talk": "વાતચીત",
+    "cat_feel": "લાગણીઓ",
+    "cat_work": "કામ અને ફોન",
+    "cat_home": "ઘર અને હવામાન"
+  };
+  I.as = {
+    "skip": "মূল বিষয়লৈ যাওক",
+    "settings": "ছেটিংছ",
+    "part": "EknathaLabs ৰ অংশ",
+    "privacyNote": "আপোনাৰ ব্ৰাউজাৰতে চলে। আপোনাৰ ফাইল আৰু শব্দ আপোনাৰ ডিভাইচতে থাকে।",
+    "mainNav": "মূল",
+    "uiLang": "ইণ্টাৰফেচৰ ভাষা",
+    "focusLang": "মই শিকি থকা ভাষা",
+    "scheme": "ৰোমান লিপিৰ ধৰণ",
+    "schSimple": "সহজ",
+    "schIast": "পাণ্ডিত্যপূৰ্ণ",
+    "showRoman": "ৰোমান উচ্চাৰণ দেখুৱাওক",
+    "on": "চলি আছে",
+    "off": "বন্ধ",
+    "voiceSpeed": "মাতৰ গতি",
+    "perDay": "প্ৰতিটো ছেছনত পুনৰাবৃত্তি",
+    "unlimited": "সীমাহীন",
+    "theme": "থীম",
+    "light": "পাতল",
+    "dark": "গাঢ়",
+    "new": "নতুন",
+    "language": "ভাষা",
+    "allLangs": "সকলো ভাষা",
+    "allStatus": "সকলো",
+    "auto": "নিজে নিজে চিনাক্ত কৰক",
+    "indianLangs": "ভাৰতীয় ভাষা",
+    "otherLangs": "অন্য ভাষা",
+    "nav_watch": "চাওক",
+    "nav_read": "পঢ়ক",
+    "nav_words": "মোৰ শব্দ",
+    "nav_review": "পুনৰাবৃত্তি",
+    "nav_scripts": "লিপি",
+    "nav_phrases": "বাক্যাংশ",
+    "nav_say": "কওক",
+    "homeH": "আপুনি যি চায় আৰু পঢ়ে তাৰ পৰাই কথিত ভাষা শিকক",
+    "homeSub": "নিজৰ ভিডিঅ’, অডিঅ’ বা লেখা আনক। যিকোনো শব্দত টেপ কৰি শুনক, ইংৰাজী আখৰত উচ্চাৰণ চাওক আৰু সংৰক্ষণ কৰক। ব্যৱধানত পুনৰাবৃত্তি কৰি মনত ৰাখক। বিনামূলীয়া, ব্যক্তিগত আৰু অফলাইনত চলে।",
+    "statWords": "সংৰক্ষিত শব্দ",
+    "statDue": "আজিৰ বাবে",
+    "statStreak": "লগে লগে দিন",
+    "cWatch": "নিজৰ ভিডিঅ’ বা অডিঅ’ দুশাৰী উপশিৰোনামৰ সৈতে চলাওক। শব্দত টেপ কৰক, শাৰী পুনৰ শুনক, গতি লেহেমীয়া কৰক, বক্তাৰ অনুকৰণ কৰক।",
+    "cRead": "যিকোনো লেখা পেষ্ট কৰক বা খোলক। প্ৰতিটো শব্দ টেপ কৰিব পাৰি, ৰোমান উচ্চাৰণ আৰু ডাঙৰকৈ পঢ়াৰ সৈতে।",
+    "cWords": "আপুনি সংৰক্ষণ কৰা সকলো, CSV, Anki আৰু বেকআপ ফাইলত ৰপ্তানিৰ সৈতে।",
+    "cReview": "পাহৰি যোৱাৰ আগতে উভতি অহা ফ্লেছকাৰ্ড।",
+    "cScripts": "আখৰ, স্বৰচিহ্ন আৰু সংখ্যা। শুনক, কুইজ খেলক, লিখি অভ্যাস কৰক।",
+    "cPhrases": "তেৰটা ভাষাত ২০০টা দৈনন্দিন বাক্যাংশ, ৰোমান উচ্চাৰণ আৰু মাতৰ সৈতে।",
+    "cSay": "ইংৰাজীত বাক্য লিখক আৰু তেলুগু, হিন্দী, কন্নড়, তামিল, মালয়ালম, বঙালী, মাৰাঠী, গুজৰাটী, অসমীয়া, কোৰিয়ান, স্পেনিছ, জাৰ্মান বা ফৰাচীত শুনক।",
+    "dueCount": "{n}টা বাকী",
+    "howH": "ই কেনেকৈ কাম কৰে",
+    "how1": "আপোনাৰ ভিডিঅ’ৰ সৈতে উপশিৰোনাম ফাইল খোলক, বা লেখা পেষ্ট কৰক।",
+    "how2": "নজনা শব্দত টেপ কৰক। শুনক আৰু অৰ্থৰ সৈতে সংৰক্ষণ কৰক।",
+    "how3": "পুনৰাবৃত্তিলৈ উভতি আহক। কাৰ্ডবোৰ ঠিক সময়ত উভতি আহে।",
+    "how4": "সকলো এই ডিভাইচতে থাকে। যেতিয়া ইচ্ছা ৰপ্তানি কৰক।",
+    "homeNote": "মাত আপোনাৰ ডিভাইচৰ পৰা আহে। ভাৰতীয় ভাষাৰ মাত ফোন আৰু ব্ৰাউজাৰ অনুসৰি বেলেগ হয়। একো নুশুনিলে ছেটিংছৰ পৰা মাত পৰীক্ষা খোলক।",
+    "noTts": "এই ব্ৰাউজাৰে লেখা ডাঙৰকৈ পঢ়িব নোৱাৰে।",
+    "noVoice": "এই ডিভাইচত {l} মাত নাই। ছিষ্টেম ছেটিংছত এটা ইনষ্টল কৰক।",
+    "storageFull": "সংৰক্ষণ কৰিব পৰা নগ’ল। ব্ৰাউজাৰৰ ষ্ট’ৰেজ ভৰ্তি বা বন্ধ।",
+    "meaning": "অৰ্থ",
+    "status": "অৱস্থা",
+    "st0": "নতুন",
+    "st1": "শিকি আছোঁ",
+    "st2": "জানোঁ",
+    "seenIn": "বাক্যাংশৰ তালিকাতো আছে",
+    "speak": "কওক",
+    "close": "বন্ধ কৰক",
+    "update": "হালনাগাদ",
+    "save": "শব্দ সংৰক্ষণ",
+    "saved": "সংৰক্ষিত",
+    "remove": "আঁতৰাওক",
+    "speakSentence": "বাক্য পঢ়ক",
+    "translateDevice": "ডিভাইচত অনুবাদ",
+    "trFail": "অনুবাদ উপলব্ধ নহয়।",
+    "lookup": "সন্ধান",
+    "opensTab": "নতুন টেব খোলে",
+    "wordDetails": "শব্দৰ বিৱৰণ",
+    "rdLede": "লেখা পেষ্ট কৰক বা খোলক। যিকোনো শব্দত টেপ কৰক।",
+    "rdPlaceholder": "ইয়াত যিকোনো ভাষাৰ লেখা পেষ্ট কৰক",
+    "rdText": "পঢ়িবলগীয়া লেখা",
+    "rdEmpty": "এতিয়ালৈকে দেখুৱাবলৈ একো নাই। লেখা পেষ্ট কৰক বা নমুনা লোড কৰক।",
+    "rdStats": "{n}টা শব্দ, {u}টা বেলেগ। {k}টা জানোঁ, {l}টা শিকি আছোঁ। ভাষা: {lang}",
+    "textLang": "লেখাৰ ভাষা",
+    "colorWords": "অৱস্থা অনুসৰি শব্দত ৰং",
+    "fontSize": "আখৰৰ আকাৰ",
+    "readAloud": "ডাঙৰকৈ পঢ়ক",
+    "stop": "ৰখাওক",
+    "sample": "নমুনা লোড কৰক",
+    "importTxt": "লেখাৰ ফাইল খোলক",
+    "clear": "মচক",
+    "clickWord": "বিৱৰণৰ বাবে শব্দত টেপ কৰক",
+    "wtLede": "নিজৰ ভিডিঅ’ বা অডিঅ’ উপশিৰোনাম ফাইলৰ সৈতে ব্যৱহাৰ কৰক। একো আপলোড নহয়।",
+    "wtSetup": "আপোনাৰ ফাইল বাছক",
+    "wtDrop": "ভিডিঅ’ বা অডিঅ’ আৰু উপশিৰোনাম ফাইল ইয়াত এৰি দিয়ক, বা বুটাম ব্যৱহাৰ কৰক।",
+    "wtMedia": "ভিডিঅ’ বা অডিঅ’",
+    "wtSub1": "উপশিৰোনাম (শিকি থকা ভাষা)",
+    "wtSub2": "উপশিৰোনাম (আপোনাৰ ভাষা)",
+    "subLang": "উপশিৰোনামৰ ভাষা",
+    "wtStart": "আৰম্ভ কৰক",
+    "wtSample": "নমুনা চেষ্টা কৰক (ডাঙৰকৈ পঢ়ে)",
+    "noSubs": "{f} ত উপশিৰোনাম পোৱা নগ’ল। .srt বা .vtt ব্যৱহাৰ কৰক।",
+    "wtPrivacy": "ফাইল আপোনাৰ ব্ৰাউজাৰতে খোলে, ডিভাইচৰ বাহিৰলৈ নাযায়। ভিডিঅ’ বা অডিঅ’ নাথাকিলে শাৰীবোৰ আপোনাৰ ডিভাইচৰ মাতেৰে পঢ়া হয়।",
+    "wtListenMode": "শুনাৰ মোড: শাৰীবোৰ ডাঙৰকৈ পঢ়া হয়",
+    "wtTranscript": "লিখিত ৰূপ",
+    "playPause": "চলাওক বা ৰখাওক",
+    "prevLine": "আগৰ শাৰী",
+    "nextLine": "পিছৰ শাৰী",
+    "replay": "শাৰী পুনৰ",
+    "loopLine": "শাৰী বাৰে বাৰে",
+    "autoPause": "প্ৰতি শাৰীৰ পিছত ৰওক",
+    "hideTarget": "শিকি থকা ভাষাৰ উপশিৰোনাম লুকুৱাওক",
+    "hideNative": "মোৰ ভাষাৰ উপশিৰোনাম লুকুৱাওক",
+    "blurNative": "মোৰ ভাষা জাপ মাৰক",
+    "speed": "গতি",
+    "subEarlier": "উপশিৰোনাম আগতে",
+    "subLater": "উপশিৰোনাম পিছত",
+    "shadow": "অনুকৰণ",
+    "stopRec": "ৰখাওক",
+    "yourVoice": "আপোনাৰ মাত",
+    "orig": "মূল",
+    "noMic": "ইয়াত ৰেকৰ্ডিং সমৰ্থিত নহয়।",
+    "micDenied": "মাইক্ৰ’ফোনৰ অনুমতি দিয়া হোৱা নাই।",
+    "wtChange": "ফাইল সলনি কৰক",
+    "wtKeys": "চাবি: Space চলাওক/ৰখাওক, A/D বা কাঁড় আগ/পিছ, R পুনৰ, L বাৰে বাৰে, P প্ৰতি শাৰীৰ পিছত ৰওক।",
+    "wdLede": "আপোনাৰ সংৰক্ষিত শব্দ। কেৱল এই ব্ৰাউজাৰতে থাকে।",
+    "wdCount": "{n}টা দেখুওৱা হৈছে, {d}টা এতিয়া বাকী",
+    "wdNoMatch": "কোনো শব্দ মিলা নাই।",
+    "wdEmpty": "এতিয়ালৈকে কোনো শব্দ সংৰক্ষণ কৰা হোৱা নাই।",
+    "wdEmptySub": "পঢ়ক বা চাওক খুলি শব্দত টেপ কৰি সংৰক্ষণ কৰক।",
+    "wdMore": "আৰু {n}টা দেখুওৱা হোৱা নাই। সন্ধান ব্যৱহাৰ কৰক।",
+    "wdNothing": "ৰপ্তানি কৰিবলৈ একো নাই।",
+    "wdImported": "{n}টা নতুন শব্দ আমদানি হ’ল।",
+    "wdImportFail": "সেই ফাইল পঢ়িব পৰা নগ’ল।",
+    "wdPrivacy": "ব্ৰাউজাৰৰ ডাটা মচিলে তালিকা নাইকিয়া হয়, গতিকে মাজে মাজে বেকআপ ৰপ্তানি কৰক।",
+    "search": "সন্ধান",
+    "edit": "সম্পাদনা",
+    "dueNow": "এতিয়া",
+    "dueToday": "আজি",
+    "dueIn": "{n} দিনত",
+    "backup": "বেকআপ",
+    "importWords": "আমদানি",
+    "rvLede": "কাৰ্ড লুটিয়াওক, তাৰ পিছত কওক কিমান মনত আছিল।",
+    "rvMode": "অভ্যাসৰ প্ৰকাৰ",
+    "rvW2M": "শব্দৰ পৰা অৰ্থ",
+    "rvM2W": "অৰ্থৰ পৰা শব্দ",
+    "rvListen": "শুনা",
+    "rvCloze": "খালী ঠাই পূৰ কৰক",
+    "rvStreak": "লগে লগে দিন: {n}",
+    "rvDone": "সম্পূৰ্ণ: {n}খন কাৰ্ড",
+    "rvDoneSub": "পিছত আকৌ আহক। ভুল হোৱা কাৰ্ড কেইমিনিটমানৰ ভিতৰত, বাকীবোৰ কেইদিনমানৰ ভিতৰত উভতি আহিব।",
+    "rvNone": "একো বাকী নাই",
+    "rvNoneSub": "আপুনি হালনাগাদ আছে। নতুন শব্দ পাবলৈ আৰু পঢ়ক বা চাওক।",
+    "rvWhichWord": "এইটো কি শব্দ?",
+    "rvPlay": "শব্দ শুনক",
+    "rvListenQ": "শুনক, তাৰ পিছত অৰ্থ মনত পেলাওক",
+    "rvHint": "অৰ্থ",
+    "rvShow": "উত্তৰ দেখুৱাওক",
+    "rvProgress": "ছেছনৰ অগ্ৰগতি",
+    "again": "পুনৰ",
+    "hard": "টান",
+    "good": "ভাল",
+    "easy": "সহজ",
+    "scLede": "আখৰ শিকক। যিকোনো আখৰত টেপ কৰি শুনক আৰু লিখি অভ্যাস কৰক।",
+    "scVowels": "স্বৰবৰ্ণ",
+    "scCons": "ব্যঞ্জনবৰ্ণ",
+    "scSigns": "স্বৰচিহ্ন",
+    "scSignsNote": "{b} আখৰৰ ওপৰত দেখুওৱা হৈছে",
+    "scDigits": "সংখ্যা",
+    "scQuiz": "সৰু কুইজ",
+    "scQuizQ": "এই আখৰটো কেনেকৈ পঢ়িব?",
+    "scTrace": "লিখি চাওক",
+    "scTraceHint": "ওপৰত এটা আখৰত টেপ কৰক, তাৰ পিছত ইয়াত লিখক।",
+    "correct": "শুদ্ধ!",
+    "wrongIs": "ভুল। এইটো {a}।",
+    "next": "পিছৰটো",
+    "phLede": "দৈনন্দিন বাক্যাংশ। যিকোনো শব্দত টেপ কৰি সংৰক্ষণ কৰক।",
+    "phNote": "এই বাক্যাংশবোৰ আৰম্ভণিৰ সংকলন। ইয়াত ভৰসা কৰাৰ আগতে মাতৃভাষীক দেখুৱাই লওক।",
+    "cat_greet": "শুভেচ্ছা",
+    "cat_intro": "পৰিচয়",
+    "cat_daily": "দৈনন্দিন জীৱন",
+    "cat_num": "সংখ্যা",
+    "slow": "লাহে লাহে",
+    "sayLede": "ইংৰাজীত বাক্য লিখক। আন ভাষাত ৰোমান উচ্চাৰণ আৰু মাতৰ সৈতে পাওক।",
+    "sayPlaceholder": "ইংৰাজী বাক্য লিখক, যেনে: How are you?",
+    "sayInput": "ইংৰাজী বাক্য",
+    "sayTo": "এই ভাষাত কওক",
+    "sayGo": "অনুবাদ কৰি কওক",
+    "sayEnglish": "ইংৰাজীত কওক",
+    "sayResult": "ফলাফল",
+    "sayMatch": "বাক্যাংশ সংকলন",
+    "sayDevice": "আপোনাৰ ডিভাইচত অনুবাদ কৰা",
+    "sayClosest": "বাক্যাংশ সংকলনৰ আটাইতকৈ ওচৰৰ বাক্য",
+    "sayNone": "যিকোনো বাক্য অনুবাদ কৰিবলৈ ডিভাইচত অনুবাদক থকা ব্ৰাউজাৰ (শেহতীয়া Chrome) লাগে। বাক্যাংশ সংকলনৰ আটাইতকৈ ওচৰৰ বাক্যবোৰ ইয়াত আছে।",
+    "sayWorking": "আপোনাৰ ডিভাইচত অনুবাদ হৈ আছে…",
+    "sayFail": "ডিভাইচৰ অনুবাদকে এই ভাষাযোৰৰ বাবে কাম কৰা নাই। বাক্যাংশ সংকলনৰ আটাইতকৈ ওচৰৰ বাক্যবোৰ ইয়াত আছে।",
+    "sayNote": "একো চাৰ্ভাৰলৈ পঠোৱা নহয়। যান্ত্ৰিক অনুবাদ ভুল হ’ব পাৰে, গতিকে গুৰুত্বপূৰ্ণ বাক্য মাতৃভাষীৰ দ্বাৰা পৰীক্ষা কৰাই লওক।",
+    "copy": "কপি",
+    "copied": "কপি হ’ল",
+    "cat_food": "আহাৰ",
+    "cat_travel": "ভ্ৰমণ",
+    "cat_shop": "বজাৰ-সদাই",
+    "cat_health": "স্বাস্থ্য",
+    "cat_people": "মানুহ",
+    "cat_time": "দিন আৰু সময়",
+    "voiceCheck": "মাত পৰীক্ষা",
+    "vcLede": "এই ডিভাইচত কোনবোৰ মাত চলে। প্ৰত্যেকটো শুনিবলৈ পৰীক্ষা টিপক। কোনো ভাষাৰ ডিভাইচ মাত নাথাকিলে Bhasha এটা সৰু অফলাইন মাত ব্যৱহাৰ কৰিব পাৰে।",
+    "vcDevice": "ডিভাইচৰ মাত",
+    "vcOffline": "অফলাইন মাত সাজু",
+    "vcOfflineAvail": "ডিভাইচৰ মাত নাই। অফলাইন মাত উপলব্ধ",
+    "vcNone": "মাত নাই",
+    "vcTest": "পৰীক্ষা",
+    "ovLabel": "অফলাইন মাতৰ বেকআপ",
+    "ovAsk": "সোধক",
+    "ovNote": "অফলাইন মাত (eSpeak NG) প্ৰায় ১৮ MB, এবাৰ ডাউনলোড হ’লে ইণ্টাৰনেট অবিহনে চলে। ই ডিভাইচৰ মাতৰ তুলনাত অধিক যান্ত্ৰিক শুনায়।",
+    "ovAskQ": "এই ডিভাইচত {l} মাত নাই। অফলাইন মাত ডাউনলোড কৰিবনে (প্ৰায় ১৮ MB, এবাৰ)?",
+    "ovYes": "ডাউনলোড",
+    "ovNo": "এতিয়া নহয়",
+    "ovLoading": "অফলাইন মাত লোড হৈ আছে…",
+    "ovFail": "অফলাইন মাত বজাব পৰা নগ’ল।",
+    "nav_today": "আজি",
+    "nav_talk": "কথোপকথন",
+    "cToday": "প্ৰতিদিনে এটা চমু পাঠ: পাঁচটা নতুন বাক্যাংশ, শুনা কুইজ আৰু মনত পেলোৱা ৰাউণ্ড।",
+    "cTalk": "প্ৰকৃত কথোপকথনৰ অভ্যাস কৰক: ৰেষ্টুৰেণ্ট, বাট সোধা, বজাৰ-সদাই, ডাক্তৰ, হোটেল। এটা শাৰী শুনি আপোনাৰ উত্তৰ বাছক।",
+    "tdLede": "দিনে পাঁচটা নতুন বাক্যাংশ। শিকক, শুনক, আৰু পাহৰি যোৱাৰ আগতে পুৰণিবোৰ মনত পেলাওক।",
+    "tdStart": "আজিৰ পাঠ আৰম্ভ কৰক",
+    "tdDone": "আজিৰ পাঠ শেষ। কাইলৈ আকৌ আহক।",
+    "tdLearn": "শিকক",
+    "tdListen": "শুনক",
+    "tdRecall": "মনত পেলাওক",
+    "tdNext": "পিছৰটো",
+    "tdFinish": "শেষ",
+    "tdListenQ": "শুনক, তাৰ পিছত অৰ্থ বাছক",
+    "tdRecallQ": "এই অৰ্থৰ বাক্যাংশটো বাছক:",
+    "tdScore": "নম্বৰ: {m}ৰ ভিতৰত {n}",
+    "tdBonus": "আৰু এটা পাঠ কৰক",
+    "tdProgress": "{m}ৰ ভিতৰত {n}টা বাক্যাংশ শিকিলে",
+    "tdRecallN": "আজি মনত পেলাবলগীয়া {n}টা পুৰণি বাক্যাংশ",
+    "drLede": "এটা কথোপকথন বাছক। তেওঁলোকে কি কয় শুনক, তাৰ পিছত আপোনাৰ উত্তৰ বাছক।",
+    "drPick": "কথোপকথন",
+    "drTurns": "{n}টা পালা",
+    "drThem": "তেওঁলোকে কয়",
+    "drYou": "আপোনাৰ পালা। কওক:",
+    "drHide": "শুনা মোড: তেওঁলোকৰ কথা লুকুৱাওক",
+    "drTry": "ঠিক হোৱা নাই। আকৌ চেষ্টা কৰক।",
+    "drDone": "কথোপকথন সম্পূৰ্ণ",
+    "drScore": "প্ৰথম চেষ্টাতে {m}ৰ ভিতৰত {n}টা শুদ্ধ",
+    "drReplay": "পুনৰ চলাওক",
+    "drTranscript": "সম্পূৰ্ণ কথোপকথন",
+    "drAnother": "আন এটা কথোপকথন",
+    "d_meet": "কাৰোবাক লগ পোৱা",
+    "d_rest": "ৰেষ্টুৰেণ্টত",
+    "d_dir": "বাট সোধা",
+    "d_shop": "বজাৰ-সদাই",
+    "d_doc": "ডাক্তৰৰ ওচৰত",
+    "d_hotel": "হোটেলত",
+    "cat_talk": "কথোপকথন",
+    "cat_feel": "অনুভৱ",
+    "cat_work": "কাম আৰু ফোন",
+    "cat_home": "ঘৰ আৰু বতৰ"
+  };
+})(window.B = window.B || {});
+
+;
+/* Bhasha phrasebook, part 2: French, Gujarati and Assamese for the first 100 phrases, plus 100 more phrases
+   (conversation lines, feelings, work, home, travel and more) in all 13 languages.
+   Drafts: must be reviewed by native speakers (see README). Generated; edit with care. */
+(function (B) {
+  'use strict';
+  var L3 = ['fr', 'gu', 'as'];
+  var OLD3 = {"hello": ["Bonjour", "નમસ્તે", "নমস্কাৰ"], "morning": ["Bonne matinée", "સુપ્રભાત", "শুভ ৰাতিপুৱা"], "night": ["Bonne nuit", "શુભ રાત્રિ", "শুভ ৰাতি"], "bye": ["À bientôt", "ફરી મળીશું", "পুনৰ লগ পাম"], "thanks": ["Merci", "આભાર", "ধন্যবাদ"], "welcome": ["Je vous en prie", "કંઈ વાંધો નહીં", "একো কথা নাই"], "please": ["S’il vous plaît", "મહેરબાની કરીને", "অনুগ্ৰহ কৰি"], "sorry": ["Désolé", "માફ કરશો", "ক্ষমা কৰিব"], "yes": ["Oui", "હા", "হয়"], "no": ["Non", "ના", "নহয়"], "name-q": ["Comment vous appelez-vous ?", "તમારું નામ શું છે?", "আপোনাৰ নাম কি?"], "name-is": ["Je m’appelle …", "મારું નામ … છે.", "মোৰ নাম …"], "from-q": ["D’où venez-vous ?", "તમે ક્યાંથી આવો છો?", "আপুনি ক’ৰ পৰা আহিছে?"], "from-india": ["Je viens de l’Inde.", "હું ભારતથી આવ્યો છું.", "মই ভাৰতৰ পৰা আহিছোঁ।"], "nice": ["Enchanté de faire votre connaissance.", "તમને મળીને આનંદ થયો.", "আপোনাক লগ পাই ভাল লাগিল।"], "how": ["Comment allez-vous ?", "તમે કેમ છો?", "আপুনি কেনে আছে?"], "fine": ["Je vais bien.", "હું મજામાં છું.", "মই ভালে আছোঁ।"], "dont-understand": ["Je ne comprends pas.", "મને સમજાયું નહીં.", "মই বুজি পোৱা নাই।"], "english-q": ["Parlez-vous anglais ?", "શું તમે અંગ્રેજી બોલો છો?", "আপুনি ইংৰাজী কয়নে?"], "slowly": ["Parlez lentement, s’il vous plaît.", "મહેરબાની કરીને ધીમે બોલો.", "অনুগ্ৰহ কৰি লাহে লাহে কওক।"], "price": ["Combien ça coûte ?", "આની કિંમત કેટલી છે?", "এইটোৰ দাম কিমান?"], "toilet": ["Où sont les toilettes ?", "શૌચાલય ક્યાં છે?", "শৌচালয় ক’ত?"], "help": ["J’ai besoin d’aide.", "મને મદદની જરૂર છે.", "মোক সহায় লাগে।"], "water": ["De l’eau, s’il vous plaît.", "મહેરબાની કરીને પાણી આપો.", "অনুগ্ৰহ কৰি পানী দিয়ক।"], "hungry": ["J’ai faim.", "મને ભૂખ લાગી છે.", "মোৰ ভোক লাগিছে।"], "delicious": ["Le repas est délicieux.", "ભોજન ખૂબ સ્વાદિષ્ટ છે.", "আহাৰ বহুত সুস্বাদু।"], "bus": ["Où est l’arrêt de bus ?", "બસ સ્ટોપ ક્યાં છે?", "বাছ ষ্টপ ক’ত?"], "doctor": ["Appelez un médecin, s’il vous plaît.", "મહેરબાની કરીને ડૉક્ટરને બોલાવો.", "অনুগ্ৰহ কৰি ডাক্তৰ মাতক।"], "time": ["Quelle heure est-il ?", "અત્યારે કેટલા વાગ્યા છે?", "এতিয়া কিমান বাজিছে?"], "learn": ["Je veux apprendre le français.", "મારે ગુજરાતી શીખવી છે.", "মই অসমীয়া শিকিব বিচাৰোঁ।"], "today": ["Aujourd’hui", "આજે", "আজি"], "tomorrow": ["Demain", "કાલે", "কাইলৈ"], "yesterday": ["Hier", "ગઈકાલે", "কালি"], "n-one": ["Un", "એક", "এক"], "n-two": ["Deux", "બે", "দুই"], "n-three": ["Trois", "ત્રણ", "তিনি"], "n-four": ["Quatre", "ચાર", "চাৰি"], "n-five": ["Cinq", "પાંચ", "পাঁচ"], "n-six": ["Six", "છ", "ছয়"], "n-seven": ["Sept", "સાત", "সাত"], "n-eight": ["Huit", "આઠ", "আঠ"], "n-nine": ["Neuf", "નવ", "ন"], "n-ten": ["Dix", "દસ", "দহ"], "mon": ["Lundi", "સોમવાર", "সোমবাৰ"], "tue": ["Mardi", "મંગળવાર", "মঙ্গলবাৰ"], "wed": ["Mercredi", "બુધવાર", "বুধবাৰ"], "thu": ["Jeudi", "ગુરુવાર", "বৃহস্পতিবাৰ"], "fri": ["Vendredi", "શુક્રવાર", "শুক্ৰবাৰ"], "sat": ["Samedi", "શનિવાર", "শনিবাৰ"], "sun": ["Dimanche", "રવિવાર", "দেওবাৰ"], "rice": ["Du riz", "ભાત", "ভাত"], "bread": ["Du pain", "બ્રેડ", "পাউৰুটি"], "tea": ["Du thé", "ચા", "চাহ"], "coffee": ["Du café", "કૉફી", "কফি"], "milk": ["Du lait", "દૂધ", "গাখীৰ"], "veg": ["Des légumes", "શાકભાજી", "পাচলি"], "fruit": ["Des fruits", "ફળ", "ফল"], "vegetarian": ["Je suis végétarien.", "હું શાકાહારી છું.", "মই নিৰামিষভোজী।"], "notspicy": ["Pas épicé, s’il vous plaît.", "મહેરબાની કરીને તીખું નહીં.", "অনুগ্ৰহ কৰি জলফাই নিদিব।"], "bill": ["L’addition, s’il vous plaît.", "મહેરબાની કરીને બિલ આપો.", "অনুগ্ৰহ কৰি বিলটো দিয়ক।"], "station": ["Où est la gare ?", "રેલવે સ્ટેશન ક્યાં છે?", "ৰেল ষ্টেচন ক’ত?"], "airport": ["Où est l’aéroport ?", "એરપોર્ટ ક્યાં છે?", "বিমানবন্দৰ ক’ত?"], "hotel": ["Où est l’hôtel ?", "હોટેલ ક્યાં છે?", "হোটেল ক’ত?"], "taxi": ["J’ai besoin d’un taxi.", "મને ટેક્સી જોઈએ છે.", "মোক এখন টেক্সী লাগে।"], "far": ["C’est à quelle distance ?", "કેટલું દૂર છે?", "কিমান দূৰ?"], "left": ["Tournez à gauche.", "ડાબી બાજુ વળો.", "বাওঁফালে ঘূৰক।"], "right": ["Tournez à droite.", "જમણી બાજુ વળો.", "সোঁফালে ঘূৰক।"], "straight": ["Allez tout droit.", "સીધા જાઓ.", "পোনে যাওক।"], "stop": ["Arrêtez-vous ici, s’il vous plaît.", "મહેરબાની કરીને અહીં રોકો.", "অনুগ্ৰহ কৰি ইয়াতে ৰখাওক।"], "ticket": ["Un billet, s’il vous plaît.", "મહેરબાની કરીને એક ટિકિટ આપો.", "অনুগ্ৰহ কৰি এখন টিকট দিয়ক।"], "hospital": ["Où est l’hôpital ?", "હોસ્પિટલ ક્યાં છે?", "চিকিৎসালয় ক’ত?"], "lost": ["Je suis perdu.", "હું રસ્તો ભૂલી ગયો છું.", "মই বাট হেৰুৱালোঁ।"], "expensive": ["C’est trop cher.", "આ બહુ મોંઘું છે.", "এইটো বেছি দামী।"], "reduce": ["Pouvez-vous baisser le prix ?", "શું તમે ભાવ ઘટાડી શકો?", "আপুনি দাম অলপ কমাব পাৰিবনে?"], "take": ["Je prends celui-ci.", "હું આ લઈશ.", "মই এইটো ল’ম।"], "card": ["Acceptez-vous les cartes ?", "શું તમે કાર્ડ સ્વીકારો છો?", "আপুনি কাৰ্ড লয়নে?"], "market": ["Où est le marché ?", "બજાર ક્યાં છે?", "বজাৰ ক’ত?"], "another": ["Montrez-m’en un autre, s’il vous plaît.", "મહેરબાની કરીને બીજું બતાવો.", "অনুগ্ৰহ কৰি আন এটা দেখুৱাওক।"], "sick": ["Je ne me sens pas bien.", "મારી તબિયત સારી નથી.", "মোৰ শৰীৰ ভাল নহয়।"], "headache": ["J’ai mal à la tête.", "મને માથું દુખે છે.", "মোৰ মূৰ বিষাইছে।"], "police": ["Appelez la police, s’il vous plaît.", "મહેરબાની કરીને પોલીસને બોલાવો.", "অনুগ্ৰহ কৰি আৰক্ষী মাতক।"], "ambulance": ["Appelez une ambulance, s’il vous plaît.", "મહેરબાની કરીને એમ્બ્યુલન્સ બોલાવો.", "অনুগ্ৰহ কৰি এম্বুলেন্স মাতক।"], "medicine": ["J’ai besoin de médicaments.", "મને દવા જોઈએ છે.", "মোক ঔষধ লাগে।"], "hurts": ["J’ai mal ici.", "અહીં દુખે છે.", "ইয়াত বিষাইছে।"], "love": ["Je t’aime.", "હું તને પ્રેમ કરું છું.", "মই তোমাক ভালপাওঁ।"], "happy": ["Je suis heureux.", "હું ખુશ છું.", "মই সুখী।"], "tired": ["Je suis fatigué.", "હું થાકી ગયો છું.", "মই ভাগৰুৱা অনুভৱ কৰিছোঁ।"], "friend": ["Voici mon ami.", "આ મારો મિત્ર છે.", "ইও মোৰ বন্ধু।"], "family": ["Voici ma famille.", "આ મારો પરિવાર છે.", "এয়া মোৰ পৰিয়াল।"], "congrats": ["Félicitations !", "અભિનંદન!", "অভিনন্দন!"], "birthday": ["Joyeux anniversaire !", "જન્મદિવસની શુભેચ્છાઓ!", "জন্মদিনৰ শুভেচ্ছা!"], "luck": ["Bonne chance !", "શુભેચ્છાઓ!", "শুভকামনা!"], "n-eleven": ["Onze", "અગિયાર", "এঘাৰ"], "n-twelve": ["Douze", "બાર", "বাৰ"], "n-fifteen": ["Quinze", "પંદર", "পোন্ধৰ"], "n-twenty": ["Vingt", "વીસ", "বিশ"], "n-thirty": ["Trente", "ત્રીસ", "ত্ৰিশ"], "n-fifty": ["Cinquante", "પચાસ", "পঞ্চাশ"], "n-hundred": ["Cent", "સો", "এশ"], "n-thousand": ["Mille", "હજાર", "হাজাৰ"]};
+  B.PHRASES.forEach(function (p) { var r = OLD3[p.id]; if (r) L3.forEach(function (l, i) { p[l] = r[i]; }); });
+  var NL = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko', 'es', 'de', 'fr', 'gu', 'as'];
+  var NEW = [["little", "talk", "Only a little.", "కొంచెం మాత్రమే.", "थोड़ा-सा ही।", "ಸ್ವಲ್ಪ ಮಾತ್ರ.", "கொஞ்சம் தான்.", "കുറച്ച് മാത്രം.", "অল্প একটু।", "थोडंसंच.", "조금만요.", "Solo un poco.", "Nur ein bisschen.", "Seulement un peu.", "થોડું જ.", "অলপহে।"], ["nice-too", "talk", "Nice to meet you too.", "మిమ్మల్ని కలవడం నాకూ సంతోషం.", "मुझे भी आपसे मिलकर खुशी हुई।", "ನನಗೂ ನಿಮ್ಮನ್ನು ಭೇಟಿಯಾಗಿ ಸಂತೋಷವಾಯಿತು.", "உங்களைச் சந்தித்ததில் எனக்கும் மகிழ்ச்சி.", "നിങ്ങളെ കണ്ടതിൽ എനിക്കും സന്തോഷം.", "আমারও আপনার সঙ্গে দেখা হয়ে ভালো লাগল।", "मलाही तुम्हाला भेटून आनंद झाला.", "저도 만나서 반갑습니다.", "Encantado de conocerle también.", "Freut mich auch.", "Moi aussi, enchanté.", "મને પણ તમને મળીને આનંદ થયો.", "মোকো আপোনাক লগ পাই ভাল লাগিল।"], ["table-how-many", "food", "How many people?", "ఎంతమంది?", "कितने लोग हैं?", "ಎಷ್ಟು ಜನ?", "எத்தனை பேர்?", "എത്ര പേരുണ്ട്?", "কতজন?", "किती जण आहात?", "몇 분이세요?", "¿Cuántas personas?", "Für wie viele Personen?", "Combien de personnes ?", "કેટલા લોકો છો?", "কিমান জন?"], ["table-two", "food", "A table for two, please.", "దయచేసి ఇద్దరికి టేబుల్ ఇవ్వండి.", "कृपया दो लोगों के लिए मेज़ दीजिए।", "ದಯವಿಟ್ಟು ಇಬ್ಬರಿಗೆ ಟೇಬಲ್ ಕೊಡಿ.", "தயவுசெய்து இருவருக்கு ஒரு மேசை வேண்டும்.", "ദയവായി രണ്ടുപേർക്ക് ഒരു മേശ വേണം.", "দয়া করে দুজনের জন্য একটা টেবিল দিন।", "कृपया दोघांसाठी टेबल द्या.", "두 명 자리로 부탁합니다.", "Una mesa para dos, por favor.", "Einen Tisch für zwei, bitte.", "Une table pour deux, s’il vous plaît.", "મહેરબાની કરીને બે જણ માટે ટેબલ આપો.", "অনুগ্ৰহ কৰি দুজনৰ বাবে এখন টেবুল দিয়ক।"], ["drink-q", "food", "What would you like to drink?", "మీరు ఏం తాగుతారు?", "आप क्या पीना चाहेंगे?", "ನೀವು ಏನು ಕುಡಿಯುತ್ತೀರಿ?", "நீங்கள் என்ன குடிக்க விரும்புகிறீர்கள்?", "നിങ്ങൾ എന്താണ് കുടിക്കുക?", "আপনি কী পান করবেন?", "तुम्ही काय प्याल?", "음료는 무엇으로 하시겠어요?", "¿Qué desea beber?", "Was möchten Sie trinken?", "Que souhaitez-vous boire ?", "તમે શું પીશો?", "আপুনি কি পান কৰিব?"], ["eat-q", "food", "What would you like to eat?", "మీరు ఏం తింటారు?", "आप क्या खाना चाहेंगे?", "ನೀವು ಏನು ತಿನ್ನುತ್ತೀರಿ?", "நீங்கள் என்ன சாப்பிட விரும்புகிறீர்கள்?", "നിങ്ങൾ എന്താണ് കഴിക്കുക?", "আপনি কী খাবেন?", "तुम्ही काय खाणार?", "무엇을 드시겠어요?", "¿Qué desea comer?", "Was möchten Sie essen?", "Que souhaitez-vous manger ?", "તમે શું જમશો?", "আপুনি কি খাব?"], ["order-rice", "food", "I would like rice, please.", "నాకు అన్నం కావాలి.", "मुझे चावल चाहिए।", "ನನಗೆ ಅನ್ನ ಬೇಕು.", "எனக்கு சாதம் வேண்டும்.", "എനിക്ക് ചോറ് വേണം.", "আমি ভাত নেব।", "मला भात हवा आहे.", "밥을 주세요.", "Quisiera arroz, por favor.", "Ich hätte gern Reis.", "Je voudrais du riz, s’il vous plaît.", "મને ભાત જોઈએ છે.", "মোক ভাত লাগে।"], ["spicy-q", "food", "Would you like it spicy?", "కారంగా కావాలా?", "क्या आपको तीखा चाहिए?", "ಖಾರ ಬೇಕಾ?", "காரமாக வேண்டுமா?", "എരിവ് വേണോ?", "ঝাল চান?", "तिखट हवे का?", "맵게 해 드릴까요?", "¿Lo quiere picante?", "Möchten Sie es scharf?", "Vous le voulez épicé ?", "તીખું જોઈએ છે?", "জলফাই দিম নেকি?"], ["anything-else", "food", "Anything else?", "ఇంకేమైనా కావాలా?", "और कुछ चाहिए?", "ಇನ್ನೇನಾದರೂ ಬೇಕಾ?", "வேறு ஏதாவது வேண்டுமா?", "വേറെ എന്തെങ്കിലും വേണോ?", "আর কিছু লাগবে?", "आणखी काही हवे का?", "더 필요하신 것 있으세요?", "¿Algo más?", "Sonst noch etwas?", "Autre chose ?", "બીજું કંઈ જોઈએ છે?", "আৰু একো লাগিবনে?"], ["need-help-q", "talk", "Do you need help?", "మీకు సహాయం కావాలా?", "क्या आपको मदद चाहिए?", "ನಿಮಗೆ ಸಹಾಯ ಬೇಕಾ?", "உங்களுக்கு உதவி வேண்டுமா?", "നിങ്ങൾക്ക് സഹായം വേണോ?", "আপনার কি সাহায্য লাগবে?", "तुम्हाला मदत हवी आहे का?", "도움이 필요하세요?", "¿Necesita ayuda?", "Brauchen Sie Hilfe?", "Avez-vous besoin d’aide ?", "શું તમને મદદ જોઈએ છે?", "আপোনাক সহায় লাগিবনে?"], ["where-go", "travel", "Where do you want to go?", "మీరు ఎక్కడికి వెళ్ళాలి?", "आप कहाँ जाना चाहते हैं?", "ನೀವು ಎಲ್ಲಿಗೆ ಹೋಗಬೇಕು?", "நீங்கள் எங்கே போக வேண்டும்?", "നിങ്ങൾക്ക് എവിടെ പോകണം?", "আপনি কোথায় যেতে চান?", "तुम्हाला कुठे जायचे आहे?", "어디로 가고 싶으세요?", "¿A dónde quiere ir?", "Wohin möchten Sie gehen?", "Où voulez-vous aller ?", "તમારે ક્યાં જવું છે?", "আপুনি ক’লৈ যাব বিচাৰে?"], ["straight-then-left", "travel", "Go straight, then turn left.", "సూటిగా వెళ్ళి, తర్వాత ఎడమవైపు తిరగండి.", "सीधे जाइए, फिर बाएँ मुड़िए।", "ನೇರವಾಗಿ ಹೋಗಿ, ನಂತರ ಎಡಕ್ಕೆ ತಿರುಗಿ.", "நேராகப் போய், பிறகு இடதுபுறம் திரும்புங்கள்.", "നേരെ പോയി, പിന്നെ ഇടത്തോട്ട് തിരിയുക.", "সোজা যান, তারপর বাঁয়ে ঘুরুন।", "सरळ जा, मग डावीकडे वळा.", "직진한 다음 왼쪽으로 도세요.", "Siga recto y luego gire a la izquierda.", "Gehen Sie geradeaus und dann links.", "Allez tout droit, puis tournez à gauche.", "સીધા જાઓ, પછી ડાબી બાજુ વળો.", "পোনে যাওক, তাৰ পিছত বাওঁফালে ঘূৰক।"], ["five-min-walk", "travel", "It is five minutes on foot.", "నడిస్తే ఐదు నిమిషాలు పడుతుంది.", "पैदल पाँच मिनट लगते हैं।", "ನಡೆದರೆ ಐದು ನಿಮಿಷ.", "நடந்தால் ஐந்து நிமிடம்.", "നടന്നാൽ അഞ്ച് മിനിറ്റ്.", "হেঁটে পাঁচ মিনিট লাগে।", "चालत पाच मिनिटे लागतात.", "걸어서 5분 걸려요.", "Está a cinco minutos andando.", "Es sind fünf Minuten zu Fuß.", "C’est à cinq minutes à pied.", "ચાલીને પાંચ મિનિટ લાગે છે.", "খোজ কাঢ়ি গ’লে পাঁচ মিনিট লাগে।"], ["help-you-q", "shop", "Can I help you?", "నేను మీకు సహాయం చేయగలనా?", "क्या मैं आपकी मदद कर सकता हूँ?", "ನಾನು ನಿಮಗೆ ಸಹಾಯ ಮಾಡಲೇ?", "நான் உங்களுக்கு உதவலாமா?", "ഞാൻ സഹായിക്കണോ?", "আমি কি আপনাকে সাহায্য করতে পারি?", "मी तुम्हाला मदत करू का?", "도와드릴까요?", "¿En qué puedo ayudarle?", "Kann ich Ihnen helfen?", "Puis-je vous aider ?", "હું તમારી શું મદદ કરી શકું?", "মই আপোনাক সহায় কৰিব পাৰোঁনে?"], ["price-500", "shop", "It is five hundred rupees.", "ఐదు వందల రూపాయలు.", "पाँच सौ रुपये हैं।", "ಐನೂರು ರೂಪಾಯಿ.", "ஐந்நூறு ரூபாய்.", "അഞ്ഞൂറ് രൂപയാണ്.", "পাঁচশো টাকা।", "पाचशे रुपये आहेत.", "오백 루피예요.", "Son quinientas rupias.", "Es kostet fünfhundert Rupien.", "Ça fait cinq cents roupies.", "પાંચસો રૂપિયા છે.", "পাঁচশ টকা।"], ["price-400", "shop", "I can give it for four hundred.", "నాలుగు వందలకు ఇస్తాను.", "मैं इसे चार सौ में दे सकता हूँ।", "ನಾನು ನಾನೂರಕ್ಕೆ ಕೊಡುತ್ತೇನೆ.", "நாநூறுக்குத் தருகிறேன்.", "നാനൂറിന് തരാം.", "আমি চারশোতে দিতে পারি।", "मी हे चारशेला देऊ शकतो.", "사백에 드릴게요.", "Puedo dárselo por cuatrocientas.", "Ich gebe es Ihnen für vierhundert.", "Je peux vous le laisser à quatre cents.", "હું તે ચારસોમાં આપી શકું.", "মই এইটো চাৰিশ টকাত দিব পাৰোঁ।"], ["cash-or-card", "shop", "Cash or card?", "నగదా లేక కార్డా?", "नकद या कार्ड?", "ನಗದೋ ಕಾರ್ಡೋ?", "பணமா அல்லது கார்டா?", "പണമോ കാർഡോ?", "নগদ না কার্ড?", "रोख की कार्ड?", "현금이세요, 카드세요?", "¿Efectivo o tarjeta?", "Bar oder mit Karte?", "Espèces ou carte ?", "રોકડ કે કાર્ડ?", "নগদ নে কাৰ্ড?"], ["pay-card", "shop", "I will pay by card.", "నేను కార్డుతో చెల్లిస్తాను.", "मैं कार्ड से भुगतान करूँगा।", "ನಾನು ಕಾರ್ಡ್‌ನಿಂದ ಪಾವತಿಸುತ್ತೇನೆ.", "நான் கார்டில் பணம் செலுத்துகிறேன்.", "ഞാൻ കാർഡ് ഉപയോഗിച്ച് പണമടയ്ക്കാം.", "আমি কার্ডে টাকা দেব।", "मी कार्डने पैसे देईन.", "카드로 계산할게요.", "Pagaré con tarjeta.", "Ich zahle mit Karte.", "Je paierai par carte.", "હું કાર્ડથી ચૂકવીશ.", "মই কাৰ্ডেৰে দাম দিম।"], ["problem-q", "health", "What is the problem?", "సమస్య ఏమిటి?", "क्या समस्या है?", "ಸಮಸ್ಯೆ ಏನು?", "என்ன பிரச்சினை?", "എന്താണ് പ്രശ്നം?", "সমস্যা কী?", "काय त्रास आहे?", "어디가 불편하세요?", "¿Cuál es el problema?", "Was fehlt Ihnen?", "Quel est le problème ?", "શું તકલીફ છે?", "কি সমস্যা?"], ["where-hurt", "health", "Where does it hurt?", "ఎక్కడ నొప్పిగా ఉంది?", "कहाँ दर्द हो रहा है?", "ಎಲ್ಲಿ ನೋವಾಗುತ್ತಿದೆ?", "எங்கே வலிக்கிறது?", "എവിടെയാണ് വേദന?", "কোথায় ব্যথা করছে?", "कुठे दुखत आहे?", "어디가 아프세요?", "¿Dónde le duele?", "Wo tut es weh?", "Où avez-vous mal ?", "ક્યાં દુખે છે?", "ক’ত বিষাইছে?"], ["fever-q", "health", "Do you have a fever?", "మీకు జ్వరం ఉందా?", "क्या आपको बुखार है?", "ನಿಮಗೆ ಜ್ವರ ಇದೆಯಾ?", "உங்களுக்குக் காய்ச்சல் இருக்கிறதா?", "നിങ്ങൾക്ക് പനിയുണ്ടോ?", "আপনার কি জ্বর আছে?", "तुम्हाला ताप आहे का?", "열이 있으세요?", "¿Tiene fiebre?", "Haben Sie Fieber?", "Avez-vous de la fièvre ?", "શું તમને તાવ છે?", "আপোনাৰ জ্বৰ আছেনে?"], ["since-yesterday", "health", "Yes, since yesterday.", "అవును, నిన్నటి నుండి.", "हाँ, कल से।", "ಹೌದು, ನಿನ್ನೆಯಿಂದ.", "ஆம், நேற்றிலிருந்து.", "അതെ, ഇന്നലെ മുതൽ.", "হ্যাঁ, গতকাল থেকে।", "हो, कालपासून.", "네, 어제부터요.", "Sí, desde ayer.", "Ja, seit gestern.", "Oui, depuis hier.", "હા, ગઈકાલથી.", "হয়, কালিৰে পৰা।"], ["medicine-twice", "health", "Take this medicine twice a day.", "ఈ మందు రోజుకు రెండుసార్లు వేసుకోండి.", "यह दवा दिन में दो बार लीजिए।", "ಈ ಔಷಧಿಯನ್ನು ದಿನಕ್ಕೆ ಎರಡು ಬಾರಿ ತೆಗೆದುಕೊಳ್ಳಿ.", "இந்த மருந்தை தினமும் இரண்டு முறை சாப்பிடுங்கள்.", "ഈ മരുന്ന് ദിവസം രണ്ടു തവണ കഴിക്കുക.", "এই ওষুধ দিনে দুবার খান।", "हे औषध दिवसातून दोनदा घ्या.", "이 약을 하루에 두 번 드세요.", "Tome esta medicina dos veces al día.", "Nehmen Sie dieses Medikament zweimal täglich.", "Prenez ce médicament deux fois par jour.", "આ દવા દિવસમાં બે વાર લો.", "এই ঔষধ দিনত দুবাৰ খাওক।"], ["reservation-q", "travel", "Do you have a reservation?", "మీకు రిజర్వేషన్ ఉందా?", "क्या आपकी बुकिंग है?", "ನಿಮ್ಮ ಬುಕಿಂಗ್ ಇದೆಯಾ?", "உங்களிடம் முன்பதிவு இருக்கிறதா?", "നിങ്ങൾക്ക് ബുക്കിംഗ് ഉണ്ടോ?", "আপনার কি বুকিং আছে?", "तुमचे बुकिंग आहे का?", "예약하셨나요?", "¿Tiene una reserva?", "Haben Sie eine Reservierung?", "Avez-vous une réservation ?", "શું તમારું બુકિંગ છે?", "আপোনাৰ বুকিং আছেনে?"], ["have-reservation", "travel", "Yes, I have a reservation.", "అవును, నాకు రిజర్వేషన్ ఉంది.", "हाँ, मेरी बुकिंग है।", "ಹೌದು, ನನ್ನ ಬುಕಿಂಗ್ ಇದೆ.", "ஆம், என்னிடம் முன்பதிவு இருக்கிறது.", "അതെ, എനിക്ക് ബുക്കിംഗ് ഉണ്ട്.", "হ্যাঁ, আমার বুকিং আছে।", "हो, माझे बुकिंग आहे.", "네, 예약했어요.", "Sí, tengo una reserva.", "Ja, ich habe eine Reservierung.", "Oui, j’ai une réservation.", "હા, મારું બુકિંગ છે.", "হয়, মোৰ বুকিং আছে।"], ["nights-q", "travel", "How many nights?", "ఎన్ని రాత్రులు?", "कितनी रातें?", "ಎಷ್ಟು ರಾತ್ರಿ?", "எத்தனை இரவுகள்?", "എത്ര രാത്രി?", "কত রাত?", "किती रात्री?", "며칠 묵으세요?", "¿Cuántas noches?", "Wie viele Nächte?", "Pour combien de nuits ?", "કેટલી રાત?", "কিমান ৰাতি?"], ["two-nights", "travel", "Two nights.", "రెండు రాత్రులు.", "दो रातें।", "ಎರಡು ರಾತ್ರಿ.", "இரண்டு இரவுகள்.", "രണ്ട് രാത്രി.", "দুই রাত।", "दोन रात्री.", "이틀이요.", "Dos noches.", "Zwei Nächte.", "Deux nuits.", "બે રાત.", "দুটা ৰাতি।"], ["third-floor", "travel", "Your room is on the third floor.", "మీ గది మూడవ అంతస్తులో ఉంది.", "आपका कमरा तीसरी मंज़िल पर है।", "ನಿಮ್ಮ ಕೋಣೆ ಮೂರನೇ ಮಹಡಿಯಲ್ಲಿದೆ.", "உங்கள் அறை மூன்றாவது மாடியில் உள்ளது.", "നിങ്ങളുടെ മുറി മൂന്നാം നിലയിലാണ്.", "আপনার ঘর তিনতলায়।", "तुमची खोली तिसऱ्या मजल्यावर आहे.", "객실은 3층입니다.", "Su habitación está en el tercer piso.", "Ihr Zimmer ist im dritten Stock.", "Votre chambre est au troisième étage.", "તમારો રૂમ ત્રીજા માળે છે.", "আপোনাৰ কোঠাটো তৃতীয় মহলাত আছে।"], ["breakfast-incl", "travel", "Is breakfast included?", "అల్పాహారం కలిపి ఉందా?", "क्या नाश्ता शामिल है?", "ಉಪಾಹಾರ ಸೇರಿದೆಯಾ?", "காலை உணவு சேர்ந்ததா?", "പ്രഭാതഭക്ഷണം ഉൾപ്പെടുന്നുണ്ടോ?", "সকালের খাবার কি অন্তর্ভুক্ত?", "नाश्ता समाविष्ट आहे का?", "아침 식사가 포함되어 있나요?", "¿El desayuno está incluido?", "Ist das Frühstück inbegriffen?", "Le petit-déjeuner est-il compris ?", "શું નાસ્તો સામેલ છે?", "ৰাতিপুৱাৰ আহাৰ অন্তৰ্ভুক্ত নেকি?"], ["breakfast-8", "travel", "Yes, breakfast is at eight.", "అవును, అల్పాహారం ఎనిమిది గంటలకు.", "हाँ, नाश्ता आठ बजे है।", "ಹೌದು, ಉಪಾಹಾರ ಎಂಟು ಗಂಟೆಗೆ.", "ஆம், காலை உணவு எட்டு மணிக்கு.", "അതെ, പ്രഭാതഭക്ഷണം എട്ട് മണിക്കാണ്.", "হ্যাঁ, সকালের খাবার আটটায়।", "हो, नाश्ता आठ वाजता आहे.", "네, 아침 식사는 8시입니다.", "Sí, el desayuno es a las ocho.", "Ja, das Frühstück ist um acht Uhr.", "Oui, le petit-déjeuner est à huit heures.", "હા, નાસ્તો આઠ વાગ્યે છે.", "হয়, ৰাতিপুৱাৰ আহাৰ আঠ বজাত।"], ["repeat", "talk", "Could you repeat that?", "మళ్ళీ చెప్పగలరా?", "क्या आप दोहरा सकते हैं?", "ಮತ್ತೆ ಹೇಳಬಹುದೇ?", "மீண்டும் சொல்ல முடியுமா?", "ഒന്നുകൂടി പറയാമോ?", "আবার বলবেন?", "पुन्हा सांगाल का?", "다시 말씀해 주시겠어요?", "¿Puede repetirlo?", "Können Sie das wiederholen?", "Pouvez-vous répéter ?", "શું તમે ફરીથી કહેશો?", "আপুনি পুনৰ কব পাৰিবনে?"], ["what-mean", "talk", "What does this mean?", "దీని అర్థం ఏమిటి?", "इसका क्या मतलब है?", "ಇದರ ಅರ್ಥವೇನು?", "இதன் அர்த்தம் என்ன?", "ഇതിന്റെ അർത്ഥം എന്താണ്?", "এর মানে কী?", "याचा अर्थ काय आहे?", "이게 무슨 뜻이에요?", "¿Qué significa esto?", "Was bedeutet das?", "Que veut dire ceci ?", "આનો અર્થ શું છે?", "ইয়াৰ অৰ্থ কি?"], ["how-say", "talk", "How do you say this in English?", "దీన్ని ఇంగ్లీషులో ఎలా అంటారు?", "इसे अंग्रेज़ी में कैसे कहते हैं?", "ಇದನ್ನು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಹೇಗೆ ಹೇಳುತ್ತಾರೆ?", "இதை ஆங்கிலத்தில் எப்படிச் சொல்வது?", "ഇത് ഇംഗ്ലീഷിൽ എങ്ങനെ പറയും?", "এটা ইংরেজিতে কীভাবে বলে?", "हे इंग्रजीत कसे म्हणतात?", "이것을 영어로 어떻게 말해요?", "¿Cómo se dice esto en inglés?", "Wie sagt man das auf Englisch?", "Comment dit-on cela en anglais ?", "આને અંગ્રેજીમાં શું કહેવાય?", "ইয়াক ইংৰাজীত কেনেকৈ কয়?"], ["write-down", "talk", "Please write it down.", "దయచేసి రాసి ఇవ్వండి.", "कृपया इसे लिख दीजिए।", "ದಯವಿಟ್ಟು ಬರೆದುಕೊಡಿ.", "தயவுசெய்து எழுதிக் கொடுங்கள்.", "ദയവായി എഴുതിത്തരൂ.", "দয়া করে লিখে দিন।", "कृपया लिहून द्या.", "적어 주세요.", "Escríbalo, por favor.", "Bitte schreiben Sie es auf.", "Écrivez-le, s’il vous plaît.", "મહેરબાની કરીને લખી આપો.", "অনুগ্ৰহ কৰি লিখি দিয়ক।"], ["wait", "talk", "Please wait a moment.", "దయచేసి ఒక్క క్షణం ఆగండి.", "कृपया एक पल रुकिए।", "ದಯವಿಟ್ಟು ಒಂದು ಕ್ಷಣ ನಿಲ್ಲಿ.", "தயவுசெய்து ஒரு நிமிடம் காத்திருங்கள்.", "ദയവായി ഒരു നിമിഷം കാത്തിരിക്കൂ.", "দয়া করে এক মুহূর্ত অপেক্ষা করুন।", "कृपया थोडा वेळ थांबा.", "잠시만 기다려 주세요.", "Espere un momento, por favor.", "Bitte warten Sie einen Moment.", "Veuillez patienter un instant.", "મહેરબાની કરીને થોડી વાર રાહ જુઓ.", "অনুগ্ৰহ কৰি এক মুহূৰ্ত অপেক্ষা কৰক।"], ["dont-know", "talk", "I don't know.", "నాకు తెలియదు.", "मुझे नहीं पता।", "ನನಗೆ ಗೊತ್ತಿಲ್ಲ.", "எனக்குத் தெரியாது.", "എനിക്കറിയില്ല.", "আমি জানি না।", "मला माहीत नाही.", "모르겠어요.", "No lo sé.", "Ich weiß es nicht.", "Je ne sais pas.", "મને ખબર નથી.", "মই নাজানো।"], ["understand", "talk", "I understand.", "నాకు అర్థమైంది.", "मैं समझ गया।", "ನನಗೆ ಅರ್ಥವಾಯಿತು.", "எனக்குப் புரிகிறது.", "എനിക്ക് മനസ്സിലായി.", "আমি বুঝেছি।", "मला समजले.", "이해했어요.", "Entiendo.", "Ich verstehe.", "Je comprends.", "હું સમજી ગયો.", "মই বুজি পাইছোঁ।"], ["maybe", "talk", "Maybe.", "బహుశా.", "शायद।", "ಬಹುಶಃ.", "ஒருவேளை.", "ഒരുപക്ഷേ.", "হয়তো।", "कदाचित.", "아마도요.", "Quizás.", "Vielleicht.", "Peut-être.", "કદાચ.", "হয়তো।"], ["of-course", "talk", "Of course.", "తప్పకుండా.", "बिल्कुल।", "ಖಂಡಿತ.", "நிச்சயமாக.", "തീർച്ചയായും.", "অবশ্যই।", "नक्कीच.", "물론이죠.", "Por supuesto.", "Natürlich.", "Bien sûr.", "ચોક્કસ.", "অৱশ্যে।"], ["excuse", "talk", "Excuse me.", "ఏమండీ.", "सुनिए।", "ದಯವಿಟ್ಟು ಕೇಳಿ.", "கொஞ்சம் கேளுங்கள்.", "ഒന്നു കേൾക്കൂ.", "শুনুন তো।", "ऐका ना.", "실례합니다.", "Perdone.", "Verzeihung.", "Excusez-moi.", "સાંભળો ને.", "শুনিছেনে?"], ["correct", "talk", "That is correct.", "అది సరైనది.", "यह सही है।", "ಅದು ಸರಿ.", "அது சரி.", "അത് ശരിയാണ്.", "এটা ঠিক।", "ते बरोबर आहे.", "맞아요.", "Eso es correcto.", "Das stimmt.", "C’est exact.", "એ સાચું છે.", "সেয়া শুদ্ধ।"], ["really", "talk", "Really?", "నిజమా?", "सच में?", "ನಿಜವಾಗಿಯೂ?", "உண்மையாகவா?", "ശരിക്കും?", "সত্যি?", "खरंच?", "정말요?", "¿De verdad?", "Wirklich?", "Vraiment ?", "ખરેખર?", "সঁচাকৈ?"], ["can-help", "talk", "Can you help me?", "మీరు నాకు సహాయం చేయగలరా?", "क्या आप मेरी मदद कर सकते हैं?", "ನೀವು ನನಗೆ ಸಹಾಯ ಮಾಡಬಹುದೇ?", "நீங்கள் எனக்கு உதவ முடியுமா?", "നിങ്ങൾക്ക് എന്നെ സഹായിക്കാമോ?", "আপনি কি আমাকে সাহায্য করতে পারেন?", "तुम्ही माझी मदत करू शकता का?", "도와주실 수 있나요?", "¿Puede ayudarme?", "Können Sie mir helfen?", "Pouvez-vous m’aider ?", "શું તમે મારી મદદ કરી શકો?", "আপুনি মোক সহায় কৰিব পাৰিবনে?"], ["good-idea", "talk", "That is a good idea.", "అది మంచి ఆలోచన.", "यह अच्छा विचार है।", "ಅದು ಒಳ್ಳೆಯ ಯೋಚನೆ.", "அது நல்ல யோசனை.", "അത് നല്ല ആശയമാണ്.", "এটা ভালো ধারণা।", "ही चांगली कल्पना आहे.", "좋은 생각이에요.", "Es una buena idea.", "Das ist eine gute Idee.", "C’est une bonne idée.", "એ સારો વિચાર છે.", "সেয়া ভাল ধাৰণা।"], ["sad", "feel", "I am sad.", "నాకు బాధగా ఉంది.", "मैं उदास हूँ।", "ನನಗೆ ದುಃಖವಾಗಿದೆ.", "எனக்குச் சோகமாக இருக்கிறது.", "എനിക്ക് സങ്കടമുണ്ട്.", "আমার মন খারাপ।", "मी दुःखी आहे.", "슬퍼요.", "Estoy triste.", "Ich bin traurig.", "Je suis triste.", "હું દુઃખી છું.", "মোৰ দুখ লাগিছে।"], ["worried", "feel", "I am worried.", "నాకు ఆందోళనగా ఉంది.", "मुझे चिंता हो रही है।", "ನನಗೆ ಚಿಂತೆಯಾಗಿದೆ.", "எனக்குக் கவலையாக இருக்கிறது.", "എനിക്ക് ആശങ്കയുണ്ട്.", "আমি চিন্তিত।", "मला काळजी वाटते.", "걱정돼요.", "Estoy preocupado.", "Ich mache mir Sorgen.", "Je suis inquiet.", "મને ચિંતા થાય છે.", "মোৰ চিন্তা হৈছে।"], ["excited", "feel", "I am excited.", "నాకు ఉత్సాహంగా ఉంది.", "मैं उत्साहित हूँ।", "ನನಗೆ ಉತ್ಸಾಹವಾಗಿದೆ.", "எனக்கு உற்சாகமாக இருக்கிறது.", "എനിക്ക് ആവേശമുണ്ട്.", "আমি উত্তেজিত।", "मी उत्साहित आहे.", "신나요.", "Estoy emocionado.", "Ich freue mich sehr.", "Je suis enthousiaste.", "હું ઉત્સાહિત છું.", "মই উৎসাহিত।"], ["cold", "feel", "I am cold.", "నాకు చలిగా ఉంది.", "मुझे ठंड लग रही है।", "ನನಗೆ ಚಳಿಯಾಗುತ್ತಿದೆ.", "எனக்குக் குளிர்கிறது.", "എനിക്ക് തണുക്കുന്നു.", "আমার ঠান্ডা লাগছে।", "मला थंडी वाजत आहे.", "추워요.", "Tengo frío.", "Mir ist kalt.", "J’ai froid.", "મને ઠંડી લાગે છે.", "মোৰ ঠাণ্ডা লাগিছে।"], ["hot", "feel", "I am hot.", "నాకు వేడిగా ఉంది.", "मुझे गर्मी लग रही है।", "ನನಗೆ ಸೆಕೆಯಾಗುತ್ತಿದೆ.", "எனக்கு வெப்பமாக இருக்கிறது.", "എനിക്ക് ചൂടെടുക്കുന്നു.", "আমার গরম লাগছে।", "मला गरम होत आहे.", "더워요.", "Tengo calor.", "Mir ist heiß.", "J’ai chaud.", "મને ગરમી લાગે છે.", "মোৰ গৰম লাগিছে।"], ["sleepy", "feel", "I am sleepy.", "నాకు నిద్ర వస్తోంది.", "मुझे नींद आ रही है।", "ನನಗೆ ನಿದ್ರೆ ಬರುತ್ತಿದೆ.", "எனக்குத் தூக்கம் வருகிறது.", "എനിക്ക് ഉറക്കം വരുന്നു.", "আমার ঘুম পাচ্ছে।", "मला झोप येत आहे.", "졸려요.", "Tengo sueño.", "Ich bin schläfrig.", "J’ai sommeil.", "મને ઊંઘ આવે છે.", "মোৰ টোপনি আহিছে।"], ["thirsty", "feel", "I am thirsty.", "నాకు దాహంగా ఉంది.", "मुझे प्यास लगी है।", "ನನಗೆ ಬಾಯಾರಿಕೆಯಾಗಿದೆ.", "எனக்குத் தாகமாக இருக்கிறது.", "എനിക്ക് ദാഹിക്കുന്നു.", "আমার তেষ্টা পেয়েছে।", "मला तहान लागली आहे.", "목말라요.", "Tengo sed.", "Ich habe Durst.", "J’ai soif.", "મને તરસ લાગી છે.", "মোৰ পিয়াহ লাগিছে।"], ["bored", "feel", "I am bored.", "నాకు విసుగ్గా ఉంది.", "मैं ऊब गया हूँ।", "ನನಗೆ ಬೇಸರವಾಗಿದೆ.", "எனக்குச் சலிப்பாக இருக்கிறது.", "എനിക്ക് ബോറടിക്കുന്നു.", "আমার একঘেয়ে লাগছে।", "मला कंटाळा आला आहे.", "심심해요.", "Estoy aburrido.", "Mir ist langweilig.", "Je m’ennuie.", "મને કંટાળો આવે છે.", "মোৰ বিৰক্তি লাগিছে।"], ["job-q", "work", "What do you do?", "మీరు ఏం పని చేస్తారు?", "आप क्या काम करते हैं?", "ನೀವು ಏನು ಕೆಲಸ ಮಾಡುತ್ತೀರಿ?", "நீங்கள் என்ன வேலை செய்கிறீர்கள்?", "നിങ്ങൾ എന്ത് ജോലി ചെയ്യുന്നു?", "আপনি কী কাজ করেন?", "तुम्ही काय काम करता?", "무슨 일을 하세요?", "¿A qué se dedica?", "Was machen Sie beruflich?", "Que faites-vous dans la vie ?", "તમે શું કામ કરો છો?", "আপুনি কি কাম কৰে?"], ["engineer", "work", "I am an engineer.", "నేను ఇంజనీర్‌ని.", "मैं इंजीनियर हूँ।", "ನಾನು ಎಂಜಿನಿಯರ್.", "நான் ஒரு பொறியாளர்.", "ഞാൻ ഒരു എഞ്ചിനീയറാണ്.", "আমি একজন ইঞ্জিনিয়ার।", "मी अभियंता आहे.", "저는 엔지니어예요.", "Soy ingeniero.", "Ich bin Ingenieur.", "Je suis ingénieur.", "હું એન્જિનિયર છું.", "মই এজন ইঞ্জিনিয়াৰ।"], ["student", "work", "I am a student.", "నేను విద్యార్థిని.", "मैं विद्यार्थी हूँ।", "ನಾನು ವಿದ್ಯಾರ್ಥಿ.", "நான் ஒரு மாணவர்.", "ഞാൻ ഒരു വിദ്യാർത്ഥിയാണ്.", "আমি একজন ছাত্র।", "मी विद्यार्थी आहे.", "저는 학생이에요.", "Soy estudiante.", "Ich bin Student.", "Je suis étudiant.", "હું વિદ્યાર્થી છું.", "মই এজন ছাত্ৰ।"], ["busy", "work", "I am busy.", "నేను బిజీగా ఉన్నాను.", "मैं व्यस्त हूँ।", "ನಾನು ಬ್ಯುಸಿಯಾಗಿದ್ದೇನೆ.", "நான் வேலையாக இருக்கிறேன்.", "ഞാൻ തിരക്കിലാണ്.", "আমি ব্যস্ত।", "मी व्यस्त आहे.", "바빠요.", "Estoy ocupado.", "Ich bin beschäftigt.", "Je suis occupé.", "હું વ્યસ્ત છું.", "মই ব্যস্ত।"], ["free-today", "work", "I am free today.", "ఈ రోజు నేను ఖాళీగా ఉన్నాను.", "आज मैं खाली हूँ।", "ಇಂದು ನಾನು ಖಾಲಿಯಾಗಿದ್ದೇನೆ.", "இன்று நான் ஓய்வாக இருக்கிறேன்.", "ഇന്ന് ഞാൻ ഫ്രീയാണ്.", "আজ আমি ফাঁকা আছি।", "आज मी मोकळा आहे.", "오늘은 시간이 있어요.", "Hoy estoy libre.", "Heute habe ich Zeit.", "Je suis libre aujourd’hui.", "આજે હું ફ્રી છું.", "আজি মই মুকলি আছোঁ।"], ["meeting", "work", "I have a meeting today.", "ఈ రోజు నాకు మీటింగ్ ఉంది.", "आज मेरी एक बैठक है।", "ಇಂದು ನನಗೆ ಮೀಟಿಂಗ್ ಇದೆ.", "இன்று எனக்கு ஒரு கூட்டம் இருக்கிறது.", "ഇന്ന് എനിക്ക് ഒരു മീറ്റിംഗ് ഉണ്ട്.", "আজ আমার একটা মিটিং আছে।", "आज माझी एक बैठक आहे.", "오늘 회의가 있어요.", "Hoy tengo una reunión.", "Ich habe heute ein Meeting.", "J’ai une réunion aujourd’hui.", "આજે મારી એક મીટિંગ છે.", "আজি মোৰ এখন সভা আছে।"], ["call-me", "work", "Please call me.", "దయచేసి నాకు ఫోన్ చేయండి.", "कृपया मुझे फ़ोन कीजिए।", "ದಯವಿಟ್ಟು ನನಗೆ ಕರೆ ಮಾಡಿ.", "தயவுசெய்து என்னை அழையுங்கள்.", "ദയവായി എന്നെ വിളിക്കൂ.", "দয়া করে আমাকে ফোন করুন।", "कृपया मला फोन करा.", "저에게 전화해 주세요.", "Llámeme, por favor.", "Bitte rufen Sie mich an.", "Appelez-moi, s’il vous plaît.", "મહેરબાની કરીને મને ફોન કરો.", "অনুগ্ৰহ কৰি মোক ফোন কৰক।"], ["phone-q", "work", "What is your phone number?", "మీ ఫోన్ నంబర్ ఏమిటి?", "आपका फ़ोन नंबर क्या है?", "ನಿಮ್ಮ ಫೋನ್ ನಂಬರ್ ಏನು?", "உங்கள் தொலைபேசி எண் என்ன?", "നിങ്ങളുടെ ഫോൺ നമ്പർ എന്താണ്?", "আপনার ফোন নম্বর কত?", "तुमचा फोन नंबर काय आहे?", "전화번호가 어떻게 되세요?", "¿Cuál es su número de teléfono?", "Wie ist Ihre Telefonnummer?", "Quel est votre numéro de téléphone ?", "તમારો ફોન નંબર શું છે?", "আপোনাৰ ফোন নম্বৰ কি?"], ["wifi-q", "work", "Is there Wi-Fi here?", "ఇక్కడ వై-ఫై ఉందా?", "क्या यहाँ वाई-फ़ाई है?", "ಇಲ್ಲಿ ವೈ-ಫೈ ಇದೆಯಾ?", "இங்கே வைஃபை இருக்கிறதா?", "ഇവിടെ വൈ-ഫൈ ഉണ്ടോ?", "এখানে কি ওয়াই-ফাই আছে?", "इथे वाय-फाय आहे का?", "여기 와이파이 있나요?", "¿Hay Wi-Fi aquí?", "Gibt es hier WLAN?", "Y a-t-il du Wi-Fi ici ?", "અહીં વાઇ-ફાઇ છે?", "ইয়াত ৱাই-ফাই আছেনে?"], ["wifi-pass", "work", "What is the Wi-Fi password?", "వై-ఫై పాస్‌వర్డ్ ఏమిటి?", "वाई-फ़ाई का पासवर्ड क्या है?", "ವೈ-ಫೈ ಪಾಸ್‌ವರ್ಡ್ ಏನು?", "வைஃபை கடவுச்சொல் என்ன?", "വൈ-ഫൈ പാസ്‌വേഡ് എന്താണ്?", "ওয়াই-ফাইয়ের পাসওয়ার্ড কী?", "वाय-फायचा पासवर्ड काय आहे?", "와이파이 비밀번호가 뭐예요?", "¿Cuál es la contraseña del Wi-Fi?", "Wie lautet das WLAN-Passwort?", "Quel est le mot de passe du Wi-Fi ?", "વાઇ-ફાઇનો પાસવર્ડ શું છે?", "ৱাই-ফাইৰ পাছৱৰ্ড কি?"], ["weather-q", "home", "How is the weather today?", "ఈ రోజు వాతావరణం ఎలా ఉంది?", "आज मौसम कैसा है?", "ಇಂದು ಹವಾಮಾನ ಹೇಗಿದೆ?", "இன்று வானிலை எப்படி இருக்கிறது?", "ഇന്ന് കാലാവസ്ഥ എങ്ങനെയാണ്?", "আজ আবহাওয়া কেমন?", "आज हवामान कसे आहे?", "오늘 날씨가 어때요?", "¿Qué tiempo hace hoy?", "Wie ist das Wetter heute?", "Quel temps fait-il aujourd’hui ?", "આજે હવામાન કેવું છે?", "আজি বতৰ কেনে?"], ["hot-today", "home", "It is very hot today.", "ఈ రోజు చాలా వేడిగా ఉంది.", "आज बहुत गर्मी है।", "ಇಂದು ತುಂಬಾ ಬಿಸಿಲು.", "இன்று மிகவும் வெயிலாக இருக்கிறது.", "ഇന്ന് നല്ല ചൂടാണ്.", "আজ খুব গরম।", "आज खूप उकाडा आहे.", "오늘은 아주 더워요.", "Hoy hace mucho calor.", "Heute ist es sehr heiß.", "Il fait très chaud aujourd’hui.", "આજે બહુ ગરમી છે.", "আজি বহুত গৰম।"], ["raining", "home", "It is raining.", "వర్షం పడుతోంది.", "बारिश हो रही है।", "ಮಳೆ ಬರುತ್ತಿದೆ.", "மழை பெய்கிறது.", "മഴ പെയ്യുന്നു.", "বৃষ্টি হচ্ছে।", "पाऊस पडत आहे.", "비가 와요.", "Está lloviendo.", "Es regnet.", "Il pleut.", "વરસાદ પડે છે.", "বৰষুণ দিছে।"], ["date-q", "home", "What is the date today?", "ఈ రోజు తేదీ ఏమిటి?", "आज की तारीख़ क्या है?", "ಇಂದಿನ ದಿನಾಂಕ ಏನು?", "இன்றைய தேதி என்ன?", "ഇന്നത്തെ തീയതി എന്താണ്?", "আজ কত তারিখ?", "आज तारीख काय आहे?", "오늘 며칠이에요?", "¿Qué fecha es hoy?", "Welches Datum ist heute?", "Quelle est la date aujourd’hui ?", "આજે તારીખ શું છે?", "আজি কেইতাৰিখ?"], ["open-q", "home", "What time does it open?", "ఇది ఎన్ని గంటలకు తెరుస్తారు?", "यह कितने बजे खुलता है?", "ಇದು ಎಷ್ಟು ಗಂಟೆಗೆ ತೆರೆಯುತ್ತದೆ?", "இது எத்தனை மணிக்குத் திறக்கும்?", "ഇത് എപ്പോൾ തുറക്കും?", "এটা কখন খোলে?", "हे किती वाजता उघडते?", "몇 시에 열어요?", "¿A qué hora abre?", "Wann öffnet es?", "À quelle heure ça ouvre ?", "આ કેટલા વાગ્યે ખુલે છે?", "এইটো কেতিয়া খোলে?"], ["close-q", "home", "What time does it close?", "ఇది ఎన్ని గంటలకు మూసేస్తారు?", "यह कितने बजे बंद होता है?", "ಇದು ಎಷ್ಟು ಗಂಟೆಗೆ ಮುಚ್ಚುತ್ತದೆ?", "இது எத்தனை மணிக்கு மூடுவார்கள்?", "ഇത് എപ്പോൾ അടയ്ക്കും?", "এটা কখন বন্ধ হয়?", "हे किती वाजता बंद होते?", "몇 시에 닫아요?", "¿A qué hora cierra?", "Wann schließt es?", "À quelle heure ça ferme ?", "આ કેટલા વાગ્યે બંધ થાય છે?", "এইটো কেতিয়া বন্ধ হয়?"], ["right-now", "home", "Right now.", "ఇప్పుడే.", "अभी।", "ಈಗಲೇ.", "இப்போதே.", "ഇപ്പോൾ തന്നെ.", "এখনই।", "आत्ताच.", "지금요.", "Ahora mismo.", "Jetzt gleich.", "Tout de suite.", "હમણાં જ.", "এতিয়াই।"], ["come-in", "home", "Please come in.", "దయచేసి లోపలికి రండి.", "कृपया अंदर आइए।", "ದಯವಿಟ್ಟು ಒಳಗೆ ಬನ್ನಿ.", "தயவுசெய்து உள்ளே வாருங்கள்.", "ദയവായി അകത്തേക്ക് വരൂ.", "দয়া করে ভেতরে আসুন।", "कृपया आत या.", "들어오세요.", "Pase, por favor.", "Bitte kommen Sie herein.", "Entrez, s’il vous plaît.", "મહેરબાની કરીને અંદર આવો.", "অনুগ্ৰহ কৰি ভিতৰলৈ আহক।"], ["sit", "home", "Please sit down.", "దయచేసి కూర్చోండి.", "कृपया बैठिए।", "ದಯವಿಟ್ಟು ಕುಳಿತುಕೊಳ್ಳಿ.", "தயவுசெய்து உட்காருங்கள்.", "ദയവായി ഇരിക്കൂ.", "দয়া করে বসুন।", "कृपया बसा.", "앉으세요.", "Siéntese, por favor.", "Bitte setzen Sie sich.", "Asseyez-vous, s’il vous plaît.", "મહેરબાની કરીને બેસો.", "অনুগ্ৰহ কৰি বহক।"], ["open-door", "home", "Please open the door.", "దయచేసి తలుపు తెరవండి.", "कृपया दरवाज़ा खोलिए।", "ದಯವಿಟ್ಟು ಬಾಗಿಲು ತೆರೆಯಿರಿ.", "தயவுசெய்து கதவைத் திறங்கள்.", "ദയവായി വാതിൽ തുറക്കൂ.", "দয়া করে দরজা খুলুন।", "कृपया दार उघडा.", "문을 열어 주세요.", "Abra la puerta, por favor.", "Bitte öffnen Sie die Tür.", "Ouvrez la porte, s’il vous plaît.", "મહેરબાની કરીને દરવાજો ખોલો.", "অনুগ্ৰহ কৰি দুৱাৰ খোলক।"], ["glass-water", "food", "A glass of water, please.", "దయచేసి ఒక గ్లాసు నీళ్ళు ఇవ్వండి.", "कृपया एक गिलास पानी दीजिए।", "ದಯವಿಟ್ಟು ಒಂದು ಲೋಟ ನೀರು ಕೊಡಿ.", "தயவுசெய்து ஒரு டம்ளர் தண்ணீர் தாருங்கள்.", "ദയവായി ഒരു ഗ്ലാസ് വെള്ളം തരൂ.", "দয়া করে এক গ্লাস জল দিন।", "कृपया एक ग्लास पाणी द्या.", "물 한 잔 주세요.", "Un vaso de agua, por favor.", "Ein Glas Wasser, bitte.", "Un verre d’eau, s’il vous plaît.", "મહેરબાની કરીને એક ગ્લાસ પાણી આપો.", "অনুগ্ৰহ কৰি এগিলাছ পানী দিয়ক।"], ["breakfast-q", "food", "What is for breakfast?", "అల్పాహారానికి ఏముంది?", "नाश्ते में क्या है?", "ಉಪಾಹಾರಕ್ಕೆ ಏನಿದೆ?", "காலை உணவுக்கு என்ன இருக்கிறது?", "പ്രഭാതഭക്ഷണത്തിന് എന്താണുള്ളത്?", "সকালের খাবারে কী আছে?", "नाश्त्याला काय आहे?", "아침 식사로 뭐가 있어요?", "¿Qué hay de desayuno?", "Was gibt es zum Frühstück?", "Qu’y a-t-il au petit-déjeuner ?", "નાસ્તામાં શું છે?", "ৰাতিপুৱাৰ আহাৰত কি আছে?"], ["lunch", "food", "Let's have lunch.", "భోజనం చేద్దాం రండి.", "चलिए, दोपहर का खाना खाते हैं।", "ಊಟ ಮಾಡೋಣ ಬನ್ನಿ.", "மதிய உணவு சாப்பிடலாம்.", "നമുക്ക് ഉച്ചഭക്ഷണം കഴിക്കാം.", "চলুন, দুপুরের খাবার খাই।", "चला, दुपारचे जेवण करूया.", "점심 먹어요.", "Vamos a comer.", "Lass uns zu Mittag essen.", "Allons déjeuner.", "ચાલો, બપોરનું ભોજન કરીએ.", "আহক, দুপৰীয়াৰ আহাৰ খাওঁ।"], ["dinner-ready", "food", "Dinner is ready.", "రాత్రి భోజనం సిద్ధంగా ఉంది.", "रात का खाना तैयार है।", "ರಾತ್ರಿ ಊಟ ಸಿದ್ಧವಾಗಿದೆ.", "இரவு உணவு தயாராக இருக்கிறது.", "അത്താഴം തയ്യാറാണ്.", "রাতের খাবার তৈরি।", "रात्रीचे जेवण तयार आहे.", "저녁 식사가 준비됐어요.", "La cena está lista.", "Das Abendessen ist fertig.", "Le dîner est prêt.", "રાતનું ભોજન તૈયાર છે.", "ৰাতিৰ আহাৰ সাজু।"], ["more", "food", "A little more, please.", "దయచేసి కొంచెం ఇంకా వడ్డించండి.", "कृपया थोड़ा और दीजिए।", "ದಯವಿಟ್ಟು ಇನ್ನೂ ಸ್ವಲ್ಪ ಕೊಡಿ.", "தயவுசெய்து இன்னும் கொஞ்சம் தாருங்கள்.", "ദയവായി കുറച്ചു കൂടി തരൂ.", "দয়া করে আরেকটু দিন।", "कृपया थोडे आणखी द्या.", "조금 더 주세요.", "Un poco más, por favor.", "Etwas mehr, bitte.", "Encore un peu, s’il vous plaît.", "મહેરબાની કરીને થોડું વધારે આપો.", "অনুগ্ৰহ কৰি অলপ আৰু দিয়ক।"], ["enough", "food", "That is enough, thank you.", "చాలు, ధన్యవాదాలు.", "बस, धन्यवाद।", "ಸಾಕು, ಧನ್ಯವಾದಗಳು.", "போதும், நன்றி.", "മതി, നന്ദി.", "যথেষ্ট, ধন্যবাদ।", "पुरे, धन्यवाद.", "충분해요, 감사합니다.", "Es suficiente, gracias.", "Das reicht, danke.", "Ça suffit, merci.", "બસ, આભાર.", "যথেষ্ট, ধন্যবাদ।"], ["train-q", "travel", "When does the train leave?", "రైలు ఎప్పుడు బయలుదేరుతుంది?", "ट्रेन कब छूटती है?", "ರೈಲು ಯಾವಾಗ ಹೊರಡುತ್ತದೆ?", "ரயில் எப்போது புறப்படும்?", "ട്രെയിൻ എപ്പോഴാണ് പുറപ്പെടുന്നത്?", "ট্রেন কখন ছাড়ে?", "रेल्वे कधी सुटते?", "기차는 언제 출발해요?", "¿Cuándo sale el tren?", "Wann fährt der Zug ab?", "Quand part le train ?", "ટ્રેન ક્યારે ઊપડે છે?", "ৰেল কেতিয়া ওলায়?"], ["platform-q", "travel", "Which platform?", "ఏ ప్లాట్‌ఫామ్?", "कौन-सा प्लेटफ़ॉर्म?", "ಯಾವ ಪ್ಲಾಟ್‌ಫಾರ್ಮ್?", "எந்த நடைமேடை?", "ഏത് പ്ലാറ്റ്ഫോം?", "কোন প্ল্যাটফর্ম?", "कोणता प्लॅटफॉर्म?", "몇 번 승강장이에요?", "¿Qué andén?", "Welcher Bahnsteig?", "Quel quai ?", "કયું પ્લેટફોર્મ?", "কোনটো প্লেটফৰ্ম?"], ["tickets-two", "travel", "Two tickets, please.", "దయచేసి రెండు టికెట్లు ఇవ్వండి.", "कृपया दो टिकट दीजिए।", "ದಯವಿಟ್ಟು ಎರಡು ಟಿಕೆಟ್ ಕೊಡಿ.", "தயவுசெய்து இரண்டு டிக்கெட் தாருங்கள்.", "ദയവായി രണ്ട് ടിക്കറ്റ് തരൂ.", "দয়া করে দুটো টিকিট দিন।", "कृपया दोन तिकिटे द्या.", "표 두 장 주세요.", "Dos billetes, por favor.", "Zwei Fahrkarten, bitte.", "Deux billets, s’il vous plaît.", "મહેરબાની કરીને બે ટિકિટ આપો.", "অনুগ্ৰহ কৰি দুখন টিকট দিয়ক।"], ["seat-free", "travel", "Is this seat free?", "ఈ సీటు ఖాళీగా ఉందా?", "क्या यह सीट खाली है?", "ಈ ಸೀಟು ಖಾಲಿ ಇದೆಯಾ?", "இந்த இருக்கை காலியாக இருக்கிறதா?", "ഈ സീറ്റ് ഒഴിവാണോ?", "এই সিটটা কি খালি?", "ही जागा रिकामी आहे का?", "이 자리 비어 있나요?", "¿Está libre este asiento?", "Ist dieser Platz frei?", "Cette place est-elle libre ?", "શું આ સીટ ખાલી છે?", "এই আসনটো খালী নেকি?"], ["late", "travel", "The bus is late.", "బస్సు ఆలస్యంగా వస్తోంది.", "बस देर से आ रही है।", "ಬಸ್ ತಡವಾಗಿದೆ.", "பேருந்து தாமதமாக வருகிறது.", "ബസ് വൈകിയാണ് വരുന്നത്.", "বাস দেরিতে আসছে।", "बस उशिरा येत आहे.", "버스가 늦어요.", "El autobús llega tarde.", "Der Bus hat Verspätung.", "Le bus est en retard.", "બસ મોડી છે.", "বাছ পলমকৈ আহিছে।"], ["how-long", "travel", "How long does it take?", "ఎంత సమయం పడుతుంది?", "कितना समय लगेगा?", "ಎಷ್ಟು ಸಮಯ ಬೇಕು?", "எவ்வளவு நேரம் ஆகும்?", "എത്ര സമയം എടുക്കും?", "কত সময় লাগবে?", "किती वेळ लागेल?", "얼마나 걸려요?", "¿Cuánto tarda?", "Wie lange dauert es?", "Combien de temps cela prend-il ?", "કેટલો સમય લાગશે?", "কিমান সময় লাগিব?"], ["map", "travel", "Can you show me on the map?", "మ్యాప్‌లో చూపించగలరా?", "क्या आप नक्शे पर दिखा सकते हैं?", "ನಕ್ಷೆಯಲ್ಲಿ ತೋರಿಸಬಹುದೇ?", "வரைபடத்தில் காட்ட முடியுமா?", "മാപ്പിൽ കാണിക്കാമോ?", "মানচিত্রে দেখিয়ে দেবেন?", "नकाशावर दाखवाल का?", "지도에서 보여 주시겠어요?", "¿Puede mostrármelo en el mapa?", "Können Sie es mir auf der Karte zeigen?", "Pouvez-vous me le montrer sur la carte ?", "શું તમે નકશા પર બતાવશો?", "আপুনি মানচিত্ৰত দেখুৱাব পাৰিবনে?"], ["passport", "travel", "Here is my passport.", "ఇదిగో నా పాస్‌పోర్ట్.", "यह मेरा पासपोर्ट है।", "ಇಗೋ ನನ್ನ ಪಾಸ್‌ಪೋರ್ಟ್.", "இதோ என் கடவுச்சீட்டு.", "ഇതാ എന്റെ പാസ്പോർട്ട്.", "এই যে আমার পাসপোর্ট।", "हा माझा पासपोर्ट आहे.", "여기 제 여권이에요.", "Aquí está mi pasaporte.", "Hier ist mein Reisepass.", "Voici mon passeport.", "આ મારો પાસપોર્ટ છે.", "এয়া মোৰ পাছপ’ৰ্ট।"], ["cheaper", "shop", "Do you have a cheaper one?", "ఇంకా చవకైనది ఉందా?", "क्या इससे सस्ता कोई है?", "ಇನ್ನೂ ಅಗ್ಗದ್ದು ಇದೆಯಾ?", "இன்னும் விலை குறைவானது இருக்கிறதா?", "വില കുറഞ്ഞത് ഉണ്ടോ?", "এর চেয়ে সস্তা কিছু আছে?", "यापेक्षा स्वस्त काही आहे का?", "더 싼 것 있나요?", "¿Tiene uno más barato?", "Haben Sie etwas Günstigeres?", "En avez-vous un moins cher ?", "શું આનાથી સસ્તું કંઈ છે?", "ইয়াতকৈ শস্তা কিবা আছেনে?"], ["bigger", "shop", "Do you have a bigger size?", "పెద్ద సైజ్ ఉందా?", "क्या इससे बड़ा साइज़ है?", "ದೊಡ್ಡ ಸೈಜ್ ಇದೆಯಾ?", "பெரிய அளவு இருக்கிறதா?", "വലിയ സൈസ് ഉണ്ടോ?", "আরও বড় সাইজ আছে?", "यापेक्षा मोठा आकार आहे का?", "더 큰 사이즈 있나요?", "¿Tiene una talla más grande?", "Haben Sie eine größere Größe?", "Avez-vous une taille au-dessus ?", "શું આનાથી મોટી સાઇઝ છે?", "ইয়াতকৈ ডাঙৰ আকাৰ আছেনে?"], ["try-on", "shop", "Can I try this on?", "ఇది వేసుకుని చూడవచ్చా?", "क्या मैं इसे पहनकर देख सकता हूँ?", "ಇದನ್ನು ಹಾಕಿ ನೋಡಬಹುದೇ?", "இதை அணிந்து பார்க்கலாமா?", "ഇത് ഇട്ടുനോക്കാമോ?", "এটা কি পরে দেখতে পারি?", "हे घालून पाहू शकतो का?", "입어 봐도 될까요?", "¿Puedo probármelo?", "Kann ich das anprobieren?", "Puis-je l’essayer ?", "શું હું આ પહેરી જોઈ શકું?", "মই এইটো পিন্ধি চাব পাৰোঁনে?"], ["receipt", "shop", "Please give me a receipt.", "దయచేసి రసీదు ఇవ్వండి.", "कृपया रसीद दीजिए।", "ದಯವಿಟ್ಟು ರಶೀದಿ ಕೊಡಿ.", "தயவுசெய்து ரசீது தாருங்கள்.", "ദയവായി രസീത് തരൂ.", "দয়া করে একটা রসিদ দিন।", "कृपया पावती द्या.", "영수증 주세요.", "Deme el recibo, por favor.", "Bitte geben Sie mir eine Quittung.", "Un reçu, s’il vous plaît.", "મહેરબાની કરીને રસીદ આપો.", "অনুগ্ৰহ কৰি এখন ৰচিদ দিয়ক।"], ["discount", "shop", "Is there a discount?", "డిస్కౌంట్ ఉందా?", "क्या कोई छूट है?", "ರಿಯಾಯಿತಿ ಇದೆಯಾ?", "தள்ளுபடி இருக்கிறதா?", "കിഴിവ് ഉണ്ടോ?", "কোনো ছাড় আছে?", "काही सूट आहे का?", "할인되나요?", "¿Hay descuento?", "Gibt es einen Rabatt?", "Y a-t-il une réduction ?", "કોઈ છૂટ છે?", "কোনো ৰেহাই আছেনে?"], ["open-today", "shop", "Are you open today?", "ఈ రోజు మీరు తెరిచి ఉన్నారా?", "क्या आप आज खुले हैं?", "ಇಂದು ನೀವು ತೆರೆದಿದ್ದೀರಾ?", "இன்று நீங்கள் திறந்திருக்கிறீர்களா?", "ഇന്ന് തുറന്നിട്ടുണ്ടോ?", "আপনারা কি আজ খোলা?", "तुम्ही आज उघडे आहात का?", "오늘 영업하세요?", "¿Está abierto hoy?", "Haben Sie heute geöffnet?", "Êtes-vous ouverts aujourd’hui ?", "શું તમે આજે ખુલ્લા છો?", "আপোনালোক আজি খোলা নেকি?"], ["fever", "health", "I have a fever.", "నాకు జ్వరంగా ఉంది.", "मुझे बुखार है।", "ನನಗೆ ಜ್ವರ ಇದೆ.", "எனக்குக் காய்ச்சல் இருக்கிறது.", "എനിക്ക് പനിയുണ്ട്.", "আমার জ্বর আছে।", "मला ताप आहे.", "열이 나요.", "Tengo fiebre.", "Ich habe Fieber.", "J’ai de la fièvre.", "મને તાવ છે.", "মোৰ জ্বৰ আছে।"], ["pharmacy", "health", "Where is the pharmacy?", "మందుల దుకాణం ఎక్కడ ఉంది?", "दवा की दुकान कहाँ है?", "ಔಷಧಿ ಅಂಗಡಿ ಎಲ್ಲಿದೆ?", "மருந்தகம் எங்கே இருக்கிறது?", "മെഡിക്കൽ ഷോപ്പ് എവിടെയാണ്?", "ওষুধের দোকান কোথায়?", "औषधांचे दुकान कुठे आहे?", "약국이 어디예요?", "¿Dónde está la farmacia?", "Wo ist die Apotheke?", "Où est la pharmacie ?", "દવાની દુકાન ક્યાં છે?", "ঔষধৰ দোকান ক’ত?"], ["rest", "health", "I need to rest.", "నేను విశ్రాంతి తీసుకోవాలి.", "मुझे आराम करना है।", "ನಾನು ವಿಶ್ರಾಂತಿ ತೆಗೆದುಕೊಳ್ಳಬೇಕು.", "நான் ஓய்வெடுக்க வேண்டும்.", "എനിക്ക് വിശ്രമിക്കണം.", "আমার বিশ্রাম দরকার।", "मला विश्रांती घ्यायची आहे.", "쉬어야 해요.", "Necesito descansar.", "Ich muss mich ausruhen.", "J’ai besoin de me reposer.", "મારે આરામ કરવો છે.", "মোক জিৰণি লাগে।"], ["better", "health", "I feel better now.", "ఇప్పుడు నాకు కొంచెం మెరుగ్గా ఉంది.", "अब मुझे बेहतर लग रहा है।", "ಈಗ ನನಗೆ ಉತ್ತಮ ಅನಿಸುತ್ತಿದೆ.", "இப்போது நலமாக உணர்கிறேன்.", "ഇപ്പോൾ എനിക്ക് സുഖം തോന്നുന്നു.", "এখন আমার ভালো লাগছে।", "आता मला बरे वाटत आहे.", "이제 좀 나아졌어요.", "Ahora me siento mejor.", "Jetzt geht es mir besser.", "Je me sens mieux maintenant.", "હવે મને સારું લાગે છે.", "এতিয়া মোৰ ভাল লাগিছে।"], ["how-old", "people", "How old are you?", "మీ వయసు ఎంత?", "आपकी उम्र कितनी है?", "ನಿಮ್ಮ ವಯಸ್ಸು ಎಷ್ಟು?", "உங்கள் வயது என்ன?", "നിങ്ങൾക്ക് എത്ര വയസ്സായി?", "আপনার বয়স কত?", "तुमचे वय किती आहे?", "나이가 어떻게 되세요?", "¿Cuántos años tiene?", "Wie alt sind Sie?", "Quel âge avez-vous ?", "તમારી ઉંમર કેટલી છે?", "আপোনাৰ বয়স কিমান?"], ["beautiful", "people", "It is beautiful here.", "ఇక్కడ చాలా అందంగా ఉంది.", "यहाँ बहुत सुंदर है।", "ಇಲ್ಲಿ ತುಂಬಾ ಸುಂದರವಾಗಿದೆ.", "இங்கே மிக அழகாக இருக்கிறது.", "ഇവിടെ വളരെ മനോഹരമാണ്.", "এখানটা খুব সুন্দর।", "इथे खूप सुंदर आहे.", "여기 정말 아름다워요.", "Qué bonito es esto.", "Es ist wunderschön hier.", "C’est magnifique ici.", "અહીં બહુ સુંદર છે.", "ইয়াত বহুত ধুনীয়া।"], ["miss-you", "people", "I miss you.", "నిన్ను మిస్ అవుతున్నాను.", "मुझे तुम्हारी याद आती है।", "ನನಗೆ ನಿನ್ನ ನೆನಪಾಗುತ್ತಿದೆ.", "எனக்கு உன் நினைவாகவே இருக்கிறது.", "എനിക്ക് നിന്നെ ഓർമ്മ വരുന്നു.", "আমি তোমাকে মিস করি।", "मला तुझी आठवण येते.", "보고 싶어요.", "Te echo de menos.", "Ich vermisse dich.", "Tu me manques.", "મને તમારી યાદ આવે છે.", "মই তোমাক মনত পেলাইছোঁ।"], ["take-care", "people", "Take care.", "జాగ్రత్తగా ఉండండి.", "अपना ध्यान रखिए।", "ಜಾಗ್ರತೆಯಾಗಿರಿ.", "கவனமாக இருங்கள்.", "സൂക്ഷിക്കണേ.", "নিজের যত্ন নেবেন।", "काळजी घ्या.", "몸조심하세요.", "Cuídese.", "Passen Sie auf sich auf.", "Prenez soin de vous.", "ધ્યાન રાખજો.", "নিজৰ যত্ন লব।"]];
+  NEW.forEach(function (r) { var o = { id: r[0], cat: r[1], en: r[2] }; NL.forEach(function (l, i) { o[l] = r[3 + i]; }); B.PHRASES.push(o); });
+  // script charts for Gujarati and Assamese
+  var sp = function (s) { return s.split(' '); };
+  B.SCRIPTS.gu = { vowels: sp('અ આ ઇ ઈ ઉ ઊ ઋ એ ઐ ઓ ઔ'), cons: sp('ક ખ ગ ઘ ઙ ચ છ જ ઝ ઞ ટ ઠ ડ ઢ ણ ત થ દ ધ ન પ ફ બ ભ મ ય ર લ વ શ ષ સ હ ળ'), signs: sp('ા િ ી ુ ૂ ૃ ે ૈ ો ૌ'), base: 'ક', digits: sp('૦ ૧ ૨ ૩ ૪ ૫ ૬ ૭ ૮ ૯') };
+  var bn = B.SCRIPTS.bn;
+  B.SCRIPTS.as = { vowels: bn.vowels, cons: bn.cons.filter(function (c) { return c !== 'ৎ'; }).map(function (c) { return c === 'র' ? 'ৰ' : c; }).concat(['ৱ']), signs: bn.signs, base: bn.base, digits: bn.digits };
+  B.PHRASE_CATS = ['greet', 'intro', 'talk', 'daily', 'food', 'travel', 'shop', 'health', 'people', 'feel', 'work', 'home', 'time', 'num'];
+  // Conversation drills: each turn is [what the other person says, your reply], both phrase ids.
+  B.DRILLS = [
+    { id: 'meet', icon: '🤝', turns: [['how', 'fine'], ['from-q', 'from-india'], ['english-q', 'little'], ['nice', 'nice-too']] },
+    { id: 'rest', icon: '🍛', turns: [['table-how-many', 'table-two'], ['drink-q', 'water'], ['eat-q', 'order-rice'], ['spicy-q', 'notspicy'], ['anything-else', 'bill']] },
+    { id: 'dir', icon: '🧭', turns: [['need-help-q', 'lost'], ['where-go', 'station'], ['straight-then-left', 'far'], ['five-min-walk', 'thanks']] },
+    { id: 'shop', icon: '🛍', turns: [['help-you-q', 'price'], ['price-500', 'expensive'], ['price-400', 'take'], ['cash-or-card', 'pay-card']] },
+    { id: 'doc', icon: '🩺', turns: [['problem-q', 'sick'], ['where-hurt', 'hurts'], ['fever-q', 'since-yesterday'], ['medicine-twice', 'thanks']] },
+    { id: 'hotel', icon: '🏨', turns: [['reservation-q', 'have-reservation'], ['nights-q', 'two-nights'], ['third-floor', 'breakfast-incl'], ['breakfast-8', 'thanks']] }
+  ];
 })(window.B = window.B || {});
 
 ;
@@ -3031,7 +4275,7 @@
     function row(text, lang, label, speakNow) {
       var main = h('div', { class: 'ph-t', lang: lang }); main.appendChild(U.renderText(text, lang, { roman: false }));
       U.bindWords(main, function () { return lang; }, function () { return text; }, function () { });
-      var rom = B.isBrahmic(text) ? B.translit(text, set.scheme) : '';
+      var rom = B.isBrahmic(text) ? B.translit(text, set.scheme, lang) : '';
       var el = h('div', { class: 'ph say-row' }, [h('div', { class: 'ph-main' }, [main, rom ? h('div', { class: 'ph-r', text: rom }) : null, label ? h('div', { class: 'ph-n', text: label }) : null]),
         h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak'), text: '🔊', onclick: function () { U.speak(text, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow'), text: '🐢', onclick: function () { U.speak(text, lang, null, 0.55); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('copy'), text: '⧉', onclick: function () { try { navigator.clipboard.writeText(text); U.toast(t('copied')); } catch (e) { } } })])]);
       return el;
@@ -3055,6 +4299,190 @@
       }, function () { fallback(t('sayFail')); });
     }
     if (Y.text) go(false);
+  };
+})(window.B);
+
+;
+/* Daily lesson: five new phrases a day, a listening quiz, and recall of older phrases (spaced repetition on phrases).
+   Progress is stored in this browser only (localStorage "bh-lesson"). */
+(function (B) {
+  'use strict';
+  var U = B.ui, h = U.h, t = U.t, set = U.set;
+  B.views = B.views || {};
+  var ORDER = ['greet', 'intro', 'talk', 'daily', 'food', 'travel', 'shop', 'health', 'people', 'feel', 'work', 'home', 'time', 'num'];
+  var MAP = null, CUR = null;
+  function P(id) { if (!MAP) { MAP = {}; B.PHRASES.forEach(function (p) { MAP[p.id] = p; }); } return MAP[id]; }
+  function curriculum() { if (!CUR) { CUR = []; ORDER.forEach(function (c) { B.PHRASES.forEach(function (p) { if (p.cat === c) CUR.push(p.id); }); }); } return CUR; }
+  function shuffle(a) { return a.slice().sort(function () { return Math.random() - 0.5; }); }
+  B.lesson = {
+    load: function () { try { return JSON.parse(U.store.get('bh-lesson')) || {}; } catch (e) { return {}; } },
+    save: function (s) { U.store.set('bh-lesson', JSON.stringify(s)); },
+    // other phrases to use as wrong answers: same category first, no duplicate text
+    distract: function (id, n, key) {
+      var p = P(id), seen = {}, out = []; seen[key(p)] = 1;
+      var pool = shuffle(B.PHRASES.filter(function (q) { return q.id !== id; })), same = pool.filter(function (q) { return q.cat === p.cat; }), rest = pool.filter(function (q) { return q.cat !== p.cat; });
+      same.concat(rest).forEach(function (q) { var k = key(q); if (out.length < n && !seen[k]) { seen[k] = 1; out.push(q); } });
+      return out;
+    },
+    shuffle: shuffle, P: P,
+    plan: function (st, force) {
+      var d = U.today(), L = st.days[d];
+      if (L && !force) return L;
+      var fresh = curriculum().filter(function (id) { return !st.cards[id]; }).slice(0, 5), now = Date.now();
+      var due = Object.keys(st.cards).filter(function (id) { return st.cards[id].due <= now; }).sort(function (a, b) { return st.cards[a].due - st.cards[b].due; }).slice(0, 5);
+      L = { ids: fresh, recall: due, done: false, score: [0, 0] }; st.days[d] = L; return L;
+    }
+  };
+  var TD = { lang: null, step: 'intro', i: 0, right: 0, total: 0, res: {} };
+
+  B.views.today = function (app) {
+    app.textContent = ''; TD.lang = TD.lang || set.focus; var lang = TD.lang;
+    var all = B.lesson.load(); all[lang] = all[lang] || { cards: {}, days: {} }; var st = all[lang]; var L = B.lesson.plan(st); B.lesson.save(all);
+    app.appendChild(h('h1', { text: t('nav_today') })); app.appendChild(h('p', { class: 'lede', text: t('tdLede') }));
+    var ls = h('select', { id: 'td-lang', 'aria-label': t('language') }, B.INDIC.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); ls.value = lang;
+    ls.addEventListener('change', function () { TD.lang = ls.value; TD.step = 'intro'; B.views.today(app); });
+    app.appendChild(h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'td-lang', text: t('language') }), ls]), h('span', { class: 'chip ok', text: t('tdProgress', { n: Object.keys(st.cards).length, m: B.PHRASES.length }) }), h('span', { class: 'chip lr', text: t('statStreak') + ': ' + U.streak() })]));
+    var box = h('section', { class: 'panel lesson' }); app.appendChild(box);
+    function save() { B.lesson.save(all); }
+    function rom(txt) { return B.isBrahmic(txt) ? B.translit(txt, set.scheme, lang) : ''; }
+    function steps(cur) {
+      var names = [['learn', t('tdLearn')], ['listen', t('tdListen')]]; if (L.recall.length) names.push(['recall', t('tdRecall')]);
+      return h('ol', { class: 'stepbar', 'aria-label': t('nav_today') }, names.map(function (n) { return h('li', { class: n[0] === cur ? 'on' : '', 'aria-current': n[0] === cur ? 'step' : null, text: n[1] }); }));
+    }
+    function draw() {
+      box.textContent = '';
+      if (TD.step === 'intro') return intro();
+      if (TD.step === 'learn') return learn();
+      if (TD.step === 'listen') return quiz('listen');
+      if (TD.step === 'recall') return quiz('recall');
+      return finish();
+    }
+    function intro() {
+      if (L.done) {
+        box.appendChild(h('h2', { text: t('tdDone') })); box.appendChild(h('p', { class: 'lede', text: t('tdScore', { n: L.score[0], m: L.score[1] }) }));
+        box.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold big', text: t('tdBonus'), onclick: function () { L = B.lesson.plan(st, true); save(); TD.step = 'learn'; draw(); } }), h('a', { class: 'abtn', href: '/talk/', 'data-nav': '1', text: '💬 ' + t('nav_talk') })]));
+        return;
+      }
+      if (!L.ids.length && !L.recall.length) { box.appendChild(h('p', { text: t('tdDone') })); return; }
+      box.appendChild(h('h2', { text: t('tdLearn') + ': ' + L.ids.length }));
+      box.appendChild(h('ul', { class: 'plain' }, L.ids.map(function (id) { return h('li', { lang: lang, text: B.lesson.P(id).en }); })));
+      if (L.recall.length) box.appendChild(h('p', { class: 'note', text: t('tdRecallN', { n: L.recall.length }) }));
+      box.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold big', text: t('tdStart'), onclick: function () { TD.step = L.ids.length ? 'learn' : 'recall'; TD.i = 0; TD.right = 0; TD.total = 0; draw(); } })]));
+    }
+    function learn() {
+      box.appendChild(steps('learn'));
+      var list = h('div', { class: 'ph-list' });
+      L.ids.forEach(function (id) {
+        var p = B.lesson.P(id), txt = p[lang], tgt = h('div', { class: 'ph-t', lang: lang }); tgt.appendChild(U.renderText(txt, lang, { roman: false }));
+        U.bindWords(tgt, function () { return lang; }, function () { return txt; }, function () { });
+        list.appendChild(h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, rom(txt) ? h('div', { class: 'ph-r', text: rom(txt) }) : null, h('div', { class: 'ph-n', text: p.en })]),
+          h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55); } })])]));
+      });
+      box.appendChild(list);
+      box.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold big', text: t('tdNext'), onclick: function () { TD.step = 'listen'; TD.i = 0; draw(); } })]));
+    }
+    function quiz(kind) {
+      var ids = kind === 'listen' ? L.ids : L.recall;
+      if (TD.i >= ids.length) { if (kind === 'listen' && L.recall.length) { TD.step = 'recall'; TD.i = 0; return draw(); } TD.step = 'done'; return draw(); }
+      var id = ids[TD.i], p = B.lesson.P(id), txt = p[lang];
+      box.appendChild(steps(kind)); box.appendChild(h('p', { class: 'note', text: (TD.i + 1) + ' / ' + ids.length }));
+      var keyOf = kind === 'listen' ? function (q) { return q.en; } : function (q) { return q[lang]; };
+      var opts = B.lesson.shuffle([p].concat(B.lesson.distract(id, 2, keyOf)));
+      if (kind === 'listen') {
+        box.appendChild(h('h2', { text: t('tdListenQ') }));
+        box.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn big', text: '🔊', 'aria-label': t('speak'), onclick: function () { U.speak(txt, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', text: '🐢', 'aria-label': t('slow'), onclick: function () { U.speak(txt, lang, null, 0.55); } })]));
+        setTimeout(function () { U.speak(txt, lang, null, set.rate); }, 150);
+      } else {
+        box.appendChild(h('h2', { text: t('tdRecallQ') })); box.appendChild(h('p', { class: 'ph-n big', text: p.en }));
+      }
+      var res = h('p', { class: 'qz-res', 'aria-live': 'polite' }), done = false, nb = h('button', { type: 'button', class: 'abtn gold', text: t('tdNext'), hidden: true, onclick: function () { TD.i++; draw(); } });
+      var wrap = h('div', { class: 'opts' }, opts.map(function (o) {
+        var kids = kind === 'listen' ? [h('span', { text: o.en })] : [h('span', { lang: lang, text: o[lang] }), rom(o[lang]) ? h('span', { class: 'r', text: rom(o[lang]) }) : null];
+        return h('button', { type: 'button', class: 'abtn opt', onclick: function (ev) {
+          if (done) return; done = true; var ok = o.id === id, b = ev.currentTarget; b.classList.add(ok ? 'right' : 'wrong');
+          if (!ok) [].forEach.call(wrap.children, function (x, i) { if (opts[i].id === id) x.classList.add('right'); });
+          res.textContent = ok ? t('correct') : t('wrongIs', { a: kind === 'listen' ? p.en : txt }); U.speak(txt, lang, null, set.rate);
+          TD.total++; if (ok) TD.right++; U.logReview();
+          var c = st.cards[id] || B.srsNew(Date.now()); st.cards[id] = B.srsNext(c, ok ? 2 : 0, Date.now());
+          if (kind === 'recall' || !ok) save(); else save();
+          if (TD.i + 1 >= ids.length && !(kind === 'listen' && L.recall.length)) nb.textContent = t('tdFinish');
+          nb.hidden = false; nb.focus();
+        } }, kids);
+      }));
+      box.appendChild(wrap); box.appendChild(res); box.appendChild(h('div', { class: 'acts' }, [nb]));
+    }
+    function finish() {
+      L.done = true; L.score = [TD.right, TD.total]; save();
+      box.appendChild(h('h2', { text: t('tdDone') })); box.appendChild(h('p', { class: 'lede', text: t('tdScore', { n: TD.right, m: TD.total }) }));
+      box.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold big', text: t('tdBonus'), onclick: function () { L = B.lesson.plan(st, true); save(); TD.step = 'learn'; draw(); } }), h('a', { class: 'abtn', href: '/talk/', 'data-nav': '1', text: '💬 ' + t('nav_talk') })]));
+      var chip = document.querySelector('.tools .chip.ok'); if (chip) chip.textContent = t('tdProgress', { n: Object.keys(st.cards).length, m: B.PHRASES.length });
+    }
+    if (L.done) TD.step = 'intro'; draw();
+  };
+})(window.B);
+
+;
+/* Conversation drills: hear what the other person says, then choose your reply. Lines come from the phrasebook. */
+(function (B) {
+  'use strict';
+  var U = B.ui, h = U.h, t = U.t, set = U.set;
+  B.views = B.views || {};
+  var DR = { lang: null, sc: null, turn: 0, ok: 0, first: true, hide: false };
+
+  B.views.talk = function (app) {
+    app.textContent = ''; DR.lang = DR.lang || set.focus; var lang = DR.lang, LS = B.lesson;
+    function rom(txt) { return B.isBrahmic(txt) ? B.translit(txt, set.scheme, lang) : ''; }
+    function line(p, who) {
+      var txt = p[lang], r = rom(txt);
+      return h('div', { class: 'bubble ' + who }, [h('div', { class: 'bub-t' }, [h('div', { class: 'ph-t', lang: lang, text: txt }), r ? h('div', { class: 'ph-r', text: r }) : null, h('div', { class: 'ph-n', text: p.en })]),
+        h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55); } })])]);
+    }
+    function list() {
+      DR.sc = null; app.textContent = '';
+      app.appendChild(h('h1', { text: t('nav_talk') })); app.appendChild(h('p', { class: 'lede', text: t('drLede') }));
+      var ls = h('select', { id: 'dr-lang', 'aria-label': t('language') }, B.INDIC.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); ls.value = lang;
+      ls.addEventListener('change', function () { DR.lang = ls.value; B.views.talk(app); });
+      var hide = h('input', { type: 'checkbox', id: 'dr-hide' }); hide.checked = DR.hide; hide.addEventListener('change', function () { DR.hide = hide.checked; });
+      app.appendChild(h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'dr-lang', text: t('language') }), ls]), h('label', { class: 'tf chk', for: 'dr-hide' }, [hide, h('span', { text: t('drHide') })])]));
+      var grid = h('div', { class: 'cards' });
+      B.DRILLS.forEach(function (d) { grid.appendChild(h('button', { type: 'button', class: 'card', onclick: function () { DR.sc = d; DR.turn = 0; DR.ok = 0; run(); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: d.icon }), h('h2', { text: t('d_' + d.id) }), h('p', { text: t('drTurns', { n: d.turns.length }) })])); });
+      app.appendChild(grid);
+    }
+    function run() {
+      app.textContent = ''; var d = DR.sc, tr = d.turns[DR.turn];
+      if (!tr) return done();
+      var them = LS.P(tr[0]), you = LS.P(tr[1]); DR.first = true;
+      app.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn', text: '← ' + t('drPick'), onclick: list }), h('span', { class: 'chip', text: (DR.turn + 1) + ' / ' + d.turns.length })]));
+      app.appendChild(h('h1', { text: d.icon + ' ' + t('d_' + d.id) }));
+      var panel = h('section', { class: 'panel' }); app.appendChild(panel);
+      panel.appendChild(h('h2', { text: t('drThem') }));
+      var tb = line(them, 'them'); panel.appendChild(tb);
+      if (DR.hide) { tb.classList.add('veil'); tb.querySelector('.bub-t').hidden = true; panel.appendChild(h('button', { type: 'button', class: 'abtn', id: 'dr-show', text: '👁 ' + t('drThem'), onclick: function (e) { tb.querySelector('.bub-t').hidden = false; e.currentTarget.remove(); } })); }
+      setTimeout(function () { U.speak(them[lang], lang, null, set.rate); }, 200);
+      panel.appendChild(h('h2', { class: 'yt', text: t('drYou') })); panel.appendChild(h('p', { class: 'ph-n big', text: you.en }));
+      var others = []; d.turns.forEach(function (x) { if (x[1] !== tr[1] && others.indexOf(x[1]) < 0 && LS.P(x[1])[lang] !== you[lang]) others.push(x[1]); });
+      var picks = LS.shuffle(others).slice(0, 2).map(LS.P); if (picks.length < 2) picks = picks.concat(LS.distract(tr[1], 2 - picks.length, function (q) { return q[lang]; }));
+      var opts = LS.shuffle([you].concat(picks)), res = h('p', { class: 'qz-res', 'aria-live': 'polite' }), last = DR.turn + 1 >= d.turns.length, solved = false;
+      var nb = h('button', { type: 'button', class: 'abtn gold', text: last ? t('tdFinish') : t('tdNext'), hidden: true, onclick: function () { DR.turn++; run(); } });
+      panel.appendChild(h('div', { class: 'opts' }, opts.map(function (o) {
+        var r = rom(o[lang]);
+        return h('button', { type: 'button', class: 'abtn opt', onclick: function (ev) {
+          if (solved) return; var b = ev.currentTarget;
+          if (o.id === you.id) { solved = true; b.classList.add('right'); res.textContent = t('correct'); U.speak(o[lang], lang, null, set.rate); if (DR.first) DR.ok++; U.logReview(); nb.hidden = false; nb.focus(); var sh = document.getElementById('dr-show'); if (sh) sh.click(); }
+          else { DR.first = false; b.classList.add('wrong'); b.disabled = true; res.textContent = t('drTry'); }
+        } }, [h('span', { lang: lang, text: o[lang] }), r ? h('span', { class: 'r', text: r }) : null]);
+      })));
+      panel.appendChild(res); panel.appendChild(h('div', { class: 'acts' }, [nb]));
+    }
+    function done() {
+      app.textContent = ''; var d = DR.sc;
+      app.appendChild(h('h1', { text: d.icon + ' ' + t('drDone') })); app.appendChild(h('p', { class: 'lede', text: t('drScore', { n: DR.ok, m: d.turns.length }) }));
+      var panel = h('section', { class: 'panel' }, [h('h2', { text: t('drTranscript') })]);
+      d.turns.forEach(function (x) { panel.appendChild(line(LS.P(x[0]), 'them')); panel.appendChild(line(LS.P(x[1]), 'you')); });
+      app.appendChild(panel);
+      app.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold', text: t('drReplay'), onclick: function () { DR.turn = 0; DR.ok = 0; run(); } }), h('button', { type: 'button', class: 'abtn', text: t('drAnother'), onclick: list })]));
+    }
+    list();
   };
 })(window.B);
 
@@ -3215,7 +4643,7 @@
       sum.textContent = t('wdCount', { n: r.length, d: W.due().length });
       if (!r.length) { listBox.appendChild(h('p', { class: 'empty', text: W.list.length ? t('wdNoMatch') : t('wdEmpty') })); return; }
       r.slice(0, 400).forEach(function (x) {
-        var rm = B.isBrahmic(x.w) ? B.translit(x.w, set.scheme) : '';
+        var rm = B.isBrahmic(x.w) ? B.translit(x.w, set.scheme, x.lang) : '';
         var row = h('div', { class: 'wd-row' }, [
           h('div', { class: 'wd-main' }, [h('span', { class: 'wd-w', lang: x.lang, text: x.w }), rm ? h('span', { class: 'wd-r', text: rm }) : null, h('span', { class: 'wd-m', text: x.m || '—' }), x.c ? h('span', { class: 'wd-c', lang: x.lang, text: x.c }) : null]),
           h('div', { class: 'wd-side' }, [h('span', { class: 'chip ' + (x.st >= 2 ? 'ok' : 'lr'), text: x.st >= 2 ? t('st2') : t('st1') }), h('span', { class: 'wd-due', text: x.st >= 2 ? '' : (x.due <= Date.now() ? t('dueNow') : fmtDue(x.due)) }),
@@ -3278,7 +4706,7 @@
         return;
       }
       var mode = V.mode, hasCtx = !!(c.c && c.c.indexOf(c.w) >= 0), em = mode === 'cloze' && !hasCtx ? 'w2m' : mode;
-      var rm = B.isBrahmic(c.w) ? B.translit(c.w, set.scheme) : '';
+      var rm = B.isBrahmic(c.w) ? B.translit(c.w, set.scheme, c.lang) : '';
       var front = h('div', { class: 'rv-front' }), back = h('div', { class: 'rv-back' });
       if (em === 'w2m') { front.appendChild(h('div', { class: 'rv-big', lang: c.lang, text: c.w })); if (set.roman && rm) front.appendChild(h('div', { class: 'rv-sub', text: rm })); }
       else if (em === 'm2w') { front.appendChild(h('div', { class: 'rv-big', text: c.m || '—' })); front.appendChild(h('div', { class: 'rv-sub', text: t('rvWhichWord') })); }
@@ -3325,7 +4753,7 @@
       h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'hm-focus', text: t('focusLang') }), (function () { var s = h('select', { id: 'hm-focus' }, B.INDIC.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); s.value = set.focus; s.addEventListener('change', function () { set.focus = s.value; U.saveSet(); B.views.home(app); }); return s; })()])])]));
     var stats = h('div', { class: 'stats' }, [stat(saved, t('statWords')), stat(due, t('statDue')), stat(U.streak(), t('statStreak'))]);
     app.appendChild(stats);
-    var cards = [['/say/', '🗣', 'nav_say', 'cSay'], ['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '💬', 'nav_phrases', 'cPhrases']];
+    var cards = [['/today/', '📅', 'nav_today', 'cToday'], ['/say/', '🗣', 'nav_say', 'cSay'], ['/talk/', '💬', 'nav_talk', 'cTalk'], ['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '📚', 'nav_phrases', 'cPhrases']];
     var grid = h('div', { class: 'cards' });
     cards.forEach(function (c) { grid.appendChild(h('a', { class: 'card', href: B.base + c[0].slice(1), onclick: function (e) { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); U.go(c[0]); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: c[1] }), h('h2', { text: t(c[2]) }), h('p', { text: t(c[3]) }), c[0] === '/review/' && due ? h('span', { class: 'chip lr', text: t('dueCount', { n: due }) }) : null])); });
     app.appendChild(grid);
@@ -3374,7 +4802,7 @@
       q(); return box;
     }
     function draw() {
-      body.textContent = ''; var S = B.SCRIPTS[SC.lang], rom = function (g) { return B.translit(g, set.scheme) || g; };
+      body.textContent = ''; var S = B.SCRIPTS[SC.lang], rom = function (g) { return B.translit(g, set.scheme, SC.lang) || g; };
       body.appendChild(grid(t('scVowels'), S.vowels, function (g) { return cell(g, rom(g)); }));
       body.appendChild(grid(t('scCons'), S.cons, function (g) { return cell(g, rom(g)); }));
       body.appendChild(h('section', { class: 'panel' }, [h('h2', { text: t('scSigns') }), h('p', { class: 'note', text: t('scSignsNote', { b: S.base }) }), h('div', { class: 'glyphs' }, S.signs.map(function (s) { var g = S.full ? s : S.base + s; return cell(g, rom(g)); }))]));
@@ -3400,7 +4828,7 @@
       B.PHRASES.filter(function (p) { return p.cat === PH.cat; }).forEach(function (p) {
         var txt = p[PH.lang], tgt = h('div', { class: 'ph-t', lang: PH.lang }); tgt.appendChild(U.renderText(txt, PH.lang, { roman: false }));
         U.bindWords(tgt, function () { return PH.lang; }, function () { return txt; }, function () { draw(); });
-        list.appendChild(h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, h('div', { class: 'ph-r', text: B.translit(txt, set.scheme) }), h('div', { class: 'ph-n', text: p.en })]), h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, PH.lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, PH.lang, null, 0.55); } })])]));
+        list.appendChild(h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, (B.isBrahmic(txt) ? h('div', { class: 'ph-r', text: B.translit(txt, set.scheme, PH.lang) }) : null), h('div', { class: 'ph-n', text: p.en })]), h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, PH.lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, PH.lang, null, 0.55); } })])]));
       });
     }
     draw();
@@ -3414,8 +4842,8 @@
   var U = B.ui, h = U.h, t = U.t, set = U.set, $ = U.$;
   var ORIGIN = 'https://eknathalabs.com', MARK = 'M29.2 23.2V35.5Q29.2 37.5 28.4 38.4Q27.6 39.4 26.1 39.4Q25 39.4 23.8 38.7Q22.6 38.1 21.6 37Q20.7 36 20 34.8Q19.4 33.6 19.4 32.5Q19.4 31.2 20.1 30.4Q20.9 29.6 22.9 29.6L23 29.7V23.2H18V18.2H46V23.2H41.9V45.8H35.7V23.2Z';
   B.MARK = MARK; B.base = '/';
-  var ROUTES = { '': 'home', read: 'read', say: 'say', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases' };
-  var NAV = [['say', '🗣'], ['watch', '🎬'], ['read', '📖'], ['words', '🗂'], ['review', '🧠'], ['scripts', 'अ'], ['phrases', '💬']];
+  var ROUTES = { '': 'home', today: 'today', talk: 'talk', read: 'read', say: 'say', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases' };
+  var NAV = [['today', '📅'], ['say', '🗣'], ['talk', '💬'], ['watch', '🎬'], ['read', '📖'], ['words', '🗂'], ['review', '🧠'], ['scripts', 'अ'], ['phrases', '📚']];
   var app;
   function mark() { var NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg'), p = document.createElementNS(NS, 'path'); s.setAttribute('viewBox', '14 14 36 36'); s.setAttribute('width', '22'); s.setAttribute('height', '22'); s.setAttribute('aria-hidden', 'true'); p.setAttribute('d', MARK); p.setAttribute('fill', 'currentColor'); s.appendChild(p); return s; }
   function pathKey() { var p = location.pathname.replace(/index\.html$/, '').replace(/^\/+|\/+$/g, ''); return p; }
@@ -3430,7 +4858,7 @@
     var panel = h('div', { class: 'pop-panel', id: 'setp', hidden: true, role: 'dialog', 'aria-label': t('settings') }), btn = h('button', { class: 'ibtn', type: 'button', 'aria-expanded': 'false', 'aria-controls': 'setp' }, [h('span', { text: '⚙' }), h('span', { class: 'lab', text: t('settings') })]);
     function sel(id, label, opts, val, fn) { var s = h('select', { id: id }, opts.map(function (o) { return h('option', { value: o[0], text: o[1] }); })); s.value = val; s.addEventListener('change', function () { fn(s.value); }); panel.appendChild(h('label', { for: id, text: label })); panel.appendChild(s); }
     function seg(label, items, val, fn) { panel.appendChild(h('label', { text: label })); var g = h('div', { class: 'seg', role: 'group', 'aria-label': label }); items.forEach(function (it) { g.appendChild(h('button', { type: 'button', 'aria-pressed': String(val === it[0]), text: it[1], onclick: function () { fn(it[0]); [].forEach.call(g.children, function (b, i) { b.setAttribute('aria-pressed', String(items[i][0] === it[0])); }); } })); }); panel.appendChild(g); }
-    var NAMES = { en: 'English', hi: 'हिन्दी', te: 'తెలుగు', kn: 'ಕನ್ನಡ', ta: 'தமிழ்', ml: 'മലയാളം', bn: 'বাংলা', mr: 'मराठी', ko: '한국어', es: 'Español', de: 'Deutsch' };
+    var NAMES = { en: 'English', hi: 'हिन्दी', te: 'తెలుగు', kn: 'ಕನ್ನಡ', ta: 'தமிழ்', ml: 'മലയാളം', bn: 'বাংলা', mr: 'मराठी', ko: '한국어', es: 'Español', de: 'Deutsch', fr: 'Français', gu: 'ગુજરાતી', as: 'অসমীয়া' };
     panel.appendChild(h('div', { class: 'pop-title', text: t('settings') }));
     sel('s-ui', t('uiLang'), Object.keys(NAMES).map(function (k) { return [k, NAMES[k]]; }), set.ui, function (v) { set.ui = v; U.saveSet(); U.applyLang(); buildChrome(); route(); });
     sel('s-focus', t('focusLang'), B.INDIC.map(function (l) { return [l, U.langNative(l) + ' · ' + U.langName(l)]; }), set.focus, function (v) { set.focus = v; U.saveSet(); route(); });
