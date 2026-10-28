@@ -2,17 +2,18 @@
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const SRC = path.join(__dirname, 'src'), OUT = path.resolve(process.env.BHASHA_OUT || path.join(__dirname, '..'));
 const BASE = process.env.BHASHA_BASE || 'https://bhasha.eknathalabs.com';
-const FILES = ['core', 'data', 'ui', 'i18n', 'v-read', 'v-watch', 'v-words', 'v-learn', 'app'];
+const FILES = ['core', 'data', 'ui', 'i18n', 'v-read', 'v-say', 'v-watch', 'v-words', 'v-learn', 'app'];
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const MARK = fs.readFileSync(path.join(__dirname, 'icons', 'icon.svg'), 'utf8').match(/d="(M29\.2[^"]+)"/)[1];
 const ROUTES = [
-  ['', 'Bhasha', 'Learn spoken languages from what you watch and read', 'Free language learning tool for Telugu, Hindi, Kannada, Tamil, Malayalam and more. Use your own video, audio or text with clickable words, romanization, read-aloud and spaced repetition. Private and works offline.'],
+  ['', 'Bhasha', 'Learn spoken languages from what you watch and read', 'Free language learning tool for Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Korean, Spanish and German. Use your own video, audio or text with clickable words, romanization, read-aloud and spaced repetition. Private and works offline.'],
+  ['say', 'Say it', 'Type English, hear it in another language', 'Type an English sentence and get it in Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Korean, Spanish or German, with romanization and a voice. Runs on your device.'],
   ['watch', 'Watch', 'Watch with two subtitle lines', 'Play your own video or audio with a subtitle file. Dual subtitles, clickable words, line repeat, slow speed, pause after each line and shadowing practice. Nothing is uploaded.'],
   ['read', 'Read', 'Read any text with tappable words', 'Paste or open text in Telugu, Hindi, Kannada, Tamil, Malayalam or other languages. Tap a word to hear it, see romanization and save it. Read aloud with sentence highlight.'],
   ['words', 'My words', 'Your saved words', 'Your saved vocabulary, stored only in your browser. Export to CSV, Anki or a backup file and import it back.'],
   ['review', 'Review', 'Spaced repetition review', 'Flashcards with spaced repetition: word to meaning, meaning to word, listening and fill-the-gap.'],
-  ['scripts', 'Scripts', 'Learn the scripts', 'Telugu, Hindi, Kannada, Tamil and Malayalam letters, vowel signs and digits with audio, a quick quiz and tracing practice.'],
-  ['phrases', 'Phrases', 'Everyday phrases', 'A starter phrasebook of greetings, introductions, daily life and numbers in Telugu, Hindi, Kannada, Tamil and Malayalam with romanization and audio.']
+  ['scripts', 'Scripts', 'Learn the scripts', 'Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi and Korean letters, vowel signs and digits with audio, a quick quiz and tracing practice.'],
+  ['phrases', 'Phrases', 'Everyday phrases', 'A starter phrasebook of greetings, introductions, daily life and numbers in ten languages with romanization and audio.']
 ];
 fs.mkdirSync(OUT, { recursive: true });
 for (const e of fs.readdirSync(OUT, { withFileTypes: true })) { const p = path.join(OUT, e.name); if (e.isDirectory() && ROUTES.some(r => r[0] && r[0] === e.name)) fs.rmSync(p, { recursive: true }); }
@@ -72,7 +73,7 @@ fs.writeFileSync(path.join(OUT, 'robots.txt'), `User-agent: *\nAllow: /\nSitemap
 fs.writeFileSync(path.join(OUT, 'site.webmanifest'), JSON.stringify({ name: 'Bhasha', short_name: 'Bhasha', description: 'Learn spoken languages from what you watch and read', start_url: '/', scope: '/', display: 'standalone', background_color: '#fff9ee', theme_color: '#1c1b4b', icons: [{ src: '/icon-192.png', sizes: '192x192', type: 'image/png' }, { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' }] }));
 fs.copyFileSync(path.join(__dirname, 'icons', 'icon.svg'), path.join(OUT, 'favicon.svg'));
 for (const f of ['icon-192.png', 'icon-512.png']) { const p = path.join(__dirname, 'icons', f); if (fs.existsSync(p)) fs.copyFileSync(p, path.join(OUT, f)); }
-const pre = ['/', ...ROUTES.filter(r => r[0]).map(r => '/' + r[0] + '/'), '/app.js?v=' + ver, '/app.css?v=' + ver, '/favicon.svg', '/site.webmanifest', ...['poppins-latin-400-normal', 'poppins-latin-600-normal', 'poppins-latin-700-normal', 'poppins-latin-800-normal', 'jetbrains-mono-latin-400-normal'].map(f => `/assets/fonts/${f}.woff2`)];
+const pre = ['/', ...ROUTES.filter(r => r[0]).map(r => '/' + r[0] + '/'), '/app.js?v=' + ver, '/app.css?v=' + ver, '/favicon.svg', '/site.webmanifest', ...['poppins-latin-400-normal', 'poppins-latin-600-normal', 'poppins-latin-700-normal', 'poppins-latin-800-normal', 'jetbrains-mono-latin-400-normal', 'noto-sans-bengali-bengali-400-normal'].map(f => `/assets/fonts/${f}.woff2`)];
 fs.writeFileSync(path.join(OUT, 'sw.js'), `const V='bhasha-${ver}',PRE=${JSON.stringify(pre)};
 self.addEventListener('install',e=>{e.waitUntil(caches.open(V).then(c=>c.addAll(PRE)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x.startsWith('bhasha-')&&x!==V).map(x=>caches.delete(x)))).then(()=>self.clients.claim()))});

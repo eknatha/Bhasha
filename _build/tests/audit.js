@@ -2,7 +2,7 @@ const {chromium}=require('playwright');
 const BASE=process.env.BASE||'http://localhost:8766';let fails=0;const F=m=>{fails++;console.log('FAIL',m)};
 function lum(c){const a=c.map(v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)});return .2126*a[0]+.7152*a[1]+.0722*a[2]}
 (async()=>{const b=await chromium.launch();
-const routes=['/','/read/','/watch/','/words/','/review/','/scripts/','/phrases/'];
+const routes=['/','/say/','/read/','/watch/','/words/','/review/','/scripts/','/phrases/'];
 // seed data so lists render
 const seed=()=>{const now=Date.now();localStorage.setItem('bh-words',JSON.stringify([{id:'te:నమస్తే',w:'నమస్తే',lang:'te',m:'hello',c:'నమస్తే మిత్రమా',n:'',st:1,added:now,iv:0,ef:2.5,reps:0,lapses:0,due:now-1000},{id:'hi:धन्यवाद',w:'धन्यवाद',lang:'hi',m:'thanks',c:'',n:'',st:2,added:now,iv:5,ef:2.5,reps:3,lapses:0,due:now+5*864e5}]));};
 let n=0;

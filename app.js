@@ -2,11 +2,13 @@
 (function (B) {
   'use strict';
   // ---------- languages
-  B.LANGS = { te: { name: 'Telugu', native: 'తెలుగు', bcp: 'te-IN', script: 'Telugu' }, hi: { name: 'Hindi', native: 'हिन्दी', bcp: 'hi-IN', script: 'Devanagari' }, kn: { name: 'Kannada', native: 'ಕನ್ನಡ', bcp: 'kn-IN', script: 'Kannada' }, ta: { name: 'Tamil', native: 'தமிழ்', bcp: 'ta-IN', script: 'Tamil' }, ml: { name: 'Malayalam', native: 'മലയാളം', bcp: 'ml-IN', script: 'Malayalam' } };
-  B.INDIC = ['te', 'hi', 'kn', 'ta', 'ml'];
+  B.LANGS = { te: { name: 'Telugu', native: 'తెలుగు', bcp: 'te-IN', script: 'Telugu' }, hi: { name: 'Hindi', native: 'हिन्दी', bcp: 'hi-IN', script: 'Devanagari' }, kn: { name: 'Kannada', native: 'ಕನ್ನಡ', bcp: 'kn-IN', script: 'Kannada' }, ta: { name: 'Tamil', native: 'தமிழ்', bcp: 'ta-IN', script: 'Tamil' }, ml: { name: 'Malayalam', native: 'മലയാളം', bcp: 'ml-IN', script: 'Malayalam' }, bn: { name: 'Bengali', native: 'বাংলা', bcp: 'bn-IN', script: 'Bengali' }, mr: { name: 'Marathi', native: 'मराठी', bcp: 'mr-IN', script: 'Devanagari' }, ko: { name: 'Korean', native: '한국어', bcp: 'ko-KR', script: 'Hangul' }, es: { name: 'Spanish', native: 'Español', bcp: 'es-ES', script: 'Latin' }, de: { name: 'German', native: 'Deutsch', bcp: 'de-DE', script: 'Latin' } };
+  B.LEARN = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko', 'es', 'de']; // languages with phrasebook, voice and Say it
+  B.SCRIPT_LANGS = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko']; // languages with a script chart
+  B.INDIC = B.LEARN;
   // other reading languages: code, English name, native name, BCP 47 for speech
   B.OTHER = [['en', 'English', 'English', 'en-US'], ['es', 'Spanish', 'Español', 'es-ES'], ['fr', 'French', 'Français', 'fr-FR'], ['de', 'German', 'Deutsch', 'de-DE'], ['it', 'Italian', 'Italiano', 'it-IT'], ['pt', 'Portuguese', 'Português', 'pt-PT'], ['ru', 'Russian', 'Русский', 'ru-RU'], ['ja', 'Japanese', '日本語', 'ja-JP'], ['ko', 'Korean', '한국어', 'ko-KR'], ['zh', 'Chinese', '中文', 'zh-CN'], ['ar', 'Arabic', 'العربية', 'ar-SA'], ['bn', 'Bengali', 'বাংলা', 'bn-IN'], ['mr', 'Marathi', 'मराठी', 'mr-IN'], ['gu', 'Gujarati', 'ગુજરાતી', 'gu-IN'], ['pa', 'Punjabi', 'ਪੰਜਾਬੀ', 'pa-IN'], ['ur', 'Urdu', 'اردو', 'ur-PK'], ['tr', 'Turkish', 'Türkçe', 'tr-TR'], ['id', 'Indonesian', 'Bahasa Indonesia', 'id-ID'], ['th', 'Thai', 'ไทย', 'th-TH'], ['vi', 'Vietnamese', 'Tiếng Việt', 'vi-VN']];
-  B.allLangs = function () { return B.INDIC.map(function (c) { return [c, B.LANGS[c].name, B.LANGS[c].native, B.LANGS[c].bcp]; }).concat(B.OTHER); };
+  B.allLangs = function () { return B.LEARN.map(function (c) { return [c, B.LANGS[c].name, B.LANGS[c].native, B.LANGS[c].bcp]; }).concat(B.OTHER.filter(function (o) { return !B.LANGS[o[0]]; })); };
   B.bcp = function (code) { var a = B.allLangs().filter(function (x) { return x[0] === code; })[0]; return a ? a[3] : code; };
   B.detectLang = function (text) {
     var c = { te: 0, hi: 0, kn: 0, ta: 0, ml: 0, ja: 0, ko: 0, zh: 0, ar: 0, ru: 0, th: 0, bn: 0, gu: 0, pa: 0 }, n = 0, i, cp;
@@ -22,14 +24,43 @@
   };
 
   // ---------- transliteration: Brahmic scripts to Latin
-  var BASES = { hi: 0x900, ta: 0xB80, te: 0xC00, kn: 0xC80, ml: 0xD00 };
+  var BASES = { hi: 0x900, bn: 0x980, ta: 0xB80, te: 0xC00, kn: 0xC80, ml: 0xD00 };
   var VOW = { 5: ['a', 'a'], 6: ['aa', 'ā'], 7: ['i', 'i'], 8: ['ee', 'ī'], 9: ['u', 'u'], 10: ['oo', 'ū'], 11: ['ru', 'ṛ'], 12: ['lu', 'ḷ'], 13: ['e', 'ĕ'], 14: ['e', 'e'], 15: ['e', 'ē'], 16: ['ai', 'ai'], 17: ['o', 'ŏ'], 18: ['o', 'o'], 19: ['o', 'ō'], 20: ['au', 'au'] };
   var SIGN = { 0x3E: 6, 0x3F: 7, 0x40: 8, 0x41: 9, 0x42: 10, 0x43: 11, 0x44: 11, 0x45: 13, 0x46: 14, 0x47: 15, 0x48: 16, 0x49: 17, 0x4A: 18, 0x4B: 19, 0x4C: 20, 0x62: 12, 0x63: 12 };
   var CON = { 0x15: ['k', 'k'], 0x16: ['kh', 'kh'], 0x17: ['g', 'g'], 0x18: ['gh', 'gh'], 0x19: ['ng', 'ṅ'], 0x1A: ['ch', 'c'], 0x1B: ['chh', 'ch'], 0x1C: ['j', 'j'], 0x1D: ['jh', 'jh'], 0x1E: ['ny', 'ñ'], 0x1F: ['t', 'ṭ'], 0x20: ['th', 'ṭh'], 0x21: ['d', 'ḍ'], 0x22: ['dh', 'ḍh'], 0x23: ['n', 'ṇ'], 0x24: ['t', 't'], 0x25: ['th', 'th'], 0x26: ['d', 'd'], 0x27: ['dh', 'dh'], 0x28: ['n', 'n'], 0x29: ['n', 'ṉ'], 0x2A: ['p', 'p'], 0x2B: ['ph', 'ph'], 0x2C: ['b', 'b'], 0x2D: ['bh', 'bh'], 0x2E: ['m', 'm'], 0x2F: ['y', 'y'], 0x30: ['r', 'r'], 0x31: ['r', 'ṟ'], 0x32: ['l', 'l'], 0x33: ['l', 'ḷ'], 0x34: ['zh', 'ḻ'], 0x35: ['v', 'v'], 0x36: ['sh', 'ś'], 0x37: ['sh', 'ṣ'], 0x38: ['s', 's'], 0x39: ['h', 'h'] };
   var NUKTA = { 0x58: ['q', 'q'], 0x59: ['kh', 'kh'], 0x5A: ['gh', 'ġ'], 0x5B: ['z', 'z'], 0x5C: ['r', 'ṛ'], 0x5D: ['rh', 'ṛh'], 0x5E: ['f', 'f'], 0x5F: ['y', 'y'] };
   var CHILLU = { 0xD7A: ['n', 'ṇ'], 0xD7B: ['n', 'n'], 0xD7C: ['r', 'r'], 0xD7D: ['l', 'l'], 0xD7E: ['l', 'ḷ'], 0xD7F: ['k', 'k'] };
-  function script(cp) { if (cp >= 0x900 && cp < 0x980) return 'hi'; if (cp >= 0xB80 && cp < 0xC00) return 'ta'; if (cp >= 0xC00 && cp < 0xC80) return 'te'; if (cp >= 0xC80 && cp < 0xD00) return 'kn'; if (cp >= 0xD00 && cp < 0xD80) return 'ml'; return null; }
+  function script(cp) { if (cp >= 0x900 && cp < 0x980) return 'hi'; if (cp >= 0x980 && cp < 0xA00) return 'bn'; if ((cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0x3131 && cp <= 0x3163) || (cp >= 0x1100 && cp <= 0x11FF)) return 'ko'; if (cp >= 0xB80 && cp < 0xC00) return 'ta'; if (cp >= 0xC00 && cp < 0xC80) return 'te'; if (cp >= 0xC80 && cp < 0xD00) return 'kn'; if (cp >= 0xD00 && cp < 0xD80) return 'ml'; return null; }
   B.isBrahmic = function (s) { for (var i = 0; i < s.length; i++) if (script(s.charCodeAt(i))) return true; return false; };
+
+  // Bengali-specific values (index = offset in the Bengali block): inherent vowel is 'o'
+  var BN_V = { 5: ['o', 'ô'], 6: ['a', 'ā'], 7: ['i', 'i'], 8: ['i', 'ī'], 9: ['u', 'u'], 10: ['u', 'ū'], 11: ['ri', 'ṛ'], 12: ['li', 'ḷ'], 15: ['e', 'e'], 16: ['oi', 'ai'], 19: ['o', 'o'], 20: ['ou', 'au'] };
+  var BN_S = { 0x3E: 6, 0x3F: 7, 0x40: 8, 0x41: 9, 0x42: 10, 0x43: 11, 0x47: 15, 0x48: 16, 0x4B: 19, 0x4C: 20 };
+  var BN_C = { 0x1C: ['j', 'j'], 0x1E: ['n', 'ñ'], 0x23: ['n', 'ṇ'], 0x2F: ['j', 'y'], 0x36: ['sh', 'ś'], 0x37: ['sh', 'ṣ'], 0x38: ['sh', 's'] };
+  // Korean (Revised Romanization with the common sound rules)
+  var HL = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
+  var HV = ['a', 'ae', 'ya', 'yae', 'eo', 'e', 'yeo', 'ye', 'o', 'wa', 'wae', 'oe', 'yo', 'u', 'wo', 'we', 'wi', 'yu', 'eu', 'ui', 'i'];
+  var HT = ['', 'k', 'k', 'k', 'n', 'n', 'n', 't', 'l', 'k', 'm', 'l', 'l', 'l', 'p', 'l', 'm', 'p', 'p', 't', 't', 'ng', 't', 't', 'k', 't', 'p', 't'];
+  var HLI = ['', 'g', 'kk', 'ks', 'n', 'nj', 'n', 'd', 'r', 'lg', 'lm', 'lb', 'ls', 'lt', 'lp', 'r', 'm', 'b', 'bs', 's', 'ss', 'ng', 'j', 'ch', 'k', 't', 'p', ''];
+  var HJ = { 0x3131: 'g', 0x3132: 'kk', 0x3134: 'n', 0x3137: 'd', 0x3138: 'tt', 0x3139: 'r', 0x3141: 'm', 0x3142: 'b', 0x3143: 'pp', 0x3145: 's', 0x3146: 'ss', 0x3147: 'ng', 0x3148: 'j', 0x3149: 'jj', 0x314A: 'ch', 0x314B: 'k', 0x314C: 't', 0x314D: 'p', 0x314E: 'h' };
+  function hangul(w) {
+    var syl = [], i, cp, o = '';
+    for (i = 0; i < w.length; i++) { cp = w.charCodeAt(i); if (cp >= 0xAC00 && cp <= 0xD7A3) { var x = cp - 0xAC00; syl.push({ l: Math.floor(x / 588), v: Math.floor(x % 588 / 28), t: x % 28 }); } else if (cp >= 0x314F && cp <= 0x3163) syl.push({ j: HV[cp - 0x314F] }); else if (HJ[cp]) syl.push({ j: HJ[cp] }); else syl.push({ j: '' }); }
+    for (i = 0; i < syl.length; i++) {
+      var a = syl[i], nx = syl[i + 1]; if (a.j != null) { o += a.j; continue; }
+      var init = HL[a.l]; if (a.l === 5 && i > 0 && syl[i - 1].t === 8) init = 'l'; if (a.l === 5 && i > 0 && syl[i - 1].t === 4) init = 'l';
+      o += init + HV[a.v];
+      if (a.t) {
+        var fin = HT[a.t];
+        if (nx && nx.l === 11) { o += HLI[a.t]; }
+        else if (nx && nx.l != null && (nx.l === 2 || nx.l === 6) && (fin === 'k' || fin === 't' || fin === 'p')) o += fin === 'k' ? 'ng' : fin === 't' ? 'n' : 'm';
+        else if (nx && nx.l === 5 && (fin === 'n' || fin === 'l')) o += 'l';
+        else if (nx && nx.l === 5 && (fin === 'k' || fin === 'p' || fin === 't')) o += fin === 'k' ? 'ng' : fin === 'p' ? 'm' : 'n';
+        else o += fin;
+      }
+    }
+    return o;
+  }
   // Transliterate one word or a whole string. scheme: 'simple' (default) or 'iast'.
   B.translit = function (str, scheme) {
     var si = scheme === 'iast' ? 1 : 0, out = '', i = 0, n = str.length;
@@ -39,22 +70,27 @@
     for (i = 0; i < n; i++) { var cp = str.charCodeAt(i), sc = script(cp); if (sc || (token.length && (cp === 0x200C || cp === 0x200D))) token.push(str[i]); else { flush(); res.push(str[i]); } }
     flush(); return res.join('');
     function word(w) {
+      if (script(w.charCodeAt(0)) === 'ko') return hangul(w);
       var units = [], k, cp, sc = script(w.charCodeAt(0)), base = BASES[sc], pendingA = -1, vowelCount = 0, prevVowel = false, prevNasalVir = false;
       for (k = 0; k < w.length; k++) {
         cp = w.charCodeAt(k); var idx = cp - base;
         if (cp === 0x200C || cp === 0x200D) continue;
         if (sc === 'ml' && CHILLU[cp]) { var ch = CHILLU[cp][si]; units.push({ t: ch, type: 'c', fin: true }); pendingA = -1; vowelCount++; continue; }
-        if (idx >= 5 && idx <= 20 && VOW[idx]) { units.push({ t: VOW[idx][si], type: 'v' }); pendingA = -1; vowelCount++; continue; }
-        if ((idx >= 0x15 && idx <= 0x39) || NUKTA[idx] && sc === 'hi') {
-          var c = (sc === 'hi' && NUKTA[idx]) ? NUKTA[idx] : CON[idx]; if (!c) continue;
+        if (idx >= 5 && idx <= 20 && (sc === 'bn' ? BN_V[idx] : VOW[idx])) { units.push({ t: (sc === 'bn' ? BN_V : VOW)[idx][si], type: 'v' }); pendingA = -1; vowelCount++; continue; }
+        if ((idx >= 0x15 && idx <= 0x39) || NUKTA[idx] && (sc === 'hi' || sc === 'bn')) {
+          var c = ((sc === 'hi' || sc === 'bn') && NUKTA[idx]) ? NUKTA[idx] : (sc === 'bn' && BN_C[idx]) ? BN_C[idx] : CON[idx]; if (!c) continue;
+          if (sc === 'bn' && idx === 0x2F && units.length && units[units.length - 1].vir && units[units.length - 1].type === 'c' && units[units.length - 1].idx !== 0x39) { var pu = units[units.length - 1]; pu.t = pu.t + pu.t; pu.vir = false; pu.a = true; pu.g = true; pendingA = units.length - 1; vowelCount++; continue; }
+          if (sc === 'bn' && idx === 0x2F && units.length && units[units.length - 1].vir) c = ['y', 'y'];
           var nx = w.charCodeAt(k + 1) - base;
           if (sc === 'te' && idx === 0x15 && false) { }
           units.push({ t: c[si], type: 'c', idx: idx, a: true }); pendingA = units.length - 1; vowelCount++; continue;
         }
-        if (SIGN[idx] && idx >= 0x3E) { if (pendingA >= 0) { units[pendingA].a = false; units[pendingA].vs = VOW[SIGN[idx]][si]; pendingA = -1; } else units.push({ t: VOW[SIGN[idx]][si], type: 'v' }); continue; }
+        if ((sc === 'bn' ? BN_S[idx] : SIGN[idx]) && idx >= 0x3E) { var VV = (sc === 'bn' ? BN_V : VOW)[sc === 'bn' ? BN_S[idx] : SIGN[idx]]; if (pendingA >= 0) { units[pendingA].a = false; units[pendingA].vs = VV[si]; pendingA = -1; } else units.push({ t: VV[si], type: 'v' }); continue; }
+        if (idx === 0x3C && (sc === 'hi' || sc === 'bn') && units.length) { var NK = { 0x15: 0x58, 0x16: 0x59, 0x17: 0x5A, 0x1C: 0x5B, 0x21: 0x5C, 0x22: 0x5D, 0x2B: 0x5E, 0x2F: 0x5F }, pk = units[units.length - 1]; if (pk.type === 'c' && NK[pk.idx]) { pk.t = NUKTA[NK[pk.idx]][si]; } continue; }
         if (idx === 0x4D) { if (pendingA >= 0) { units[pendingA].a = false; units[pendingA].vir = true; vowelCount--; pendingA = -1; } continue; }
         if (idx === 0x01) { units.push({ t: si ? 'm̐' : 'n', type: 'm' }); continue; }
-        if (idx === 0x02) { units.push({ t: si ? 'ṃ' : 'm', type: 'm', anu: true }); continue; }
+        if (idx === 0x02) { units.push({ t: si ? 'ṃ' : (sc === 'bn' ? 'ng' : 'm'), type: 'm', anu: sc !== 'bn' }); continue; }
+        if (cp === 0x9CE) { units.push({ t: 't', type: 'c', fin: true }); pendingA = -1; vowelCount++; continue; }
         if (idx === 0x03) { units.push({ t: si ? 'ḥ' : 'h', type: 'm' }); continue; }
         if (idx >= 0x66 && idx <= 0x6F) { units.push({ t: String(idx - 0x66), type: 'd' }); continue; }
         if (cp === 0x964 || cp === 0x965) { units.push({ t: '.', type: 'p' }); continue; }
@@ -88,7 +124,7 @@
       for (k = 0; k < units.length; k++) {
         var x = units[k]; o += x.t;
         if (x.type === 'c' && !x.fin) {
-          if (x.vs) o += x.vs; else if (x.a) { var last = k === units.length - 1 || units[k + 1].type === 'p'; if (sc === 'hi' && last && vowelCount >= 2) { } else o += 'a'; }
+          if (x.vs) o += x.vs; else if (x.a) { var last = k === units.length - 1 || units[k + 1].type === 'p'; if ((sc === 'hi' || sc === 'bn') && last && vowelCount >= 2 && !x.g) { } else o += (sc === 'bn' ? 'o' : 'a'); }
           else if (x.vir && sc === 'ml' && k === units.length - 1) o += 'u';
         }
       }
@@ -186,6 +222,9 @@
     ta: { vowels: sp('அ ஆ இ ஈ உ ஊ எ ஏ ஐ ஒ ஓ ஔ'), cons: sp('க ங ச ஞ ட ண த ந ப ம ய ர ல வ ழ ள ற ன ஜ ஷ ஸ ஹ'), signs: sp('ா ி ீ ு ூ ெ ே ை ொ ோ ௌ'), base: 'க', digits: sp('௦ ௧ ௨ ௩ ௪ ௫ ௬ ௭ ௮ ௯') },
     ml: { vowels: sp('അ ആ ഇ ഈ ഉ ഊ ഋ എ ഏ ഐ ഒ ഓ ഔ'), cons: sp('ക ഖ ഗ ഘ ങ ച ഛ ജ ഝ ഞ ട ഠ ഡ ഢ ണ ത ഥ ദ ധ ന പ ഫ ബ ഭ മ യ ര ല വ ശ ഷ സ ഹ ള ഴ റ'), signs: sp('ാ ി ീ ു ൂ ൃ െ േ ൈ ൊ ോ ൌ'), base: 'ക', digits: sp('൦ ൧ ൨ ൩ ൪ ൫ ൬ ൭ ൮ ൯') }
   };
+  B.SCRIPTS.bn = { vowels: sp('অ আ ই ঈ উ ঊ ঋ এ ঐ ও ঔ'), cons: sp('ক খ গ ঘ ঙ চ ছ জ ঝ ঞ ট ঠ ড ঢ ণ ত থ দ ধ ন প ফ ব ভ ম য র ল শ ষ স হ ড় ঢ় য় ৎ'), signs: sp('া ি ী ু ূ ৃ ে ৈ ো ৌ'), base: 'ক', digits: sp('০ ১ ২ ৩ ৪ ৫ ৬ ৭ ৮ ৯') };
+  B.SCRIPTS.mr = { vowels: B.SCRIPTS.hi.vowels, cons: B.SCRIPTS.hi.cons.concat(['ळ']), signs: B.SCRIPTS.hi.signs, base: B.SCRIPTS.hi.base, digits: B.SCRIPTS.hi.digits };
+  B.SCRIPTS.ko = { vowels: sp('ㅏ ㅑ ㅓ ㅕ ㅗ ㅛ ㅜ ㅠ ㅡ ㅣ ㅐ ㅔ'), cons: sp('ㄱ ㄴ ㄷ ㄹ ㅁ ㅂ ㅅ ㅇ ㅈ ㅊ ㅋ ㅌ ㅍ ㅎ ㄲ ㄸ ㅃ ㅆ ㅉ'), signs: sp('가 갸 거 겨 고 교 구 규 그 기 개 게'), base: 'ㄱ', full: true, digits: sp('영 일 이 삼 사 오 육 칠 팔 구') };
   B.PHRASE_CATS = ['greet', 'intro', 'daily', 'num'];
   // id, category, English, then te, hi, kn, ta, ml
   var P = [
@@ -225,7 +264,10 @@
   ];
   var N = [['one', 'One', 'ఒకటి', 'एक', 'ಒಂದು', 'ஒன்று', 'ഒന്ന്'], ['two', 'Two', 'రెండు', 'दो', 'ಎರಡು', 'இரண்டு', 'രണ്ട്'], ['three', 'Three', 'మూడు', 'तीन', 'ಮೂರು', 'மூன்று', 'മൂന്ന്'], ['four', 'Four', 'నాలుగు', 'चार', 'ನಾಲ್ಕು', 'நான்கு', 'നാല്'], ['five', 'Five', 'ఐదు', 'पाँच', 'ಐದು', 'ஐந்து', 'അഞ്ച്'], ['six', 'Six', 'ఆరు', 'छह', 'ಆರು', 'ஆறு', 'ആറ്'], ['seven', 'Seven', 'ఏడు', 'सात', 'ಏಳು', 'ஏழு', 'ഏഴ്'], ['eight', 'Eight', 'ఎనిమిది', 'आठ', 'ಎಂಟು', 'எட்டு', 'എട്ട്'], ['nine', 'Nine', 'తొమ్మిది', 'नौ', 'ಒಂಬತ್ತು', 'ஒன்பது', 'ഒമ്പത്'], ['ten', 'Ten', 'పది', 'दस', 'ಹತ್ತು', 'பத்து', 'പത്ത്']];
   var IDX = { te: 3, hi: 4, kn: 5, ta: 6, ml: 7 };
-  B.PHRASES = P.map(function (r) { var o = { id: r[0], cat: r[1], en: r[2] }; B.INDIC.forEach(function (l) { o[l] = r[IDX[l]]; }); return o; }).concat(N.map(function (r) { var o = { id: 'n-' + r[0], cat: 'num', en: r[1] }; B.INDIC.forEach(function (l) { o[l] = r[IDX[l] - 1]; }); return o; }));
+  B.PHRASES = P.map(function (r) { var o = { id: r[0], cat: r[1], en: r[2] }; ['te', 'hi', 'kn', 'ta', 'ml'].forEach(function (l) { o[l] = r[IDX[l]]; }); return o; }).concat(N.map(function (r) { var o = { id: 'n-' + r[0], cat: 'num', en: r[1] }; ['te', 'hi', 'kn', 'ta', 'ml'].forEach(function (l) { o[l] = r[IDX[l] - 1]; }); return o; }));
+  var X = {"hello": ["নমস্কার", "नमस्कार", "Hola", "안녕하세요", "Hallo"], "morning": ["সুপ্রভাত", "शुभ प्रभात", "Buenos días", "좋은 아침이에요", "Guten Morgen"], "night": ["শুভ রাত্রি", "शुभ रात्री", "Buenas noches", "안녕히 주무세요", "Gute Nacht"], "bye": ["আবার দেখা হবে", "पुन्हा भेटू", "Hasta pronto", "또 만나요", "Bis bald"], "thanks": ["ধন্যবাদ", "धन्यवाद", "Gracias", "감사합니다", "Danke"], "welcome": ["কোনো সমস্যা নেই", "काही हरकत नाही", "De nada", "천만에요", "Gern geschehen"], "please": ["দয়া করে", "कृपया", "Por favor", "부탁합니다", "Bitte"], "sorry": ["দুঃখিত", "क्षमा करा", "Lo siento", "죄송합니다", "Entschuldigung"], "yes": ["হ্যাঁ", "हो", "Sí", "네", "Ja"], "no": ["না", "नाही", "No", "아니요", "Nein"], "name-q": ["আপনার নাম কী?", "तुमचे नाव काय आहे?", "¿Cómo te llamas?", "이름이 뭐예요?", "Wie heißen Sie?"], "name-is": ["আমার নাম …", "माझे नाव … आहे.", "Me llamo …", "제 이름은 …이에요.", "Ich heiße …"], "from-q": ["আপনি কোথা থেকে এসেছেন?", "तुम्ही कुठून आलात?", "¿De dónde eres?", "어디에서 오셨어요?", "Woher kommen Sie?"], "from-india": ["আমি ভারত থেকে এসেছি।", "मी भारतातून आलो आहे.", "Soy de India.", "저는 인도에서 왔어요.", "Ich komme aus Indien."], "nice": ["আপনার সঙ্গে দেখা হয়ে ভালো লাগল।", "तुम्हाला भेटून आनंद झाला.", "Mucho gusto.", "만나서 반갑습니다.", "Freut mich."], "how": ["আপনি কেমন আছেন?", "तुम्ही कसे आहात?", "¿Cómo estás?", "어떻게 지내세요?", "Wie geht es Ihnen?"], "fine": ["আমি ভালো আছি।", "मी ठीक आहे.", "Estoy bien.", "저는 잘 지내요.", "Mir geht es gut."], "dont-understand": ["আমি বুঝতে পারছি না।", "मला समजले नाही.", "No entiendo.", "이해가 안 돼요.", "Ich verstehe nicht."], "english-q": ["আপনি কি ইংরেজি বলতে পারেন?", "तुम्ही इंग्रजी बोलता का?", "¿Hablas inglés?", "영어 할 수 있어요?", "Sprechen Sie Englisch?"], "slowly": ["দয়া করে ধীরে বলুন।", "कृपया हळू बोला.", "Por favor, habla despacio.", "천천히 말해 주세요.", "Bitte sprechen Sie langsam."], "price": ["এটার দাম কত?", "याची किंमत किती आहे?", "¿Cuánto cuesta esto?", "이거 얼마예요?", "Wie viel kostet das?"], "toilet": ["টয়লেট কোথায়?", "शौचालय कुठे आहे?", "¿Dónde está el baño?", "화장실이 어디예요?", "Wo ist die Toilette?"], "help": ["আমার সাহায্য দরকার।", "मला मदत हवी आहे.", "Necesito ayuda.", "도와주세요.", "Ich brauche Hilfe."], "water": ["দয়া করে জল দিন।", "कृपया पाणी द्या.", "Agua, por favor.", "물 주세요.", "Wasser, bitte."], "hungry": ["আমার খিদে পেয়েছে।", "मला भूक लागली आहे.", "Tengo hambre.", "배고파요.", "Ich habe Hunger."], "delicious": ["খাবারটা খুব সুস্বাদু।", "जेवण खूप चविष्ट आहे.", "La comida está deliciosa.", "음식이 정말 맛있어요.", "Das Essen ist köstlich."], "bus": ["বাস স্টপ কোথায়?", "बस स्टॉप कुठे आहे?", "¿Dónde está la parada de autobús?", "버스 정류장이 어디예요?", "Wo ist die Bushaltestelle?"], "doctor": ["দয়া করে একজন ডাক্তার ডাকুন।", "कृपया डॉक्टरांना बोलवा.", "Por favor, llame a un médico.", "의사를 불러 주세요.", "Bitte rufen Sie einen Arzt."], "time": ["এখন কটা বাজে?", "आता किती वाजले आहेत?", "¿Qué hora es?", "지금 몇 시예요?", "Wie spät ist es?"], "learn": ["আমি বাংলা শিখতে চাই।", "मला मराठी शिकायची आहे.", "Quiero aprender español.", "저는 한국어를 배우고 싶어요.", "Ich möchte Deutsch lernen."], "today": ["আজ", "आज", "Hoy", "오늘", "Heute"], "tomorrow": ["আগামীকাল", "उद्या", "Mañana", "내일", "Morgen"], "yesterday": ["গতকাল", "काल", "Ayer", "어제", "Gestern"], "n-one": ["এক", "एक", "Uno", "하나", "Eins"], "n-two": ["দুই", "दोन", "Dos", "둘", "Zwei"], "n-three": ["তিন", "तीन", "Tres", "셋", "Drei"], "n-four": ["চার", "चार", "Cuatro", "넷", "Vier"], "n-five": ["পাঁচ", "पाच", "Cinco", "다섯", "Fünf"], "n-six": ["ছয়", "सहा", "Seis", "여섯", "Sechs"], "n-seven": ["সাত", "सात", "Siete", "일곱", "Sieben"], "n-eight": ["আট", "आठ", "Ocho", "여덟", "Acht"], "n-nine": ["নয়", "नऊ", "Nueve", "아홉", "Neun"], "n-ten": ["দশ", "दहा", "Diez", "열", "Zehn"]};
+  var XL = ['bn', 'mr', 'es', 'ko', 'de'];
+  B.PHRASES.forEach(function (p) { var r = X[p.id]; XL.forEach(function (l, i) { p[l] = r[i]; }); });
   B.sampleText = function (lang) { var ids = ['how', 'fine', 'name-q', 'from-q', 'from-india', 'nice', 'slowly', 'learn']; return ids.map(function (i) { return B.PHRASES.filter(function (p) { return p.id === i; })[0][lang]; }).join(' '); };
   B.sampleSrt = function (lang) { var ids = ['hello', 'how', 'fine', 'name-q', 'from-q', 'from-india', 'nice', 'thanks'], t = 0, out = []; ids.forEach(function (i, k) { var p = B.PHRASES.filter(function (x) { return x.id === i; })[0]; out.push({ s: t, e: t + 3.5, t: p[lang], n: p.en }); t += 4; }); return out; };
   B.srtText = function (lines, which) { function f(x) { var h = Math.floor(x / 3600), m = Math.floor(x % 3600 / 60), s = Math.floor(x % 60), ms = Math.round((x % 1) * 1000); return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0') + ',' + String(ms).padStart(3, '0'); } return lines.map(function (l, i) { return (i + 1) + '\n' + f(l.s) + ' --> ' + f(l.e) + '\n' + (which === 'n' ? l.n : l.t) + '\n'; }).join('\n'); };
@@ -394,7 +436,8 @@
     wdLede: 'Your saved words. Stored only in this browser.', wdCount: '{n} shown, {d} due now', wdNoMatch: 'No words match.', wdEmpty: 'No saved words yet.', wdEmptySub: 'Open Read or Watch and tap a word to save it.', wdMore: '{n} more not shown. Use the search.', wdNothing: 'Nothing to export.', wdImported: '{n} new words imported.', wdImportFail: 'Could not read that file.', wdPrivacy: 'Clear your browser data and the list is gone, so export a backup now and then.', search: 'Search', edit: 'Edit', dueNow: 'Due now', dueToday: 'Due today', dueIn: 'In {n} d', backup: 'Backup', importWords: 'Import',
     rvLede: 'Flip the card, then rate how well you knew it.', rvMode: 'Practice mode', rvW2M: 'Word to meaning', rvM2W: 'Meaning to word', rvListen: 'Listening', rvCloze: 'Fill the gap', rvStreak: 'Day streak: {n}', rvDone: 'Done: {n} cards', rvDoneSub: 'Come back later. Cards you missed return in minutes, the rest in days.', rvNone: 'Nothing due', rvNoneSub: 'You are caught up. Read or watch more to find new words.', rvWhichWord: 'What is the word?', rvPlay: 'Play word', rvListenQ: 'Listen, then recall the meaning', rvHint: 'Meaning', rvShow: 'Show answer', rvProgress: 'Session progress', again: 'Again', hard: 'Hard', good: 'Good', easy: 'Easy',
     scLede: 'Learn the letters. Tap any glyph to hear it and trace it.', scVowels: 'Vowels', scCons: 'Consonants', scSigns: 'Vowel signs', scSignsNote: 'Shown on the letter {b}', scDigits: 'Digits', scQuiz: 'Quick quiz', scQuizQ: 'How do you read this letter?', scTrace: 'Trace', scTraceHint: 'Tap a letter above, then trace it here.', correct: 'Correct!', wrongIs: 'Not quite. It is {a}.', next: 'Next',
-    phLede: 'Everyday phrases. Tap any word to save it.', phNote: 'Phrases are a starter set. A native speaker should check them before you rely on them.', cat_greet: 'Greetings', cat_intro: 'Introductions', cat_daily: 'Daily life', cat_num: 'Numbers', slow: 'Slow'
+    phLede: 'Everyday phrases. Tap any word to save it.', phNote: 'Phrases are a starter set. A native speaker should check them before you rely on them.', cat_greet: 'Greetings', cat_intro: 'Introductions', cat_daily: 'Daily life', cat_num: 'Numbers', slow: 'Slow',
+    nav_say: "Say it", cSay: "Type an English sentence and hear it in Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Korean, Spanish or German.", sayLede: "Type a sentence in English. Get it in another language with romanization and a voice.", sayPlaceholder: "Type an English sentence, for example: How are you?", sayInput: "English sentence", sayTo: "Say it in", sayGo: "Translate and speak", sayEnglish: "Speak English", sayResult: "Result", sayMatch: "Phrasebook", sayDevice: "Translated on your device", sayClosest: "Closest phrasebook entries", sayNone: "Free-form translation needs a browser with an on-device translator (recent Chrome). Here are the closest phrases from the phrasebook.", sayWorking: "Translating on your device…", sayFail: "The on-device translator could not do this language pair. Here are the closest phrases from the phrasebook.", sayNote: "Nothing is sent to a server. Machine translation can be wrong, so check important sentences with a native speaker.", copy: "Copy", copied: "Copied"
   };
   I.hi = {
     skip: 'सामग्री पर जाएँ', settings: 'सेटिंग', part: 'EknathaLabs का हिस्सा', privacyNote: 'आपके ब्राउज़र में चलता है। आपकी फ़ाइलें और शब्द आपके डिवाइस पर रहते हैं।', mainNav: 'मुख्य', uiLang: 'इंटरफ़ेस भाषा', focusLang: 'जो भाषा मैं सीख रहा/रही हूँ', scheme: 'रोमन लिपि शैली', schSimple: 'सरल', schIast: 'विद्वत', showRoman: 'रोमन में उच्चारण दिखाएँ', on: 'चालू', off: 'बंद', voiceSpeed: 'आवाज़ की गति', perDay: 'हर सत्र में दोहराव', unlimited: 'असीमित', theme: 'थीम', light: 'हल्का', dark: 'गहरा', 'new': 'नया', language: 'भाषा', allLangs: 'सभी भाषाएँ', allStatus: 'सभी', auto: 'अपने आप पहचानें', indianLangs: 'भारतीय भाषाएँ', otherLangs: 'अन्य भाषाएँ',
@@ -408,7 +451,8 @@
     wdLede: 'आपके सहेजे शब्द। केवल इसी ब्राउज़र में रखे जाते हैं।', wdCount: '{n} दिख रहे हैं, {d} अभी बाकी', wdNoMatch: 'कोई शब्द मेल नहीं खाता।', wdEmpty: 'अभी कोई शब्द सहेजा नहीं है।', wdEmptySub: 'पढ़ें या देखें खोलकर किसी शब्द पर टैप करें और सहेजें।', wdMore: '{n} और नहीं दिख रहे। खोज इस्तेमाल करें।', wdNothing: 'निर्यात के लिए कुछ नहीं।', wdImported: '{n} नए शब्द आयात हुए।', wdImportFail: 'वह फ़ाइल पढ़ नहीं सके।', wdPrivacy: 'ब्राउज़र डेटा साफ़ करने पर सूची मिट जाती है, इसलिए समय-समय पर बैकअप निर्यात करें।', search: 'खोजें', edit: 'बदलें', dueNow: 'अभी बाकी', dueToday: 'आज बाकी', dueIn: '{n} दिन में', backup: 'बैकअप', importWords: 'आयात',
     rvLede: 'कार्ड पलटें, फिर बताएँ कि कितना याद था।', rvMode: 'अभ्यास का तरीका', rvW2M: 'शब्द से अर्थ', rvM2W: 'अर्थ से शब्द', rvListen: 'सुनकर', rvCloze: 'खाली जगह भरें', rvStreak: 'लगातार दिन: {n}', rvDone: 'पूरा: {n} कार्ड', rvDoneSub: 'बाद में लौटें। छूटे कार्ड मिनटों में, बाकी दिनों में लौटते हैं।', rvNone: 'कुछ भी बाकी नहीं', rvNoneSub: 'आप आगे हैं। नए शब्द पाने के लिए और पढ़ें या देखें।', rvWhichWord: 'यह कौन सा शब्द है?', rvPlay: 'शब्द सुनें', rvListenQ: 'सुनें, फिर अर्थ याद करें', rvHint: 'अर्थ', rvShow: 'उत्तर दिखाएँ', rvProgress: 'सत्र की प्रगति', again: 'फिर से', hard: 'कठिन', good: 'ठीक', easy: 'आसान',
     scLede: 'अक्षर सीखें। किसी भी अक्षर पर टैप करके सुनें और लिखकर अभ्यास करें।', scVowels: 'स्वर', scCons: 'व्यंजन', scSigns: 'मात्राएँ', scSignsNote: 'अक्षर {b} पर दिखाई गई', scDigits: 'अंक', scQuiz: 'छोटी क्विज़', scQuizQ: 'यह अक्षर कैसे पढ़ते हैं?', scTrace: 'लिखकर देखें', scTraceHint: 'ऊपर कोई अक्षर टैप करें, फिर यहाँ उसे लिखें।', correct: 'सही!', wrongIs: 'ठीक नहीं। यह {a} है।', next: 'आगे',
-    phLede: 'रोज़मर्रा के वाक्यांश। किसी भी शब्द पर टैप करके सहेजें।', phNote: 'ये वाक्यांश शुरुआती सेट हैं। भरोसा करने से पहले किसी मातृभाषी से जँचवा लें।', cat_greet: 'अभिवादन', cat_intro: 'परिचय', cat_daily: 'रोज़मर्रा', cat_num: 'संख्याएँ', slow: 'धीरे'
+    phLede: 'रोज़मर्रा के वाक्यांश। किसी भी शब्द पर टैप करके सहेजें।', phNote: 'ये वाक्यांश शुरुआती सेट हैं। भरोसा करने से पहले किसी मातृभाषी से जँचवा लें।', cat_greet: 'अभिवादन', cat_intro: 'परिचय', cat_daily: 'रोज़मर्रा', cat_num: 'संख्याएँ', slow: 'धीरे',
+    nav_say: "बोलें", cSay: "अंग्रेज़ी में वाक्य लिखें और उसे तेलुगु, हिन्दी, कन्नड़, तमिल, मलयालम, बांग्ला, मराठी, कोरियाई, स्पेनिश या जर्मन में सुनें।", sayLede: "अंग्रेज़ी में वाक्य लिखें। उसे दूसरी भाषा में रोमन उच्चारण और आवाज़ के साथ पाएँ।", sayPlaceholder: "अंग्रेज़ी में वाक्य लिखें, जैसे: How are you?", sayInput: "अंग्रेज़ी वाक्य", sayTo: "इस भाषा में बोलें", sayGo: "अनुवाद करें और बोलें", sayEnglish: "अंग्रेज़ी बोलें", sayResult: "नतीजा", sayMatch: "वाक्यांश-पुस्तिका", sayDevice: "आपके डिवाइस पर अनुवादित", sayClosest: "वाक्यांश-पुस्तिका के सबसे करीबी वाक्य", sayNone: "खुला अनुवाद डिवाइस पर चलने वाले अनुवादक वाले ब्राउज़र (हाल का Chrome) में होता है। वाक्यांश-पुस्तिका के सबसे करीबी वाक्य ये हैं।", sayWorking: "आपके डिवाइस पर अनुवाद हो रहा है…", sayFail: "डिवाइस का अनुवादक इस भाषा-जोड़ी के लिए काम नहीं कर सका। वाक्यांश-पुस्तिका के सबसे करीबी वाक्य ये हैं।", sayNote: "कुछ भी सर्वर को नहीं भेजा जाता। मशीनी अनुवाद गलत हो सकता है, इसलिए ज़रूरी वाक्य किसी मातृभाषी से जँचवाएँ।", copy: "कॉपी करें", copied: "कॉपी हो गया"
   };
   I.te = {
     skip: 'కంటెంట్‌కు వెళ్లండి', settings: 'సెట్టింగ్‌లు', part: 'EknathaLabs లో భాగం', privacyNote: 'మీ బ్రౌజర్‌లోనే నడుస్తుంది. మీ ఫైళ్లు, పదాలు మీ పరికరంలోనే ఉంటాయి.', mainNav: 'ప్రధాన', uiLang: 'ఇంటర్‌ఫేస్ భాష', focusLang: 'నేను నేర్చుకుంటున్న భాష', scheme: 'రోమన్ శైలి', schSimple: 'సరళం', schIast: 'పండిత', showRoman: 'రోమన్ ఉచ్చారణ చూపు', on: 'ఆన్', off: 'ఆఫ్', voiceSpeed: 'స్వరం వేగం', perDay: 'ఒక సెషన్‌లో రివ్యూలు', unlimited: 'పరిమితి లేదు', theme: 'థీమ్', light: 'లైట్', dark: 'డార్క్', 'new': 'కొత్త', language: 'భాష', allLangs: 'అన్ని భాషలు', allStatus: 'అన్నీ', auto: 'ఆటోమేటిక్‌గా గుర్తించు', indianLangs: 'భారతీయ భాషలు', otherLangs: 'ఇతర భాషలు',
@@ -422,7 +466,8 @@
     wdLede: 'మీరు సేవ్ చేసిన పదాలు. ఈ బ్రౌజర్‌లో మాత్రమే నిల్వ అవుతాయి.', wdCount: '{n} చూపుతున్నాం, {d} ఇప్పుడు మిగిలాయి', wdNoMatch: 'సరిపోయే పదాలు లేవు.', wdEmpty: 'ఇంకా పదాలు సేవ్ చేయలేదు.', wdEmptySub: 'చదవండి లేదా చూడండి తెరిచి పదాన్ని తాకి సేవ్ చేయండి.', wdMore: 'ఇంకా {n} చూపలేదు. శోధన వాడండి.', wdNothing: 'ఎగుమతి చేయడానికి ఏమీ లేదు.', wdImported: '{n} కొత్త పదాలు దిగుమతి అయ్యాయి.', wdImportFail: 'ఆ ఫైల్ చదవలేకపోయాం.', wdPrivacy: 'బ్రౌజర్ డేటా తొలగిస్తే జాబితా పోతుంది, కాబట్టి అప్పుడప్పుడు బ్యాకప్ ఎగుమతి చేయండి.', search: 'శోధన', edit: 'మార్చు', dueNow: 'ఇప్పుడే', dueToday: 'ఈ రోజు', dueIn: '{n} రోజుల్లో', backup: 'బ్యాకప్', importWords: 'దిగుమతి',
     rvLede: 'కార్డు తిప్పండి, ఎంత గుర్తుందో చెప్పండి.', rvMode: 'సాధన విధానం', rvW2M: 'పదం నుంచి అర్థం', rvM2W: 'అర్థం నుంచి పదం', rvListen: 'వినడం', rvCloze: 'ఖాళీ నింపండి', rvStreak: 'వరుస రోజులు: {n}', rvDone: 'పూర్తి: {n} కార్డులు', rvDoneSub: 'తర్వాత రండి. మిస్సైన కార్డులు నిమిషాల్లో, మిగతావి రోజుల్లో వస్తాయి.', rvNone: 'ఏదీ మిగల్లేదు', rvNoneSub: 'మీరు ముందున్నారు. కొత్త పదాల కోసం మరింత చదవండి లేదా చూడండి.', rvWhichWord: 'ఈ పదం ఏమిటి?', rvPlay: 'పదం వినండి', rvListenQ: 'విని, అర్థం గుర్తు చేసుకోండి', rvHint: 'అర్థం', rvShow: 'జవాబు చూపు', rvProgress: 'సెషన్ పురోగతి', again: 'మళ్లీ', hard: 'కష్టం', good: 'బాగుంది', easy: 'సులభం',
     scLede: 'అక్షరాలు నేర్చుకోండి. ఏ అక్షరాన్నైనా తాకి వినండి, రాసి చూడండి.', scVowels: 'అచ్చులు', scCons: 'హల్లులు', scSigns: 'గుణింతాలు', scSignsNote: '{b} అక్షరంపై చూపబడ్డాయి', scDigits: 'అంకెలు', scQuiz: 'చిన్న క్విజ్', scQuizQ: 'ఈ అక్షరాన్ని ఎలా చదువుతారు?', scTrace: 'రాసి చూడండి', scTraceHint: 'పైన ఒక అక్షరాన్ని తాకి, ఇక్కడ రాయండి.', correct: 'సరైనది!', wrongIs: 'కాదు. ఇది {a}.', next: 'తర్వాత',
-    phLede: 'రోజువారీ వాక్యాలు. ఏ పదాన్నైనా తాకి సేవ్ చేయండి.', phNote: 'ఈ వాక్యాలు ప్రారంభ సెట్. నమ్మే ముందు మాతృభాష వారితో సరిచూడండి.', cat_greet: 'పలకరింపులు', cat_intro: 'పరిచయం', cat_daily: 'రోజువారీ', cat_num: 'సంఖ్యలు', slow: 'నెమ్మదిగా'
+    phLede: 'రోజువారీ వాక్యాలు. ఏ పదాన్నైనా తాకి సేవ్ చేయండి.', phNote: 'ఈ వాక్యాలు ప్రారంభ సెట్. నమ్మే ముందు మాతృభాష వారితో సరిచూడండి.', cat_greet: 'పలకరింపులు', cat_intro: 'పరిచయం', cat_daily: 'రోజువారీ', cat_num: 'సంఖ్యలు', slow: 'నెమ్మదిగా',
+    nav_say: "చెప్పండి", cSay: "ఇంగ్లీష్ వాక్యం రాసి తెలుగు, హిందీ, కన్నడ, తమిళం, మలయాళం, బెంగాలీ, మరాఠీ, కొరియన్, స్పానిష్ లేదా జర్మన్‌లో వినండి.", sayLede: "ఇంగ్లీష్‌లో వాక్యం రాయండి. మరో భాషలో రోమన్ ఉచ్చారణ, స్వరంతో పొందండి.", sayPlaceholder: "ఇంగ్లీష్ వాక్యం రాయండి, ఉదాహరణకు: How are you?", sayInput: "ఇంగ్లీష్ వాక్యం", sayTo: "ఈ భాషలో చెప్పు", sayGo: "అనువదించి చదువు", sayEnglish: "ఇంగ్లీష్ చదువు", sayResult: "ఫలితం", sayMatch: "వాక్యాల జాబితా", sayDevice: "మీ పరికరంలో అనువదించబడింది", sayClosest: "వాక్యాల జాబితాలో దగ్గరి వాక్యాలు", sayNone: "స్వేచ్ఛా అనువాదానికి పరికరంలో అనువాదకం ఉన్న బ్రౌజర్ (ఇటీవలి Chrome) కావాలి. వాక్యాల జాబితాలో దగ్గరి వాక్యాలు ఇవి.", sayWorking: "మీ పరికరంలో అనువదిస్తోంది…", sayFail: "పరికరంలోని అనువాదకం ఈ భాషా జతకు పని చేయలేదు. వాక్యాల జాబితాలో దగ్గరి వాక్యాలు ఇవి.", sayNote: "ఏదీ సర్వర్‌కు పంపబడదు. యంత్ర అనువాదం తప్పు కావచ్చు, ముఖ్యమైన వాక్యాలను మాతృభాష వారితో సరిచూడండి.", copy: "కాపీ", copied: "కాపీ అయింది"
   };
   I.kn = {
     skip: 'ವಿಷಯಕ್ಕೆ ಹೋಗಿ', settings: 'ಸೆಟ್ಟಿಂಗ್‌ಗಳು', part: 'EknathaLabs ನ ಭಾಗ', privacyNote: 'ನಿಮ್ಮ ಬ್ರೌಸರ್‌ನಲ್ಲೇ ಕೆಲಸ ಮಾಡುತ್ತದೆ. ನಿಮ್ಮ ಫೈಲ್‌ಗಳು ಮತ್ತು ಪದಗಳು ನಿಮ್ಮ ಸಾಧನದಲ್ಲೇ ಇರುತ್ತವೆ.', mainNav: 'ಮುಖ್ಯ', uiLang: 'ಇಂಟರ್‌ಫೇಸ್ ಭಾಷೆ', focusLang: 'ನಾನು ಕಲಿಯುತ್ತಿರುವ ಭಾಷೆ', scheme: 'ರೋಮನ್ ಶೈಲಿ', schSimple: 'ಸರಳ', schIast: 'ಪಾಂಡಿತ್ಯ', showRoman: 'ರೋಮನ್ ಉಚ್ಚಾರಣೆ ತೋರಿಸಿ', on: 'ಆನ್', off: 'ಆಫ್', voiceSpeed: 'ಧ್ವನಿ ವೇಗ', perDay: 'ಒಂದು ಅಧಿವೇಶನದಲ್ಲಿ ಪುನರಾವರ್ತನೆ', unlimited: 'ಮಿತಿ ಇಲ್ಲ', theme: 'ಥೀಮ್', light: 'ಲೈಟ್', dark: 'ಡಾರ್ಕ್', 'new': 'ಹೊಸ', language: 'ಭಾಷೆ', allLangs: 'ಎಲ್ಲಾ ಭಾಷೆಗಳು', allStatus: 'ಎಲ್ಲಾ', auto: 'ತಾನಾಗಿ ಗುರುತಿಸಿ', indianLangs: 'ಭಾರತೀಯ ಭಾಷೆಗಳು', otherLangs: 'ಇತರ ಭಾಷೆಗಳು',
@@ -436,7 +481,8 @@
     wdLede: 'ನೀವು ಉಳಿಸಿದ ಪದಗಳು. ಈ ಬ್ರೌಸರ್‌ನಲ್ಲಿ ಮಾತ್ರ ಸಂಗ್ರಹವಾಗುತ್ತವೆ.', wdCount: '{n} ತೋರಿಸಲಾಗಿದೆ, {d} ಈಗ ಬಾಕಿ', wdNoMatch: 'ಹೊಂದುವ ಪದಗಳಿಲ್ಲ.', wdEmpty: 'ಇನ್ನೂ ಪದಗಳನ್ನು ಉಳಿಸಿಲ್ಲ.', wdEmptySub: 'ಓದಿ ಅಥವಾ ನೋಡಿ ತೆರೆದು ಪದವನ್ನು ಒತ್ತಿ ಉಳಿಸಿ.', wdMore: 'ಇನ್ನೂ {n} ತೋರಿಸಿಲ್ಲ. ಹುಡುಕಾಟ ಬಳಸಿ.', wdNothing: 'ರಫ್ತು ಮಾಡಲು ಏನೂ ಇಲ್ಲ.', wdImported: '{n} ಹೊಸ ಪದಗಳು ಆಮದಾದವು.', wdImportFail: 'ಆ ಫೈಲ್ ಓದಲಾಗಲಿಲ್ಲ.', wdPrivacy: 'ಬ್ರೌಸರ್ ಡೇಟಾ ಅಳಿಸಿದರೆ ಪಟ್ಟಿ ಹೋಗುತ್ತದೆ, ಆದ್ದರಿಂದ ಆಗಾಗ ಬ್ಯಾಕಪ್ ರಫ್ತು ಮಾಡಿ.', search: 'ಹುಡುಕಿ', edit: 'ಬದಲಿಸಿ', dueNow: 'ಈಗಲೇ', dueToday: 'ಇಂದು', dueIn: '{n} ದಿನದಲ್ಲಿ', backup: 'ಬ್ಯಾಕಪ್', importWords: 'ಆಮದು',
     rvLede: 'ಕಾರ್ಡ್ ತಿರುಗಿಸಿ, ಎಷ್ಟು ನೆನಪಿತ್ತು ಎಂದು ಹೇಳಿ.', rvMode: 'ಅಭ್ಯಾಸ ವಿಧಾನ', rvW2M: 'ಪದದಿಂದ ಅರ್ಥ', rvM2W: 'ಅರ್ಥದಿಂದ ಪದ', rvListen: 'ಆಲಿಸುವುದು', rvCloze: 'ಖಾಲಿ ತುಂಬಿ', rvStreak: 'ಸತತ ದಿನಗಳು: {n}', rvDone: 'ಮುಗಿದಿದೆ: {n} ಕಾರ್ಡ್‌ಗಳು', rvDoneSub: 'ನಂತರ ಬನ್ನಿ. ತಪ್ಪಿದ ಕಾರ್ಡ್‌ಗಳು ನಿಮಿಷಗಳಲ್ಲಿ, ಉಳಿದವು ದಿನಗಳಲ್ಲಿ ಬರುತ್ತವೆ.', rvNone: 'ಏನೂ ಬಾಕಿ ಇಲ್ಲ', rvNoneSub: 'ನೀವು ಮುಂದಿದ್ದೀರಿ. ಹೊಸ ಪದಗಳಿಗಾಗಿ ಇನ್ನಷ್ಟು ಓದಿ ಅಥವಾ ನೋಡಿ.', rvWhichWord: 'ಈ ಪದ ಯಾವುದು?', rvPlay: 'ಪದ ಕೇಳಿ', rvListenQ: 'ಕೇಳಿ, ಅರ್ಥ ನೆನಪಿಸಿಕೊಳ್ಳಿ', rvHint: 'ಅರ್ಥ', rvShow: 'ಉತ್ತರ ತೋರಿಸಿ', rvProgress: 'ಅಧಿವೇಶನ ಪ್ರಗತಿ', again: 'ಮತ್ತೆ', hard: 'ಕಷ್ಟ', good: 'ಚೆನ್ನಾಗಿದೆ', easy: 'ಸುಲಭ',
     scLede: 'ಅಕ್ಷರಗಳನ್ನು ಕಲಿಯಿರಿ. ಯಾವ ಅಕ್ಷರವನ್ನಾದರೂ ಒತ್ತಿ ಕೇಳಿ, ಬರೆದು ಅಭ್ಯಾಸ ಮಾಡಿ.', scVowels: 'ಸ್ವರಗಳು', scCons: 'ವ್ಯಂಜನಗಳು', scSigns: 'ಸ್ವರ ಚಿಹ್ನೆಗಳು', scSignsNote: 'ಅಕ್ಷರ {b} ಮೇಲೆ ತೋರಿಸಲಾಗಿದೆ', scDigits: 'ಅಂಕೆಗಳು', scQuiz: 'ಸಣ್ಣ ರಸಪ್ರಶ್ನೆ', scQuizQ: 'ಈ ಅಕ್ಷರವನ್ನು ಹೇಗೆ ಓದುತ್ತೀರಿ?', scTrace: 'ಬರೆದು ನೋಡಿ', scTraceHint: 'ಮೇಲೆ ಒಂದು ಅಕ್ಷರವನ್ನು ಒತ್ತಿ, ಇಲ್ಲಿ ಬರೆಯಿರಿ.', correct: 'ಸರಿ!', wrongIs: 'ಅಲ್ಲ. ಇದು {a}.', next: 'ಮುಂದೆ',
-    phLede: 'ದಿನನಿತ್ಯದ ವಾಕ್ಯಗಳು. ಯಾವ ಪದವನ್ನಾದರೂ ಒತ್ತಿ ಉಳಿಸಿ.', phNote: 'ಈ ವಾಕ್ಯಗಳು ಆರಂಭಿಕ ಸೆಟ್. ನಂಬುವ ಮೊದಲು ಮಾತೃಭಾಷಿಕರಿಂದ ಪರಿಶೀಲಿಸಿ.', cat_greet: 'ಶುಭಾಶಯಗಳು', cat_intro: 'ಪರಿಚಯ', cat_daily: 'ದಿನನಿತ್ಯ', cat_num: 'ಸಂಖ್ಯೆಗಳು', slow: 'ನಿಧಾನ'
+    phLede: 'ದಿನನಿತ್ಯದ ವಾಕ್ಯಗಳು. ಯಾವ ಪದವನ್ನಾದರೂ ಒತ್ತಿ ಉಳಿಸಿ.', phNote: 'ಈ ವಾಕ್ಯಗಳು ಆರಂಭಿಕ ಸೆಟ್. ನಂಬುವ ಮೊದಲು ಮಾತೃಭಾಷಿಕರಿಂದ ಪರಿಶೀಲಿಸಿ.', cat_greet: 'ಶುಭಾಶಯಗಳು', cat_intro: 'ಪರಿಚಯ', cat_daily: 'ದಿನನಿತ್ಯ', cat_num: 'ಸಂಖ್ಯೆಗಳು', slow: 'ನಿಧಾನ',
+    nav_say: "ಹೇಳಿ", cSay: "ಇಂಗ್ಲಿಷ್ ವಾಕ್ಯ ಬರೆದು ತೆಲುಗು, ಹಿಂದಿ, ಕನ್ನಡ, ತಮಿಳು, ಮಲಯಾಳಂ, ಬಂಗಾಳಿ, ಮರಾಠಿ, ಕೊರಿಯನ್, ಸ್ಪ್ಯಾನಿಷ್ ಅಥವಾ ಜರ್ಮನ್‌ನಲ್ಲಿ ಕೇಳಿ.", sayLede: "ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ವಾಕ್ಯ ಬರೆಯಿರಿ. ಬೇರೆ ಭಾಷೆಯಲ್ಲಿ ರೋಮನ್ ಉಚ್ಚಾರಣೆ ಮತ್ತು ಧ್ವನಿಯೊಂದಿಗೆ ಪಡೆಯಿರಿ.", sayPlaceholder: "ಇಂಗ್ಲಿಷ್ ವಾಕ್ಯ ಬರೆಯಿರಿ, ಉದಾಹರಣೆಗೆ: How are you?", sayInput: "ಇಂಗ್ಲಿಷ್ ವಾಕ್ಯ", sayTo: "ಈ ಭಾಷೆಯಲ್ಲಿ ಹೇಳು", sayGo: "ಅನುವಾದಿಸಿ ಹೇಳು", sayEnglish: "ಇಂಗ್ಲಿಷ್ ಹೇಳು", sayResult: "ಫಲಿತಾಂಶ", sayMatch: "ವಾಕ್ಯಗಳ ಪಟ್ಟಿ", sayDevice: "ನಿಮ್ಮ ಸಾಧನದಲ್ಲಿ ಅನುವಾದಿಸಲಾಗಿದೆ", sayClosest: "ವಾಕ್ಯಗಳ ಪಟ್ಟಿಯ ಹತ್ತಿರದ ವಾಕ್ಯಗಳು", sayNone: "ಮುಕ್ತ ಅನುವಾದಕ್ಕೆ ಸಾಧನದಲ್ಲೇ ಅನುವಾದಕ ಇರುವ ಬ್ರೌಸರ್ (ಇತ್ತೀಚಿನ Chrome) ಬೇಕು. ವಾಕ್ಯಗಳ ಪಟ್ಟಿಯ ಹತ್ತಿರದ ವಾಕ್ಯಗಳು ಇಲ್ಲಿವೆ.", sayWorking: "ನಿಮ್ಮ ಸಾಧನದಲ್ಲಿ ಅನುವಾದಿಸುತ್ತಿದೆ…", sayFail: "ಸಾಧನದ ಅನುವಾದಕ ಈ ಭಾಷಾ ಜೋಡಿಗೆ ಕೆಲಸ ಮಾಡಲಿಲ್ಲ. ವಾಕ್ಯಗಳ ಪಟ್ಟಿಯ ಹತ್ತಿರದ ವಾಕ್ಯಗಳು ಇಲ್ಲಿವೆ.", sayNote: "ಏನೂ ಸರ್ವರ್‌ಗೆ ಕಳುಹಿಸಲ್ಪಡುವುದಿಲ್ಲ. ಯಂತ್ರ ಅನುವಾದ ತಪ್ಪಾಗಬಹುದು, ಮುಖ್ಯ ವಾಕ್ಯಗಳನ್ನು ಮಾತೃಭಾಷಿಕರಿಂದ ಪರಿಶೀಲಿಸಿ.", copy: "ನಕಲಿಸಿ", copied: "ನಕಲಾಯಿತು"
   };
   I.ta = {
     skip: 'உள்ளடக்கத்துக்குச் செல்லவும்', settings: 'அமைப்புகள்', part: 'EknathaLabs இன் பகுதி', privacyNote: 'உங்கள் உலாவியிலேயே இயங்குகிறது. உங்கள் கோப்புகளும் சொற்களும் உங்கள் சாதனத்திலேயே இருக்கும்.', mainNav: 'முதன்மை', uiLang: 'இடைமுக மொழி', focusLang: 'நான் கற்கும் மொழி', scheme: 'ரோமன் பாணி', schSimple: 'எளிய', schIast: 'அறிஞர்', showRoman: 'ரோமன் உச்சரிப்பைக் காட்டு', on: 'இயக்கு', off: 'நிறுத்து', voiceSpeed: 'குரல் வேகம்', perDay: 'ஒரு அமர்வின் மீளாய்வுகள்', unlimited: 'வரம்பு இல்லை', theme: 'தீம்', light: 'ஒளி', dark: 'இருள்', 'new': 'புதிய', language: 'மொழி', allLangs: 'அனைத்து மொழிகள்', allStatus: 'அனைத்தும்', auto: 'தானாகக் கண்டறி', indianLangs: 'இந்திய மொழிகள்', otherLangs: 'பிற மொழிகள்',
@@ -450,7 +496,8 @@
     wdLede: 'நீங்கள் சேமித்த சொற்கள். இந்த உலாவியில் மட்டுமே சேமிக்கப்படும்.', wdCount: '{n} காட்டப்படுகின்றன, {d} இப்போது நிலுவை', wdNoMatch: 'பொருந்தும் சொற்கள் இல்லை.', wdEmpty: 'இன்னும் சொற்கள் சேமிக்கப்படவில்லை.', wdEmptySub: 'படி அல்லது பார் பகுதியைத் திறந்து சொல்லைத் தொட்டுச் சேமியுங்கள்.', wdMore: 'மேலும் {n} காட்டப்படவில்லை. தேடலைப் பயன்படுத்துங்கள்.', wdNothing: 'ஏற்றுமதி செய்ய எதுவும் இல்லை.', wdImported: '{n} புதிய சொற்கள் இறக்குமதியாயின.', wdImportFail: 'அந்தக் கோப்பைப் படிக்க முடியவில்லை.', wdPrivacy: 'உலாவித் தரவை அழித்தால் பட்டியல் போய்விடும், எனவே அவ்வப்போது காப்புப் பிரதி எடுங்கள்.', search: 'தேடு', edit: 'திருத்து', dueNow: 'இப்போதே', dueToday: 'இன்று', dueIn: '{n} நாளில்', backup: 'காப்புப் பிரதி', importWords: 'இறக்குமதி',
     rvLede: 'அட்டையைத் திருப்புங்கள், எவ்வளவு நினைவிருந்தது என்று சொல்லுங்கள்.', rvMode: 'பயிற்சி முறை', rvW2M: 'சொல்லிலிருந்து பொருள்', rvM2W: 'பொருளிலிருந்து சொல்', rvListen: 'கேட்டல்', rvCloze: 'இடைவெளியை நிரப்புக', rvStreak: 'தொடர் நாட்கள்: {n}', rvDone: 'முடிந்தது: {n} அட்டைகள்', rvDoneSub: 'பின்னர் வாருங்கள். தவறியவை நிமிடங்களில், மற்றவை நாட்களில் திரும்பும்.', rvNone: 'எதுவும் நிலுவையில்லை', rvNoneSub: 'நீங்கள் முன்னிலையில் உள்ளீர்கள். புதிய சொற்களுக்கு மேலும் படியுங்கள் அல்லது பாருங்கள்.', rvWhichWord: 'இந்தச் சொல் எது?', rvPlay: 'சொல்லைக் கேள்', rvListenQ: 'கேட்டு, பொருளை நினைவுகூருங்கள்', rvHint: 'பொருள்', rvShow: 'விடையைக் காட்டு', rvProgress: 'அமர்வு முன்னேற்றம்', again: 'மீண்டும்', hard: 'கடினம்', good: 'நன்று', easy: 'எளிது',
     scLede: 'எழுத்துகளைக் கற்கலாம். எந்த எழுத்தையும் தொட்டுக் கேளுங்கள், எழுதிப் பழகுங்கள்.', scVowels: 'உயிரெழுத்துகள்', scCons: 'மெய்யெழுத்துகள்', scSigns: 'உயிர்மெய் குறிகள்', scSignsNote: '{b} எழுத்தின் மீது காட்டப்பட்டவை', scDigits: 'எண்கள்', scQuiz: 'சிறு வினாடி வினா', scQuizQ: 'இந்த எழுத்தை எப்படிப் படிப்பீர்கள்?', scTrace: 'எழுதிப் பாருங்கள்', scTraceHint: 'மேலே ஓர் எழுத்தைத் தொட்டு, இங்கே எழுதுங்கள்.', correct: 'சரி!', wrongIs: 'இல்லை. இது {a}.', next: 'அடுத்து',
-    phLede: 'அன்றாடச் சொற்றொடர்கள். எந்தச் சொல்லையும் தொட்டுச் சேமியுங்கள்.', phNote: 'இந்தச் சொற்றொடர்கள் தொடக்கத் தொகுப்பு. நம்புவதற்கு முன் தாய்மொழிப் பேச்சாளரிடம் சரிபாருங்கள்.', cat_greet: 'வாழ்த்துகள்', cat_intro: 'அறிமுகம்', cat_daily: 'அன்றாடம்', cat_num: 'எண்கள்', slow: 'மெதுவாக'
+    phLede: 'அன்றாடச் சொற்றொடர்கள். எந்தச் சொல்லையும் தொட்டுச் சேமியுங்கள்.', phNote: 'இந்தச் சொற்றொடர்கள் தொடக்கத் தொகுப்பு. நம்புவதற்கு முன் தாய்மொழிப் பேச்சாளரிடம் சரிபாருங்கள்.', cat_greet: 'வாழ்த்துகள்', cat_intro: 'அறிமுகம்', cat_daily: 'அன்றாடம்', cat_num: 'எண்கள்', slow: 'மெதுவாக',
+    nav_say: "சொல்", cSay: "ஆங்கில வாக்கியத்தை எழுதி தெலுங்கு, இந்தி, கன்னடம், தமிழ், மலையாளம், வங்காளம், மராத்தி, கொரியன், ஸ்பானிஷ் அல்லது ஜெர்மனில் கேளுங்கள்.", sayLede: "ஆங்கிலத்தில் வாக்கியம் எழுதுங்கள். வேறொரு மொழியில் ரோமன் உச்சரிப்பு, குரலுடன் பெறுங்கள்.", sayPlaceholder: "ஆங்கில வாக்கியத்தை எழுதுங்கள், எ.கா: How are you?", sayInput: "ஆங்கில வாக்கியம்", sayTo: "இந்த மொழியில் சொல்", sayGo: "மொழிபெயர்த்துச் சொல்", sayEnglish: "ஆங்கிலம் சொல்", sayResult: "முடிவு", sayMatch: "சொற்றொடர் பட்டியல்", sayDevice: "உங்கள் சாதனத்தில் மொழிபெயர்க்கப்பட்டது", sayClosest: "சொற்றொடர் பட்டியலின் நெருங்கிய வாக்கியங்கள்", sayNone: "சுதந்திர மொழிபெயர்ப்புக்கு சாதனத்திலேயே மொழிபெயர்ப்பி உள்ள உலாவி (சமீபத்திய Chrome) தேவை. சொற்றொடர் பட்டியலின் நெருங்கிய வாக்கியங்கள் இதோ.", sayWorking: "உங்கள் சாதனத்தில் மொழிபெயர்க்கிறது…", sayFail: "சாதன மொழிபெயர்ப்பி இந்த மொழி ஜோடிக்கு வேலை செய்யவில்லை. சொற்றொடர் பட்டியலின் நெருங்கிய வாக்கியங்கள் இதோ.", sayNote: "எதுவும் சேவையகத்துக்கு அனுப்பப்படாது. இயந்திர மொழிபெயர்ப்பு தவறாகலாம், முக்கிய வாக்கியங்களைத் தாய்மொழியாளரிடம் சரிபாருங்கள்.", copy: "நகலெடு", copied: "நகலெடுக்கப்பட்டது"
   };
   I.ml = {
     skip: 'ഉള്ളടക്കത്തിലേക്ക് പോകുക', settings: 'ക്രമീകരണങ്ങൾ', part: 'EknathaLabs ന്റെ ഭാഗം', privacyNote: 'നിങ്ങളുടെ ബ്രൗസറിൽ തന്നെ പ്രവർത്തിക്കുന്നു. ഫയലുകളും വാക്കുകളും നിങ്ങളുടെ ഉപകരണത്തിൽ തന്നെ ഇരിക്കും.', mainNav: 'പ്രധാനം', uiLang: 'ഇന്റർഫേസ് ഭാഷ', focusLang: 'ഞാൻ പഠിക്കുന്ന ഭാഷ', scheme: 'റോമൻ ശൈലി', schSimple: 'ലളിതം', schIast: 'പാണ്ഡിത്യം', showRoman: 'റോമൻ ഉച്ചാരണം കാണിക്കുക', on: 'ഓൺ', off: 'ഓഫ്', voiceSpeed: 'ശബ്ദ വേഗത', perDay: 'ഒരു സെഷനിലെ പുനരവലോകനങ്ങൾ', unlimited: 'പരിധി ഇല്ല', theme: 'തീം', light: 'ലൈറ്റ്', dark: 'ഡാർക്ക്', 'new': 'പുതിയത്', language: 'ഭാഷ', allLangs: 'എല്ലാ ഭാഷകളും', allStatus: 'എല്ലാം', auto: 'സ്വയം കണ്ടെത്തുക', indianLangs: 'ഇന്ത്യൻ ഭാഷകൾ', otherLangs: 'മറ്റ് ഭാഷകൾ',
@@ -464,7 +511,8 @@
     wdLede: 'നിങ്ങൾ സേവ് ചെയ്ത വാക്കുകൾ. ഈ ബ്രൗസറിൽ മാത്രം സൂക്ഷിക്കുന്നു.', wdCount: '{n} കാണിക്കുന്നു, {d} ഇപ്പോൾ ബാക്കി', wdNoMatch: 'യോജിക്കുന്ന വാക്കുകളില്ല.', wdEmpty: 'ഇതുവരെ വാക്കുകൾ സേവ് ചെയ്തിട്ടില്ല.', wdEmptySub: 'വായിക്കുക അല്ലെങ്കിൽ കാണുക തുറന്ന് വാക്കിൽ തൊട്ട് സേവ് ചെയ്യുക.', wdMore: 'ഇനിയും {n} കാണിച്ചിട്ടില്ല. തിരയൽ ഉപയോഗിക്കുക.', wdNothing: 'എക്സ്പോർട്ട് ചെയ്യാൻ ഒന്നുമില്ല.', wdImported: '{n} പുതിയ വാക്കുകൾ ഇമ്പോർട്ട് ചെയ്തു.', wdImportFail: 'ആ ഫയൽ വായിക്കാനായില്ല.', wdPrivacy: 'ബ്രൗസർ ഡാറ്റ മായ്ച്ചാൽ പട്ടിക പോകും, അതിനാൽ ഇടയ്ക്കിടെ ബാക്കപ്പ് എക്സ്പോർട്ട് ചെയ്യുക.', search: 'തിരയുക', edit: 'മാറ്റുക', dueNow: 'ഇപ്പോൾ', dueToday: 'ഇന്ന്', dueIn: '{n} ദിവസത്തിൽ', backup: 'ബാക്കപ്പ്', importWords: 'ഇമ്പോർട്ട്',
     rvLede: 'കാർഡ് മറിക്കൂ, എത്ര ഓർമ്മയുണ്ടായിരുന്നു എന്ന് പറയൂ.', rvMode: 'പരിശീലന രീതി', rvW2M: 'വാക്കിൽ നിന്ന് അർത്ഥം', rvM2W: 'അർത്ഥത്തിൽ നിന്ന് വാക്ക്', rvListen: 'കേൾക്കൽ', rvCloze: 'വിടവ് നിറയ്ക്കുക', rvStreak: 'തുടർച്ചയായ ദിവസങ്ങൾ: {n}', rvDone: 'കഴിഞ്ഞു: {n} കാർഡുകൾ', rvDoneSub: 'പിന്നീട് വരൂ. തെറ്റിയ കാർഡുകൾ മിനിറ്റുകൾക്കുള്ളിൽ, ബാക്കി ദിവസങ്ങൾക്കുള്ളിൽ തിരിച്ചെത്തും.', rvNone: 'ഒന്നും ബാക്കിയില്ല', rvNoneSub: 'നിങ്ങൾ മുന്നിലാണ്. പുതിയ വാക്കുകൾക്ക് കൂടുതൽ വായിക്കൂ അല്ലെങ്കിൽ കാണൂ.', rvWhichWord: 'ഈ വാക്ക് ഏത്?', rvPlay: 'വാക്ക് കേൾക്കുക', rvListenQ: 'കേട്ട് അർത്ഥം ഓർക്കുക', rvHint: 'അർത്ഥം', rvShow: 'ഉത്തരം കാണിക്കുക', rvProgress: 'സെഷൻ പുരോഗതി', again: 'വീണ്ടും', hard: 'ബുദ്ധിമുട്ട്', good: 'നല്ലത്', easy: 'എളുപ്പം',
     scLede: 'അക്ഷരങ്ങൾ പഠിക്കൂ. ഏത് അക്ഷരത്തിലും തൊട്ട് കേൾക്കൂ, എഴുതി പഠിക്കൂ.', scVowels: 'സ്വരങ്ങൾ', scCons: 'വ്യഞ്ജനങ്ങൾ', scSigns: 'സ്വരചിഹ്നങ്ങൾ', scSignsNote: '{b} എന്ന അക്ഷരത്തിൽ കാണിച്ചിരിക്കുന്നു', scDigits: 'അക്കങ്ങൾ', scQuiz: 'ചെറിയ ക്വിസ്', scQuizQ: 'ഈ അക്ഷരം എങ്ങനെ വായിക്കും?', scTrace: 'എഴുതി നോക്കൂ', scTraceHint: 'മുകളിൽ ഒരു അക്ഷരത്തിൽ തൊട്ട്, ഇവിടെ എഴുതൂ.', correct: 'ശരി!', wrongIs: 'അല്ല. ഇത് {a}.', next: 'അടുത്തത്',
-    phLede: 'ദൈനംദിന വാക്യങ്ങൾ. ഏത് വാക്കിലും തൊട്ട് സേവ് ചെയ്യൂ.', phNote: 'ഈ വാക്യങ്ങൾ ഒരു പ്രാരംഭ സെറ്റ് ആണ്. ആശ്രയിക്കുന്നതിനുമുമ്പ് മാതൃഭാഷക്കാരനെക്കൊണ്ട് പരിശോധിപ്പിക്കുക.', cat_greet: 'അഭിവാദ്യങ്ങൾ', cat_intro: 'പരിചയപ്പെടുത്തൽ', cat_daily: 'ദൈനംദിനം', cat_num: 'സംഖ്യകൾ', slow: 'പതുക്കെ'
+    phLede: 'ദൈനംദിന വാക്യങ്ങൾ. ഏത് വാക്കിലും തൊട്ട് സേവ് ചെയ്യൂ.', phNote: 'ഈ വാക്യങ്ങൾ ഒരു പ്രാരംഭ സെറ്റ് ആണ്. ആശ്രയിക്കുന്നതിനുമുമ്പ് മാതൃഭാഷക്കാരനെക്കൊണ്ട് പരിശോധിപ്പിക്കുക.', cat_greet: 'അഭിവാദ്യങ്ങൾ', cat_intro: 'പരിചയപ്പെടുത്തൽ', cat_daily: 'ദൈനംദിനം', cat_num: 'സംഖ്യകൾ', slow: 'പതുക്കെ',
+    nav_say: "പറയൂ", cSay: "ഇംഗ്ലീഷ് വാക്യം ടൈപ്പ് ചെയ്ത് തെലുങ്ക്, ഹിന്ദി, കന്നഡ, തമിഴ്, മലയാളം, ബംഗാളി, മറാത്തി, കൊറിയൻ, സ്പാനിഷ് അല്ലെങ്കിൽ ജർമ്മനിൽ കേൾക്കൂ.", sayLede: "ഇംഗ്ലീഷിൽ വാക്യം ടൈപ്പ് ചെയ്യൂ. മറ്റൊരു ഭാഷയിൽ റോമൻ ഉച്ചാരണവും ശബ്ദവും സഹിതം നേടൂ.", sayPlaceholder: "ഇംഗ്ലീഷ് വാക്യം ടൈപ്പ് ചെയ്യൂ, ഉദാ: How are you?", sayInput: "ഇംഗ്ലീഷ് വാക്യം", sayTo: "ഈ ഭാഷയിൽ പറയുക", sayGo: "വിവർത്തനം ചെയ്ത് പറയുക", sayEnglish: "ഇംഗ്ലീഷ് പറയുക", sayResult: "ഫലം", sayMatch: "വാക്യ പട്ടിക", sayDevice: "നിങ്ങളുടെ ഉപകരണത്തിൽ വിവർത്തനം ചെയ്തത്", sayClosest: "വാക്യ പട്ടികയിലെ ഏറ്റവും അടുത്ത വാക്യങ്ങൾ", sayNone: "സ്വതന്ത്ര വിവർത്തനത്തിന് ഉപകരണത്തിൽ തന്നെ വിവർത്തകൻ ഉള്ള ബ്രൗസർ (പുതിയ Chrome) വേണം. വാക്യ പട്ടികയിലെ ഏറ്റവും അടുത്ത വാക്യങ്ങൾ ഇതാ.", sayWorking: "നിങ്ങളുടെ ഉപകരണത്തിൽ വിവർത്തനം ചെയ്യുന്നു…", sayFail: "ഉപകരണത്തിലെ വിവർത്തകന് ഈ ഭാഷാ ജോടിക്ക് പ്രവർത്തിക്കാനായില്ല. വാക്യ പട്ടികയിലെ ഏറ്റവും അടുത്ത വാക്യങ്ങൾ ഇതാ.", sayNote: "ഒന്നും സെർവറിലേക്ക് അയയ്ക്കില്ല. യന്ത്ര വിവർത്തനം തെറ്റാകാം, പ്രധാന വാക്യങ്ങൾ മാതൃഭാഷക്കാരനെക്കൊണ്ട് പരിശോധിപ്പിക്കുക.", copy: "പകർത്തുക", copied: "പകർത്തി"
   };
 })(window.B = window.B || {});
 
@@ -522,6 +570,79 @@
     app.appendChild(h('section', { class: 'panel' }, [h('h2', { text: t('rdText') }), ta, actions, tools]));
     app.appendChild(h('section', { class: 'panel rd-panel' }, [h('div', { class: 'legend2' }, [h('span', { class: 'tk new', text: t('st0') }), h('span', { class: 'tk learn', text: t('st1') }), h('span', { class: 'tk known', text: t('st2') }), h('span', { class: 'hint', text: t('clickWord') })]), out, stats]));
     draw();
+  };
+})(window.B);
+
+;
+/* Say it: type English, get the sentence in another language with romanization and voice.
+   Order of attempts: exact phrasebook match, on-device translator (if the browser has one), closest phrasebook entries. */
+(function (B) {
+  'use strict';
+  var U = B.ui, h = U.h, t = U.t, set = U.set;
+  var Y = { to: null, text: '' };
+  B.views = B.views || {};
+  function norm(s) { return s.toLowerCase().replace(/[’']/g, "'").replace(/[^a-z0-9'… ]+/g, ' ').replace(/\s+/g, ' ').trim(); }
+  function toks(s) { return norm(s).replace(/…/g, ' ').split(' ').filter(Boolean); }
+  // best phrasebook matches for an English sentence
+  B.sayMatch = function (text, lang) {
+    var q = norm(text), qt = toks(text), out = [];
+    if (!qt.length) return out;
+    B.PHRASES.forEach(function (p) {
+      var pn = norm(p.en), pt = toks(p.en), score;
+      if (pn === q) score = 1;
+      else {
+        var inter = pt.filter(function (w) { return qt.indexOf(w) >= 0; }).length, uni = pt.length + qt.length - inter;
+        score = uni ? inter / uni : 0;
+      }
+      var tpl = null;
+      if (p.en.indexOf('…') >= 0) { var pre = norm(p.en.split('…')[0]); if (pre && q.indexOf(pre) === 0 && q.length > pre.length) { tpl = text.trim().slice(pre.length).trim().replace(/[.!?]+$/, ''); score = Math.max(score, 0.95); } }
+      if (score > 0) out.push({ p: p, score: score, tpl: tpl, text: tpl ? p[lang].replace('…', tpl) : p[lang] });
+    });
+    out.sort(function (a, b) { return b.score - a.score; });
+    return out;
+  };
+  B.views.say = function (app) {
+    app.textContent = ''; U.stopSpeak(); Y.to = Y.to || set.focus;
+    app.appendChild(h('h1', { text: t('nav_say') })); app.appendChild(h('p', { class: 'lede', text: t('sayLede') }));
+    var ta = h('textarea', { id: 'sy-text', rows: 3, maxlength: 600, placeholder: t('sayPlaceholder'), 'aria-label': t('sayInput'), spellcheck: 'true', lang: 'en' }); ta.value = Y.text;
+    var sel = h('select', { id: 'sy-to', 'aria-label': t('sayTo') }, B.LEARN.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); sel.value = Y.to;
+    var out = h('div', { class: 'say-out', 'aria-live': 'polite' }), status = h('p', { class: 'note', hidden: true });
+    sel.addEventListener('change', function () { Y.to = sel.value; if (Y.text) go(false); });
+    ta.addEventListener('input', function () { Y.text = ta.value; });
+    ta.addEventListener('keydown', function (e) { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); go(true); } });
+    var goBtn = h('button', { type: 'button', class: 'abtn gold', text: '🔊 ' + t('sayGo'), onclick: function () { go(true); } });
+    app.appendChild(h('section', { class: 'panel' }, [h('div', { class: 'tools' }, [h('div', { class: 'tf grow' }, [h('label', { for: 'sy-text', text: t('sayInput') }), ta]), h('div', { class: 'tf' }, [h('label', { for: 'sy-to', text: t('sayTo') }), sel])]),
+      h('div', { class: 'acts' }, [goBtn, h('button', { type: 'button', class: 'abtn', text: '🔊 ' + t('sayEnglish'), onclick: function () { if (ta.value.trim()) U.speak(ta.value.trim(), 'en', null, set.rate); } }), h('button', { type: 'button', class: 'abtn', text: t('clear'), onclick: function () { ta.value = ''; Y.text = ''; out.textContent = ''; status.hidden = true; ta.focus(); } })]), status]));
+    app.appendChild(out);
+    app.appendChild(h('p', { class: 'note', text: t('sayNote') }));
+    var seq = 0;
+    function row(text, lang, label, speakNow) {
+      var main = h('div', { class: 'ph-t', lang: lang }); main.appendChild(U.renderText(text, lang, { roman: false }));
+      U.bindWords(main, function () { return lang; }, function () { return text; }, function () { });
+      var rom = B.isBrahmic(text) ? B.translit(text, set.scheme) : '';
+      var el = h('div', { class: 'ph say-row' }, [h('div', { class: 'ph-main' }, [main, rom ? h('div', { class: 'ph-r', text: rom }) : null, label ? h('div', { class: 'ph-n', text: label }) : null]),
+        h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak'), text: '🔊', onclick: function () { U.speak(text, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow'), text: '🐢', onclick: function () { U.speak(text, lang, null, 0.55); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('copy'), text: '⧉', onclick: function () { try { navigator.clipboard.writeText(text); U.toast(t('copied')); } catch (e) { } } })])]);
+      return el;
+    }
+    function show(list, title, speakFirst) {
+      out.textContent = ''; if (title) out.appendChild(h('h2', { text: title }));
+      list.forEach(function (x, i) { out.appendChild(row(x.text, Y.to, x.label)); });
+      if (speakFirst && list.length) U.speak(list[0].text, Y.to, null, set.rate);
+    }
+    function go(speak) {
+      var text = ta.value.trim(); Y.text = ta.value; status.hidden = true; if (!text) { ta.focus(); return; }
+      var my = ++seq, lang = Y.to, m = B.sayMatch(text, lang), best = m[0];
+      if (best && best.score >= 0.95) { show([{ text: best.text, label: t('sayMatch') + ': ' + best.p.en }], t('sayResult'), speak); return; }
+      var near = m.filter(function (x) { return x.score >= 0.2; }).slice(0, 4).map(function (x) { return { text: x.text, label: x.p.en }; });
+      function fallback(msg) { if (my !== seq) return; status.hidden = false; status.textContent = msg; if (near.length) show(near, t('sayClosest'), false); else out.textContent = ''; }
+      if (!U.canTranslate()) { fallback(t('sayNone')); return; }
+      out.textContent = ''; status.hidden = false; status.textContent = t('sayWorking');
+      U.translate(text, 'en', lang).then(function (r) {
+        if (my !== seq) return; status.hidden = true; r = String(r || '').trim(); if (!r) { fallback(t('trFail')); return; }
+        show([{ text: r, label: t('sayDevice') }], t('sayResult'), speak);
+      }, function () { fallback(t('sayFail')); });
+    }
+    if (Y.text) go(false);
   };
 })(window.B);
 
@@ -792,7 +913,7 @@
       h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'hm-focus', text: t('focusLang') }), (function () { var s = h('select', { id: 'hm-focus' }, B.INDIC.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); s.value = set.focus; s.addEventListener('change', function () { set.focus = s.value; U.saveSet(); B.views.home(app); }); return s; })()])])]));
     var stats = h('div', { class: 'stats' }, [stat(saved, t('statWords')), stat(due, t('statDue')), stat(U.streak(), t('statStreak'))]);
     app.appendChild(stats);
-    var cards = [['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '💬', 'nav_phrases', 'cPhrases']];
+    var cards = [['/say/', '🗣', 'nav_say', 'cSay'], ['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '💬', 'nav_phrases', 'cPhrases']];
     var grid = h('div', { class: 'cards' });
     cards.forEach(function (c) { grid.appendChild(h('a', { class: 'card', href: B.base + c[0].slice(1), onclick: function (e) { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); U.go(c[0]); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: c[1] }), h('h2', { text: t(c[2]) }), h('p', { text: t(c[3]) }), c[0] === '/review/' && due ? h('span', { class: 'chip lr', text: t('dueCount', { n: due }) }) : null])); });
     app.appendChild(grid);
@@ -804,9 +925,9 @@
   // ---------------- Scripts
   var SC = { lang: null, quiz: null, trace: null };
   B.views.scripts = function (app) {
-    app.textContent = ''; SC.lang = SC.lang || set.focus;
+    app.textContent = ''; SC.lang = SC.lang || (B.SCRIPT_LANGS.indexOf(set.focus) >= 0 ? set.focus : 'te');
     app.appendChild(h('h1', { text: t('nav_scripts') })); app.appendChild(h('p', { class: 'lede', text: t('scLede') }));
-    var ls = h('select', { id: 'sc-lang', 'aria-label': t('language') }, B.INDIC.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); ls.value = SC.lang;
+    var ls = h('select', { id: 'sc-lang', 'aria-label': t('language') }, B.SCRIPT_LANGS.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); ls.value = SC.lang;
     ls.addEventListener('change', function () { SC.lang = ls.value; SC.quiz = null; draw(); });
     var body = h('div'); app.appendChild(h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'sc-lang', text: t('language') }), ls])])); app.appendChild(body);
     function cell(g, rom, extra) {
@@ -844,7 +965,7 @@
       body.textContent = ''; var S = B.SCRIPTS[SC.lang], rom = function (g) { return B.translit(g, set.scheme) || g; };
       body.appendChild(grid(t('scVowels'), S.vowels, function (g) { return cell(g, rom(g)); }));
       body.appendChild(grid(t('scCons'), S.cons, function (g) { return cell(g, rom(g)); }));
-      body.appendChild(h('section', { class: 'panel' }, [h('h2', { text: t('scSigns') }), h('p', { class: 'note', text: t('scSignsNote', { b: S.base }) }), h('div', { class: 'glyphs' }, S.signs.map(function (s) { var g = S.base + s; return cell(g, rom(g)); }))]));
+      body.appendChild(h('section', { class: 'panel' }, [h('h2', { text: t('scSigns') }), h('p', { class: 'note', text: t('scSignsNote', { b: S.base }) }), h('div', { class: 'glyphs' }, S.signs.map(function (s) { var g = S.full ? s : S.base + s; return cell(g, rom(g)); }))]));
       body.appendChild(grid(t('scDigits'), S.digits, function (g, i) { return cell(g, String(i)); }));
       body.appendChild(quiz()); drawTrace(); body.appendChild(traceBox);
     }
@@ -881,8 +1002,8 @@
   var U = B.ui, h = U.h, t = U.t, set = U.set, $ = U.$;
   var ORIGIN = 'https://eknathalabs.com', MARK = 'M29.2 23.2V35.5Q29.2 37.5 28.4 38.4Q27.6 39.4 26.1 39.4Q25 39.4 23.8 38.7Q22.6 38.1 21.6 37Q20.7 36 20 34.8Q19.4 33.6 19.4 32.5Q19.4 31.2 20.1 30.4Q20.9 29.6 22.9 29.6L23 29.7V23.2H18V18.2H46V23.2H41.9V45.8H35.7V23.2Z';
   B.MARK = MARK; B.base = '/';
-  var ROUTES = { '': 'home', read: 'read', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases' };
-  var NAV = [['watch', '🎬'], ['read', '📖'], ['words', '🗂'], ['review', '🧠'], ['scripts', 'अ'], ['phrases', '💬']];
+  var ROUTES = { '': 'home', read: 'read', say: 'say', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases' };
+  var NAV = [['say', '🗣'], ['watch', '🎬'], ['read', '📖'], ['words', '🗂'], ['review', '🧠'], ['scripts', 'अ'], ['phrases', '💬']];
   var app;
   function mark() { var NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg'), p = document.createElementNS(NS, 'path'); s.setAttribute('viewBox', '14 14 36 36'); s.setAttribute('width', '22'); s.setAttribute('height', '22'); s.setAttribute('aria-hidden', 'true'); p.setAttribute('d', MARK); p.setAttribute('fill', 'currentColor'); s.appendChild(p); return s; }
   function pathKey() { var p = location.pathname.replace(/index\.html$/, '').replace(/^\/+|\/+$/g, ''); return p; }

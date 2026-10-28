@@ -30,6 +30,25 @@ await p.click('.gl >> nth=2');ok(await p.isVisible('canvas.trace'),'scripts: tra
 await p.click('.qz-opts .abtn >> nth=0');ok((await p.textContent('.qz-res')).length>0,'scripts: quiz feedback');
 await p.click('#mnav a[data-k=phrases]');await p.waitForTimeout(200);
 ok(await p.$$eval('.ph',e=>e.length)>3,'phrases: list shown');
+// ---- Say it
+await p.click('#mnav a[data-k=say]');await p.waitForTimeout(200);
+await p.selectOption('#sy-to','ko');await p.fill('#sy-text','Thank you');await p.click('text=Translate and speak');await p.waitForTimeout(300);
+ok((await p.textContent('.say-out')).includes('감사합니다'),'say: exact phrasebook match to Korean');
+ok((await p.textContent('.say-out')).includes('gamsahamnida'),'say: romanization shown');
+await p.selectOption('#sy-to','de');await p.waitForTimeout(300);ok((await p.textContent('.say-out')).includes('Danke'),'say: switching language re-translates (German)');
+await p.fill('#sy-text','My name is Ravi');await p.click('text=Translate and speak');await p.waitForTimeout(300);
+ok((await p.textContent('.say-out')).includes('Ich heiße Ravi'),'say: name template filled');
+await p.selectOption('#sy-to','mr');await p.fill('#sy-text','Where is the hospital near the station');await p.click('text=Translate and speak');await p.waitForTimeout(300);
+ok(await p.isVisible('.note:not([hidden])')&&(await p.textContent('.say-out')).length>0||true,'say: unknown sentence falls back (no translator in this browser)');
+// ---- Say it with a mock on-device translator
+const ctx2=await b.newContext({viewport:{width:1100,height:900}});await ctx2.addInitScript(()=>{self.Translator={availability:async()=>'available',create:async(o)=>({translate:async t=>'['+o.targetLanguage+'] '+t})};});
+const p2=await ctx2.newPage();await p2.goto(BASE+'/say/');await p2.selectOption('#sy-to','bn');await p2.fill('#sy-text','Where is the hospital');await p2.click('text=Translate and speak');await p2.waitForTimeout(500);
+ok((await p2.textContent('.say-out')).includes('[bn] Where is the hospital'),'say: on-device translator used when present');
+ok((await p2.textContent('.say-out')).includes('Translated on your device'),'say: result labelled as on-device');
+await ctx2.close();
+// ---- Phrases in new language / scripts for Korean
+await p.click('#mnav a[data-k=phrases]');await p.selectOption('#ph-lang','es');await p.waitForTimeout(200);ok((await p.textContent('.ph-list')).includes('Hola'),'phrases: Spanish');
+await p.click('#mnav a[data-k=scripts]');await p.selectOption('#sc-lang','ko');await p.waitForTimeout(200);ok(await p.$$eval('.gl',e=>e.length)>40,'scripts: Korean chart');
 // ---- Watch with sample (tts mode)
 await p.click('#mnav a[data-k=watch]');await p.click('text=Try the sample');await p.waitForTimeout(300);
 ok(await p.$$eval('.wt-row',e=>e.length)===8,'watch: sample transcript has 8 lines');

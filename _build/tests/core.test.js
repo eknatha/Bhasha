@@ -16,5 +16,9 @@ const v=B.parseSubs('WEBVTT\n\n00:01.000 --> 00:02.000 align:start\nHi\n');eq([v
 eq(B.lineAt(l,1.2),0,'lineAt in cue');eq(B.lineAt(l,2.7),-1,'lineAt gap is -1');
 eq(B.fmtTime(3725),'1:02:05','fmtTime hours');
 eq(B.parseCsv(B.csv([['a,b','c"d','e\nf']])),[['a,b','c"d','e\nf']],'csv round trip');
-eq(B.PHRASES.every(p=>['te','hi','kn','ta','ml','en'].every(k=>p[k])),true,'phrases complete');
+eq(B.PHRASES.every(p=>B.LEARN.concat(['en']).every(k=>p[k])),true,'phrases complete in all 10 languages');
+eq(B.LEARN.length,10,'10 learning languages');eq(B.allLangs().filter(x=>x[0]==='ko').length,1,'no duplicate language entries');
+[['বাংলা','bangla'],['ধন্যবাদ','dhonnobad'],['আমি ভালো আছি','ami bhalo achhi'],['नमस्कार','namaskaar'],['안녕하세요','annyeonghaseyo'],['감사합니다','gamsahamnida'],['한국어','hangugeo'],['좋은 아침이에요','joeun achimieyo'],['천만에요','cheonmaneyo']].forEach(([s,r])=>eq(B.translit(s,'simple'),r,'translit '+s));
+eq(B.detectLang('안녕하세요 감사합니다'),'ko','detect ko');eq(B.detectLang('আমি ভালো আছি'),'bn','detect bn');
+eq(B.SCRIPTS.ko.signs.length+B.SCRIPTS.bn.cons.length>0,true,'scripts for bn, mr, ko');
 console.log(fails?'FAILED '+fails:'ALL PASS');process.exit(fails?1:0);
