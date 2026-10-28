@@ -6,7 +6,7 @@ const routes=['/','/say/','/read/','/watch/','/words/','/review/','/scripts/','/
 // seed data so lists render
 const seed=()=>{const now=Date.now();localStorage.setItem('bh-words',JSON.stringify([{id:'te:నమస్తే',w:'నమస్తే',lang:'te',m:'hello',c:'నమస్తే మిత్రమా',n:'',st:1,added:now,iv:0,ef:2.5,reps:0,lapses:0,due:now-1000},{id:'hi:धन्यवाद',w:'धन्यवाद',lang:'hi',m:'thanks',c:'',n:'',st:2,added:now,iv:5,ef:2.5,reps:3,lapses:0,due:now+5*864e5}]));};
 let n=0;
-for(const lang of ['en','te','ta','ml']){for(const theme of ['light','dark','new']){
+for(const lang of ['en','hi','te','kn','ta','ml','bn','mr','ko','es','de']){for(const theme of ['light','dark','new']){
  for(const w of [320,375,768,1280]){
   const ctx=await b.newContext({viewport:{width:w,height:800}});await ctx.addInitScript(([l,t])=>{try{localStorage.setItem('el-theme',t);localStorage.setItem('bh-set',JSON.stringify({ui:l,focus:'te',scheme:'simple',roman:true,perDay:10,rate:.9}));localStorage.setItem('el-lang',l);}catch(e){}},[lang,theme]);
   await ctx.addInitScript(seed);const p=await ctx.newPage();

@@ -186,3 +186,4 @@ canvas.trace{width:min(100%,320px);aspect-ratio:4/3;border:2px solid var(--edge)
 .ph-main{min-width:0}.ph-t{font-size:22px;font-weight:600;line-height:1.6;overflow-wrap:anywhere}.ph-r{font-size:14px;color:var(--text-muted)}.ph-n{font-size:15px}.ph-a{display:flex;gap:6px;flex:none}
 @media print{header.top,.foot,.acts,.popup,.toast,.tools{display:none!important}body{background:#fff;color:#000}}
 .say-out{margin-top:20px;display:grid;gap:10px}.say-out h2{margin:0}
+.vc{max-height:85vh}.vc-rows{display:grid;gap:6px}.vc-row{display:grid;grid-template-columns:minmax(110px,1fr) minmax(0,1.6fr) auto;gap:8px;align-items:center;padding:6px 8px;border:2px solid var(--edge);border-radius:12px;background:var(--bg)}.vc-s{font-size:13px;color:var(--text-muted);overflow-wrap:anywhere}.vc-l span{color:var(--text-muted);font-size:12px}@media(max-width:520px){.vc-row{grid-template-columns:1fr auto}.vc-s{grid-column:1/-1;order:3}}

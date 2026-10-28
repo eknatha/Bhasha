@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const SRC = path.join(__dirname, 'src'), OUT = path.resolve(process.env.BHASHA_OUT || path.join(__dirname, '..'));
 const BASE = process.env.BHASHA_BASE || 'https://bhasha.eknathalabs.com';
-const FILES = ['core', 'data', 'ui', 'i18n', 'v-read', 'v-say', 'v-watch', 'v-words', 'v-learn', 'app'];
+const FILES = ['core', 'data', 'ui', 'speech', 'i18n', 'v-read', 'v-say', 'v-watch', 'v-words', 'v-learn', 'app'];
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const MARK = fs.readFileSync(path.join(__dirname, 'icons', 'icon.svg'), 'utf8').match(/d="(M29\.2[^"]+)"/)[1];
 const ROUTES = [

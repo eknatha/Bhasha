@@ -42,8 +42,8 @@ await p.selectOption('#sy-to','mr');await p.fill('#sy-text','Where is the hospit
 ok(await p.isVisible('.note:not([hidden])')&&(await p.textContent('.say-out')).length>0||true,'say: unknown sentence falls back (no translator in this browser)');
 // ---- Say it with a mock on-device translator
 const ctx2=await b.newContext({viewport:{width:1100,height:900}});await ctx2.addInitScript(()=>{self.Translator={availability:async()=>'available',create:async(o)=>({translate:async t=>'['+o.targetLanguage+'] '+t})};});
-const p2=await ctx2.newPage();await p2.goto(BASE+'/say/');await p2.selectOption('#sy-to','bn');await p2.fill('#sy-text','Where is the hospital');await p2.click('text=Translate and speak');await p2.waitForTimeout(500);
-ok((await p2.textContent('.say-out')).includes('[bn] Where is the hospital'),'say: on-device translator used when present');
+const p2=await ctx2.newPage();await p2.goto(BASE+'/say/');await p2.selectOption('#sy-to','bn');await p2.fill('#sy-text','The library closes early on Sundays');await p2.click('text=Translate and speak');await p2.waitForTimeout(500);
+ok((await p2.textContent('.say-out')).includes('[bn] The library closes early on Sundays'),'say: on-device translator used when present');
 ok((await p2.textContent('.say-out')).includes('Translated on your device'),'say: result labelled as on-device');
 await ctx2.close();
 // ---- Phrases in new language / scripts for Korean

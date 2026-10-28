@@ -13,7 +13,8 @@
   function jget(k, d) { try { var v = JSON.parse(store.get(k)); return v == null ? d : v; } catch (e) { return d; } }
 
   // ---------- settings
-  var UILANGS = ['en', 'hi', 'te', 'kn', 'ta', 'ml'];
+  var UILANGS = ['en', 'hi', 'te', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko', 'es', 'de'], MAINSITE = ['en', 'hi', 'te', 'kn', 'ta', 'ml'];
+  U.UILANGS = UILANGS; U.MAINSITE = MAINSITE;
   var set = U.set = (function () {
     var s = jget('bh-set', {}), nl = (navigator.language || 'en').toLowerCase().slice(0, 2), sl = store.get('el-lang');
     if (UILANGS.indexOf(s.ui) < 0) s.ui = UILANGS.indexOf(sl) >= 0 ? sl : (UILANGS.indexOf(nl) >= 0 ? nl : 'en');
@@ -22,10 +23,11 @@
     if (s.roman == null) s.roman = true;
     if (!(s.perDay >= 0)) s.perDay = 10;
     if (!(s.rate > 0)) s.rate = 0.9;
+    if (['ask', 'yes', 'no'].indexOf(s.ov) < 0) s.ov = 'ask';
     s.theme = document.documentElement.getAttribute('data-theme') || 'light';
     return s;
   })();
-  U.saveSet = function () { store.set('bh-set', JSON.stringify({ ui: set.ui, focus: set.focus, scheme: set.scheme, roman: set.roman, perDay: set.perDay, rate: set.rate })); store.set('el-lang', set.ui); store.set('el-theme', set.theme); };
+  U.saveSet = function () { store.set('bh-set', JSON.stringify({ ui: set.ui, focus: set.focus, scheme: set.scheme, roman: set.roman, perDay: set.perDay, rate: set.rate, ov: set.ov })); if (MAINSITE.indexOf(set.ui) >= 0) store.set('el-lang', set.ui); store.set('el-theme', set.theme); };
   U.t = function (k, v) { var d = B.I18N[set.ui] || B.I18N.en, s = d[k]; if (s == null) s = B.I18N.en[k]; if (s == null) s = k; if (v) for (var x in v) s = s.split('{' + x + '}').join(v[x]); return s; };
   var t = U.t;
   U.applyTheme = function () { document.documentElement.setAttribute('data-theme', set.theme); var m = $('meta[name=theme-color]'); if (m) m.setAttribute('content', { light: '#1c1b4b', dark: '#1c1b4b', new: '#0b3d3a' }[set.theme]); };
@@ -36,21 +38,7 @@
   U.roman = function (w, lang) { return B.isBrahmic(w) ? B.translit(w, set.scheme) : ''; };
   U.today = function () { var d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 
-  // ---------- speech
-  var voices = [];
-  function loadVoices() { try { voices = window.speechSynthesis ? speechSynthesis.getVoices() : []; } catch (e) { voices = []; } }
-  if ('speechSynthesis' in window) { loadVoices(); try { speechSynthesis.addEventListener('voiceschanged', loadVoices); } catch (e) { } }
-  U.voiceFor = function (lang) { var code = B.bcp(lang).toLowerCase(), pre = code.slice(0, 2), v = null, i; for (i = 0; i < voices.length; i++) if (voices[i].lang.toLowerCase().replace('_', '-') === code) { v = voices[i]; break; } if (!v) for (i = 0; i < voices.length; i++) if (voices[i].lang.toLowerCase().indexOf(pre) === 0) { v = voices[i]; break; } return v; };
-  U.canSpeak = function () { return 'speechSynthesis' in window; };
-  U.speak = function (text, lang, onend, rate) {
-    if (!U.canSpeak()) { U.toast(t('noTts')); if (onend) setTimeout(onend, 0); return false; }
-    loadVoices(); var v = U.voiceFor(lang), u = new SpeechSynthesisUtterance(text);
-    u.lang = B.bcp(lang); if (v) u.voice = v; else if (voices.length) U.toast(t('noVoice', { l: U.langName(lang) }));
-    u.rate = rate || set.rate; var done = false; function fin() { if (!done) { done = true; if (onend) onend(); } } u.onend = fin; u.onerror = fin;
-    try { speechSynthesis.cancel(); speechSynthesis.speak(u); } catch (e) { fin(); return false; }
-    return true;
-  };
-  U.stopSpeak = function () { try { if (U.canSpeak()) speechSynthesis.cancel(); } catch (e) { } };
+  // ---------- speech lives in speech.js (device voices with an offline fallback)
 
   // ---------- saved words
   var W = U.words = { list: [] };
