@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://bhasha.eknathalabs.com/sitemap.xml
