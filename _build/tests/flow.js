@@ -118,7 +118,7 @@ await p.keyboard.press('Escape');
   const out=await q.textContent('.say-out');ok(out.includes(thanks),'say: Thank you in '+l);if(rom)ok(out.includes(rom),'say: romanization for '+l+' ('+rom+')');}
  await q.goto(BASE+'/phrases/');await q.selectOption('#ph-lang','as');
  const tabs=await q.$$eval('.tabs .tab',e=>e.length);ok(tabs===14,'phrases: 14 categories ('+tabs+')');
- let total=0;for(let i=0;i<tabs;i++){await q.click('.tabs .tab:nth-child('+(i+1)+')');total+=(await q.$$('.ph-list .ph')).length;}ok(total===200,'phrases: 200 phrases shown for Assamese ('+total+')');
+ let total=0;for(let i=0;i<tabs;i++){await q.click('.tabs .tab:nth-child('+(i+1)+')');total+=(await q.$$('.ph-list .ph')).length;}ok(total===250,'phrases: 250 phrases shown for Assamese ('+total+')');
  await q.goto(BASE+'/scripts/');for(const l of ['gu','as']){await q.selectOption('#sc-lang',l);await q.waitForTimeout(100);const gl=await q.$$eval('.glyphs .gl',e=>e.length);ok(gl>40,'scripts: '+l+' chart has '+gl+' glyphs');}
  ok(qe.length===0,'new languages: no page errors '+qe.join(';'));await c.close();}
 // ---- every interface language shows its own text

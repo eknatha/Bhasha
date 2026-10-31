@@ -44,17 +44,17 @@
         var r = rom(o[lang]);
         return h('button', { type: 'button', class: 'abtn opt', onclick: function (ev) {
           if (solved) return; var b = ev.currentTarget;
-          if (o.id === you.id) { solved = true; b.classList.add('right'); res.textContent = t('correct'); U.speak(o[lang], lang, null, set.rate); if (DR.first) DR.ok++; U.logReview(); nb.hidden = false; nb.focus(); var sh = document.getElementById('dr-show'); if (sh) sh.click(); }
-          else { DR.first = false; b.classList.add('wrong'); b.disabled = true; res.textContent = t('drTry'); }
+          if (o.id === you.id) { solved = true; b.classList.add('right'); res.textContent = t('correct'); if (B.fx) B.fx.good(); U.speak(o[lang], lang, null, set.rate); if (DR.first) DR.ok++; U.logReview(); nb.hidden = false; nb.focus(); var sh = document.getElementById('dr-show'); if (sh) sh.click(); }
+          else { DR.first = false; b.classList.add('wrong'); b.disabled = true; res.textContent = t('drTry'); if (B.fx) B.fx.bad(); }
         } }, [h('span', { lang: lang, text: o[lang] }), r ? h('span', { class: 'r', text: r }) : null]);
       })));
       panel.appendChild(res); panel.appendChild(h('div', { class: 'acts' }, [nb]));
     }
     function done() {
-      app.textContent = ''; var d = DR.sc;
+      app.textContent = ''; var d = DR.sc; if (B.fx) B.fx.celebrate(app);
       app.appendChild(h('h1', { text: d.icon + ' ' + t('drDone') })); app.appendChild(h('p', { class: 'lede', text: t('drScore', { n: DR.ok, m: d.turns.length }) }));
       var panel = h('section', { class: 'panel' }, [h('h2', { text: t('drTranscript') })]);
-      d.turns.forEach(function (x) { panel.appendChild(line(LS.P(x[0]), 'them')); panel.appendChild(line(LS.P(x[1]), 'you')); });
+      d.turns.forEach(function (x) { [[x[0], 'them'], [x[1], 'you']].forEach(function (z) { var b = line(LS.P(z[0]), z[1]); var pa = b.querySelector('.ph-a'); if (pa) pa.appendChild(U.pronToggle(b, LS.P(z[0])[lang], lang)); panel.appendChild(b); }); });
       app.appendChild(panel);
       app.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold', text: t('drReplay'), onclick: function () { DR.turn = 0; DR.ok = 0; run(); } }), h('button', { type: 'button', class: 'abtn', text: t('drAnother'), onclick: list })]));
     }

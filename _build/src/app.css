@@ -196,3 +196,28 @@ canvas.trace{width:min(100%,320px);aspect-ratio:4/3;border:2px solid var(--edge)
 .bubble{display:flex;gap:10px;justify-content:space-between;align-items:center;padding:12px 14px;border:2px solid var(--edge);border-radius:18px;background:var(--soft);margin:8px 0;max-width:100%}.bubble.you{background:var(--feat);margin-inline-start:clamp(0px,6vw,48px)}.bubble.them{margin-inline-end:clamp(0px,6vw,48px)}.bub-t{min-width:0}.bubble.veil{justify-content:flex-end}
 .panel h2.yt{margin-top:18px}
 .card{font:inherit;text-align:start;cursor:pointer}
+
+/* feel: step entrance, confetti, pronunciation, privacy */
+.enter{animation:bhEnter .28s ease both}
+@keyframes bhEnter{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.abtn.opt.right{animation:bhPop .3s ease}
+.abtn.opt.wrong{animation:bhShake .3s ease}
+@keyframes bhPop{50%{transform:scale(1.04)}}
+@keyframes bhShake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.confetti{position:fixed;left:0;right:0;top:0;height:0;overflow:visible;pointer-events:none;z-index:60}
+.confetti i{position:absolute;top:-10px;width:9px;height:14px;border-radius:2px;animation:bhFall 1.8s ease-in forwards}
+@keyframes bhFall{to{transform:translate(var(--dx),100vh) rotate(var(--rot));opacity:.2}}
+@media(prefers-reduced-motion:reduce){.enter,.abtn.opt.right,.abtn.opt.wrong{animation:none}.confetti{display:none}}
+.pron{flex-basis:100%;width:100%;margin-top:10px;padding:12px;border:2px dashed var(--edge);border-radius:14px;background:var(--feat)}
+.ph{flex-wrap:wrap}.bubble{flex-wrap:wrap}
+.pr-row{display:flex;flex-wrap:wrap;gap:8px}
+.pr-msg{margin:8px 0 0;font-size:13px;color:var(--text-muted)}
+.pr-wave{display:block;width:100%;max-width:420px;height:56px;margin-top:10px;color:var(--text);background:var(--surface);border-radius:10px;border:1px solid var(--edge)}
+.pr-meter{height:8px;margin-top:10px;border-radius:99px;background:var(--surface);overflow:hidden;border:1px solid var(--edge)}
+.pr-meter i{display:block;height:100%;width:0;background:var(--gold);transition:width .08s linear}
+.abtn.rec{background:#c0392b;border-color:#c0392b;color:#fff}
+.pvlink{margin-left:auto;font-weight:600}
+.cards.pv .card b{display:block;margin:6px 0 4px}
+.pv-list li{padding:4px 0}
+.pron [hidden]{display:none!important}
+.abtn.danger{border-color:var(--kick)}.abtn.danger:hover{background:var(--kick);color:var(--bg)}

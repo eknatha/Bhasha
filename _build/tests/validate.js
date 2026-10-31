@@ -8,7 +8,7 @@ const B=globalThis.window.B;let fails=0;const bad=(m)=>{fails++;console.log('FAI
 const R={te:/[ఀ-౿]/,hi:/[ऀ-ॿ]/,mr:/[ऀ-ॿ]/,kn:/[ಀ-೿]/,ta:/[஀-௿]/,ml:/[ഀ-ൿ]/,bn:/[ঀ-৿]/,ko:/[가-힯]/,es:/[a-záéíóúñü¿¡]/i,de:/[a-zäöüß]/i,fr:/[a-zàâçéèêëîïôûùüÿœ]/i,gu:/[\u0A80-\u0AFF]/,as:/[\u0980-\u09FF]/};
 const LAT=/[A-Za-z]/;
 const P=B.PHRASES;
-if(P.length!==200)bad('phrase count '+P.length);
+if(P.length!==250)bad('phrase count '+P.length);
 if(new Set(P.map(p=>p.id)).size!==P.length)bad('duplicate ids');
 const cats=new Set(B.PHRASE_CATS);
 P.forEach(p=>{if(!cats.has(p.cat))bad(p.id+' bad cat '+p.cat);if(!p.en)bad(p.id+' no en');
