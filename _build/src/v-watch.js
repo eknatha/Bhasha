@@ -16,7 +16,26 @@
     if (S.pair.length) player(root); else setup(root);
   };
 
-  function setup(root) {
+  // ---- suggested videos: links to YouTube searches (nothing is loaded or sent from Bhasha)
+  var WS = { lang: null };
+  function yt(q) { return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q); }
+  function suggest() {
+    WS.lang = WS.lang || set.focus; var V = B.VIDEOS, lang = WS.lang, L = V.names[lang], box = h('section', { class: 'panel', id: 'ws-sug' });
+    function link(text, q) { return h('a', { class: 'abtn', href: yt(q), target: '_blank', rel: 'noopener noreferrer', text: text + ' ↗' }); }
+    box.appendChild(h('h2', { text: '🎓 ' + t('wsH') }));
+    box.appendChild(h('p', { class: 'note', text: t('wsLede', { l: L }) }));
+    var ls = h('select', { id: 'ws-lang', 'aria-label': t('language') }, B.LEARN.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); ls.value = lang;
+    ls.addEventListener('change', function () { WS.lang = ls.value; var n = suggest(); box.replaceWith(n); var f = n.querySelector('#ws-lang'); if (f) f.focus(); });
+    box.appendChild(h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'ws-lang', text: t('language') }), ls])]));
+    box.appendChild(h('div', { class: 'acts wrap-acts' }, V.topics.map(function (tp) { return link(t('wsT_' + tp[0]), tp[1].replace('{L}', L)); })));
+    var ch = V.channels[lang];
+    if (ch && ch.length) { box.appendChild(h('h3', { text: t('wsCh') })); box.appendChild(h('div', { class: 'acts wrap-acts' }, ch.map(function (c) { return link(c, c); }))); }
+    box.appendChild(h('p', { class: 'note', text: t('wsTip', { r: t('nav_read') }) }));
+    return box;
+  }
+
+  function setup(root) { setup0(root); root.appendChild(suggest()); }
+  function setup0(root) {
     root.textContent = '';
     var info = h('div', { class: 'wt-info', 'aria-live': 'polite' }), subs = [null, null], files = { media: null };
     function status() { info.textContent = [files.media ? '🎞 ' + files.media.name : '', subs[0] ? '📝 ' + subs[0].name + ' (' + subs[0].lines.length + ')' : '', subs[1] ? '🌐 ' + subs[1].name + ' (' + subs[1].lines.length + ')' : ''].filter(Boolean).join('   '); startBtn.disabled = !subs[0]; }

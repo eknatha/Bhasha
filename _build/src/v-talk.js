@@ -3,7 +3,7 @@
   'use strict';
   var U = B.ui, h = U.h, t = U.t, set = U.set;
   B.views = B.views || {};
-  var DR = { lang: null, sc: null, turn: 0, ok: 0, first: true, hide: false };
+  var DR = { lang: null, sc: null, turn: 0, ok: 0, first: true, hide: false, group: 'all' };
 
   B.views.talk = function (app) {
     app.textContent = ''; DR.lang = DR.lang || set.focus; var lang = DR.lang, LS = B.lesson;
@@ -20,9 +20,19 @@
       ls.addEventListener('change', function () { DR.lang = ls.value; B.views.talk(app); });
       var hide = h('input', { type: 'checkbox', id: 'dr-hide' }); hide.checked = DR.hide; hide.addEventListener('change', function () { DR.hide = hide.checked; });
       app.appendChild(h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'dr-lang', text: t('language') }), ls]), h('label', { class: 'tf chk', for: 'dr-hide' }, [hide, h('span', { text: t('drHide') })])]));
-      var grid = h('div', { class: 'cards' });
-      B.DRILLS.forEach(function (d) { grid.appendChild(h('button', { type: 'button', class: 'card', onclick: function () { DR.sc = d; DR.turn = 0; DR.ok = 0; run(); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: d.icon }), h('h2', { text: t('d_' + d.id) }), h('p', { text: t('drTurns', { n: d.turns.length }) })])); });
-      app.appendChild(grid);
+      var tabs = h('div', { class: 'tabs', role: 'group', 'aria-label': t('drGroups') });
+      ['all'].concat(B.DRILL_GROUPS).forEach(function (g) {
+        var n = g === 'all' ? B.DRILLS.length : B.DRILLS.filter(function (d) { return d.group === g; }).length;
+        tabs.appendChild(h('button', { type: 'button', class: 'tab' + (DR.group === g ? ' on' : ''), 'data-group': g, 'aria-pressed': DR.group === g ? 'true' : 'false', text: t('grp_' + g) + ' · ' + n, onclick: function () { DR.group = g; list(); var b = app.querySelector('.tab.on'); if (b) b.focus(); } }));
+      });
+      app.appendChild(tabs);
+      function card(d) { return h('button', { type: 'button', class: 'card', 'data-drill': d.id, onclick: function () { DR.sc = d; DR.turn = 0; DR.ok = 0; run(); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: d.icon }), h('h2', { text: t('d_' + d.id) }), h('p', { text: t('drTurns', { n: d.turns.length }) })]); }
+      B.DRILL_GROUPS.forEach(function (g) {
+        if (DR.group !== 'all' && DR.group !== g) return;
+        var list_ = B.DRILLS.filter(function (d) { return d.group === g; }); if (!list_.length) return;
+        if (DR.group === 'all') app.appendChild(h('h2', { class: 'grp-h', text: t('grp_' + g) }));
+        app.appendChild(h('div', { class: 'cards' }, list_.map(card)));
+      });
     }
     function run() {
       app.textContent = ''; var d = DR.sc, tr = d.turns[DR.turn];

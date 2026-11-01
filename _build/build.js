@@ -2,21 +2,24 @@
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const SRC = path.join(__dirname, 'src'), OUT = path.resolve(process.env.BHASHA_OUT || path.join(__dirname, '..'));
 const BASE = process.env.BHASHA_BASE || 'https://bhasha.eknathalabs.com';
-const FILES = ['core', 'data', 'ui', 'fx', 'pron', 'speech', 'i18n', 'phrases2', 'v-read', 'v-say', 'v-today', 'v-talk', 'v-privacy', 'v-watch', 'v-words', 'v-learn', 'app'];
+const FILES = ['core', 'data', 'ui', 'fx', 'pron', 'speech', 'i18n', 'phrases2', 'v-read', 'v-say', 'v-today', 'v-talk', 'fundata', 'fun', 'v-privacy', 'v-watch', 'v-words', 'v-learn', 'app'];
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const MARK = fs.readFileSync(path.join(__dirname, 'icons', 'icon.svg'), 'utf8').match(/d="(M29\.2[^"]+)"/)[1];
 const ROUTES = [
   ['', 'Bhasha', 'Learn spoken languages from what you watch and read', 'Free language learning tool for Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Gujarati, Assamese, Korean, Spanish, German and French. Use your own video, audio or text with clickable words, romanization, read-aloud and spaced repetition. Private and works offline.'],
   ['today', 'Daily lesson', 'A short lesson every day', 'Five new phrases a day with audio, a listening quiz and a recall round using spaced repetition. Runs in your browser; progress stays on your device.'],
   ['talk', 'Conversations', 'Practise real conversations', 'Conversation drills for a restaurant, directions, shopping, the doctor, a hotel and meeting someone. Hear a line, choose your reply, with romanization and audio.'],
+  ['kids', 'Kids corner', 'Picture games for children', 'Free picture games for children learning Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Gujarati, Assamese, Korean, Spanish, German or French: animals, fruits, colours, body and things, with audio. No accounts, no ads, nothing uploaded.'],
+  ['proverbs', 'Proverbs and idioms', 'A saying a day', 'A proverb or idiom of the day in each of thirteen languages, with its meaning, romanization and audio.'],
+  ['twisters', 'Tongue twisters', 'Train your mouth', 'Tongue twisters in thirteen languages with slow, normal and fast audio, and a microphone practice that stays on your device.'],
   ['say', 'Say it', 'Type English, hear it in another language', 'Type an English sentence and get it in Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Gujarati, Assamese, Korean, Spanish, German or French, with romanization and a voice. Runs on your device.'],
-  ['watch', 'Watch', 'Watch with two subtitle lines', 'Play your own video or audio with a subtitle file. Dual subtitles, clickable words, line repeat, slow speed, pause after each line and shadowing practice. Nothing is uploaded.'],
+  ['watch', 'Watch', 'Watch with two subtitle lines', 'Play your own video or audio with a subtitle file. Dual subtitles, clickable words, line repeat, slow speed, pause after each line and shadowing practice, plus suggested videos to learn from. Nothing is uploaded.'],
   ['read', 'Read', 'Read any text with tappable words', 'Paste or open text in Telugu, Hindi, Kannada, Tamil, Malayalam or other languages. Tap a word to hear it, see romanization and save it. Read aloud with sentence highlight.'],
   ['words', 'My words', 'Your saved words', 'Your saved vocabulary, stored only in your browser. Export to CSV, Anki or a backup file and import it back.'],
   ['review', 'Review', 'Spaced repetition review', 'Flashcards with spaced repetition: word to meaning, meaning to word, listening and fill-the-gap.'],
   ['scripts', 'Scripts', 'Learn the scripts', 'Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Gujarati, Assamese and Korean letters, vowel signs and digits with audio, a quick quiz and tracing practice.'],
   ['privacy', 'Free and private', 'Free, private and offline', 'Bhasha is free, has no accounts, no ads and no tracking. See exactly what is saved in your browser, download it, restore it or delete it.'],
-  ['phrases', 'Phrases', 'Everyday phrases', 'A phrasebook of 250 everyday phrases (greetings, conversation, travel, shopping, health, work and numbers) in thirteen languages with romanization and audio.']
+  ['phrases', 'Phrases', 'Everyday phrases', 'A phrasebook of 420 everyday phrases (greetings, conversation, travel, shopping, health, work and numbers) in thirteen languages with romanization and audio.']
 ];
 fs.mkdirSync(OUT, { recursive: true });
 for (const e of fs.readdirSync(OUT, { withFileTypes: true })) { const p = path.join(OUT, e.name); if (e.isDirectory() && ROUTES.some(r => r[0] && r[0] === e.name)) fs.rmSync(p, { recursive: true }); }

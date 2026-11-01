@@ -16,7 +16,12 @@ Bhasha is inspired by tools such as Language Reactor, but it does not touch Netf
 | **Pronunciation practice** | A 🎙 button on every phrase (Phrases, Daily lesson, Conversation transcript): hear the model, record yourself, play yours back, compare by ear and see your waveform. Recordings stay in memory and are never saved or uploaded. There is no automatic score on purpose. |
 | **Free and private** | `/privacy/`: plain statement (free, no accounts, no ads, no tracking), live list of what is saved in this browser, download, restore from file and delete-everything. |
 | **Conversations** | `/talk/`: six short role-plays (meeting someone, restaurant, directions, shopping, doctor, hotel). Hear their line, pick your reply in the language, retry on a miss, optional hide-text listening mode, transcript at the end. |
-| **Phrases** | 250 everyday phrases in all thirteen languages (14 categories) with romanization (where the script needs it) and slow audio. Tap any word to save it. |
+| **Kids corner** | Picture games for children (tap the picture, what is this?, memory match) with 38 animals, fruits, colours, body parts and things in all thirteen languages. **Kids mode** in Settings gives bigger text and a simple four-item menu. |
+| **Proverbs and idioms** | A saying of the day, plus 12 per language, with meaning, romanization, audio and mic practice. |
+| **Tongue twisters** | Three per language with slow, normal and fast audio and mic practice. |
+| **Voice and speed per language** | Settings, Voice check: pick any voice your device offers and a speed for each language. Saved on your device only. |
+| **Watch: videos to learn from** | Topic links (beginner lessons, alphabet, kids songs, stories, conversation, cooking, travel, school lessons, grammar) that open a YouTube search for the language in a new tab, plus a few channel names. Bhasha loads nothing from YouTube itself. |
+| **Phrases** | 420 everyday phrases in all thirteen languages (14 categories) with romanization (where the script needs it) and slow audio. Tap any word to save it. |
 
 - Interface in all fourteen languages: English, Hindi, Telugu, Kannada, Tamil, Malayalam, Bengali, Marathi, Gujarati, Assamese, Korean, Spanish, German and French. Light, Dark and New themes shared with the rest of EknathaLabs.
 - Thirteen learning languages: Telugu, Hindi, Kannada, Tamil, Malayalam, Bengali, Marathi, Gujarati, Assamese, Korean, Spanish, German, French. Text can be in any language. Brahmic scripts and Korean get romanization (simple or scholarly style; Korean uses Revised Romanization). Other languages work with tap, speak and save.
@@ -60,15 +65,16 @@ python3 -m http.server 8766        # in the repo root, in a second terminal
 cd _build
 node tests/core.test.js            # transliteration, spaced repetition, subtitle parsing, CSV
 node tests/flow.js                 # read, save, words, CSV export, review, Say it (with and without a translator), scripts, phrases, watch with real audio
-node tests/validate.js             # 250 phrases x 13 languages, 6 conversations, script and romanization checks, interface text complete in 14 languages
+node tests/extras.js               # sayings, twisters, kids games and kids mode, per-language voice and speed, Watch suggestions, themes
+node tests/validate.js             # 420 phrases x 13 languages, 56 conversations, script and romanization checks, interface text complete in 14 languages
 node tests/voice.js                # offline voice produces audible audio for all thirteen languages (browser with no device voices)
 node tests/voice2.js               # device voice matching (odd language tags), Voice check dialog
-node tests/audit.js                # overflow at 4 widths x 3 themes x 14 languages x 11 pages, contrast, keyboard, no outside requests, offline
+node tests/audit.js                # overflow at 4 widths x 3 themes x 14 languages x 14 pages, contrast, keyboard, no outside requests, offline
 ```
 
 ## Needs a native speaker before you rely on it
 
-- **Interface text** for every language except English, and the **250-phrase phrasebook and conversations in all thirteen languages** (`src/data.js`), are careful drafts, not reviewed by native speakers. `node tests/validate.js` checks completeness, script and placeholders, not correctness of meaning.
+- **Interface text** for every language except English, and the **420-phrase phrasebook and 56 conversations in all thirteen languages** (`src/data.js`), are careful drafts, not reviewed by native speakers. `node tests/validate.js` checks completeness, script and placeholders, not correctness of meaning.
 - **Say it** uses machine translation when the browser provides it. Treat results as a study aid. Marathi and Hindi detection is by script only, so choose the language yourself for Devanagari text.
 - **Romanization** is rule-based. It follows common spoken pronunciation (for example Hindi drops the final schwa), so it can differ from what a given speaker says. Simple style does not mark long and short vowels; scholarly style does.
 - **Speech voices** come from the device first. If a language has no device voice (common for Assamese, Telugu, Kannada, Malayalam, Tamil, Bengali, Marathi on some systems) Bhasha offers a one-time ~18 MB download of an offline voice (eSpeak NG, robotic but audible). Settings, Voice check shows what each language will use. Tested here: all ten languages produce audio via the offline voice; real device voices vary and were checked only with mocks.

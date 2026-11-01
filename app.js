@@ -309,14 +309,18 @@
     if (['ask', 'yes', 'no'].indexOf(s.ov) < 0) s.ov = 'ask';
     if (s.sound == null) s.sound = true;
     if (s.haptic == null) s.haptic = true;
+    if (!s.voices || typeof s.voices !== 'object') s.voices = {};
+    if (!s.rates || typeof s.rates !== 'object') s.rates = {};
+    s.kids = s.kids === true;
     s.theme = document.documentElement.getAttribute('data-theme') || 'light';
     return s;
   })();
-  U.saveSet = function () { store.set('bh-set', JSON.stringify({ ui: set.ui, focus: set.focus, scheme: set.scheme, roman: set.roman, perDay: set.perDay, rate: set.rate, ov: set.ov, sound: set.sound, haptic: set.haptic })); if (MAINSITE.indexOf(set.ui) >= 0) store.set('el-lang', set.ui); store.set('el-theme', set.theme); };
+  U.saveSet = function () { store.set('bh-set', JSON.stringify({ ui: set.ui, focus: set.focus, scheme: set.scheme, roman: set.roman, perDay: set.perDay, rate: set.rate, ov: set.ov, sound: set.sound, haptic: set.haptic, voices: set.voices, rates: set.rates, kids: set.kids })); if (MAINSITE.indexOf(set.ui) >= 0) store.set('el-lang', set.ui); store.set('el-theme', set.theme); };
   U.t = function (k, v) { var d = B.I18N[set.ui] || B.I18N.en, s = d[k]; if (s == null) s = B.I18N.en[k]; if (s == null) s = k; if (v) for (var x in v) s = s.split('{' + x + '}').join(v[x]); return s; };
   var t = U.t;
   U.applyTheme = function () { document.documentElement.setAttribute('data-theme', set.theme); var m = $('meta[name=theme-color]'); if (m) m.setAttribute('content', { light: '#1c1b4b', dark: '#1c1b4b', new: '#0b3d3a' }[set.theme]); };
   U.applyLang = function () { document.documentElement.lang = set.ui; };
+  U.applyKids = function () { if (set.kids) document.documentElement.setAttribute('data-kids', ''); else document.documentElement.removeAttribute('data-kids'); };
   var toastT; U.toast = function (m) { var e = $('#toast'); if (!e) return; e.textContent = m; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 2200); };
   U.langName = function (c) { var a = B.allLangs().filter(function (x) { return x[0] === c; })[0]; return a ? a[1] : c; };
   U.langNative = function (c) { var a = B.allLangs().filter(function (x) { return x[0] === c; })[0]; return a ? a[2] : c; };
@@ -561,8 +565,13 @@
       sc = (tag === code ? 2 : 1) + (v.localService ? 0.5 : 0) + (v['default'] ? 0.1 : 0);
       if (sc > bs) { bs = sc; best = v; }
     }
+    var want = set.voices && set.voices[lang];
+    if (want && !dead[lang]) for (i = 0; i < voices.length; i++) if (voices[i].voiceURI === want && (voices[i].lang || '').toLowerCase().split(/[-_]/)[0] === pre) return voices[i];
     return dead[lang] ? null : best;
   };
+  // speed: a language's own speed, unless a caller asks for a fixed slow speed
+  U.rateFor = function (lang) { var r = set.rates && set.rates[lang]; return r > 0 ? r : set.rate; };
+  U.voicesFor = function (lang) { load(); var pre = B.bcp(lang).toLowerCase().split(/[-_]/)[0]; return voices.filter(function (v) { return (v.lang || '').toLowerCase().split(/[-_]/)[0] === pre; }); };
   // ---- offline engine
   var ESP = { en: 'en-us', zh: 'cmn', pt: 'pt-pt', no: 'nb', iw: 'he' };
   function espCode(lang) { return ESP[lang] || lang; }
@@ -626,9 +635,10 @@
     try { speechSynthesis.cancel(); } catch (e) { }
     next();
   }
-  U.speak = function (text, lang, onend, rate) {
+  U.speak = function (text, lang, onend, rate, fixed) {
     if (!text) { if (onend) onend(); return false; }
     var my = ++tok; if (audioEl) { try { audioEl.pause(); } catch (e) { } }
+    if (!fixed && (rate == null || rate === set.rate)) rate = U.rateFor(lang);
     if (!U.canSpeak()) { fallback(text, lang, onend, rate, my); return true; }
     whenVoices().then(function () {
       if (my !== tok) return; load(); var v = U.voiceFor(lang);
@@ -648,7 +658,16 @@
       B.LEARN.concat(['en']).forEach(function (l) {
         var v = U.voiceFor(l), st = v ? t('vcDevice') + ': ' + v.name : (engine ? t('vcOffline') : (set.ov === 'no' ? t('vcNone') : t('vcOfflineAvail')));
         var phr = (B.PHRASES.filter(function (p) { return p.id === 'hello'; })[0] || {})[l] || 'Hello';
-        rows.appendChild(h('div', { class: 'vc-row' }, [h('div', { class: 'vc-l' }, [h('b', { text: U.langNative(l) }), h('span', { text: ' ' + U.langName(l) })]), h('div', { class: 'vc-s', text: st }), h('button', { type: 'button', class: 'abtn', text: '🔊 ' + t('vcTest'), onclick: function () { U.speak(phr, l, function () { paint(); }, 0.9); } })]));
+        var vs = U.voicesFor(l), vsel = null, rsel = null;
+        if (vs.length) {
+          vsel = h('select', { id: 'vc-v-' + l, 'aria-label': t('vcVoice') + ': ' + U.langName(l) }, [h('option', { value: '', text: t('vcAuto') })].concat(vs.map(function (x) { return h('option', { value: x.voiceURI, text: x.name + ' (' + x.lang + ')' }); })));
+          vsel.value = (set.voices && set.voices[l]) || ''; if (vsel.value !== ((set.voices && set.voices[l]) || '')) vsel.value = '';
+          vsel.addEventListener('change', function () { if (vsel.value) set.voices[l] = vsel.value; else delete set.voices[l]; delete dead[l]; U.saveSet(); var id = vsel.id; paint(); var nn = document.getElementById(id); if (nn) nn.focus(); });
+        }
+        rsel = h('select', { id: 'vc-r-' + l, 'aria-label': t('vcSpeed') + ': ' + U.langName(l) }, [h('option', { value: '', text: t('vcDefault') })].concat(['0.6', '0.75', '0.9', '1', '1.15'].map(function (x) { return h('option', { value: x, text: x + '×' }); })));
+        rsel.value = set.rates && set.rates[l] ? String(set.rates[l]) : '';
+        rsel.addEventListener('change', function () { if (rsel.value) set.rates[l] = +rsel.value; else delete set.rates[l]; U.saveSet(); });
+        rows.appendChild(h('div', { class: 'vc-row' }, [h('div', { class: 'vc-l' }, [h('b', { text: U.langNative(l) }), h('span', { text: ' ' + U.langName(l) })]), h('div', { class: 'vc-s', text: st }), vsel ? h('label', { class: 'vc-c', for: 'vc-v-' + l }, [h('span', { text: t('vcVoice') }), vsel]) : null, h('label', { class: 'vc-c', for: 'vc-r-' + l }, [h('span', { text: t('vcSpeed') }), rsel]), h('button', { type: 'button', class: 'abtn', text: '🔊 ' + t('vcTest'), onclick: function () { U.speak(phr, l, function () { paint(); }); } })]));
       });
     }
     var seg = h('div', { class: 'seg', role: 'group', 'aria-label': t('ovLabel') });
@@ -707,7 +726,7 @@
     "cWords": "Everything you saved, with export to CSV, Anki and a backup file.",
     "cReview": "Flashcards that come back just before you forget.",
     "cScripts": "Letters, vowel signs and digits. Hear, quiz and trace them.",
-    "cPhrases": "250 everyday phrases in thirteen languages, with romanization and voice.",
+    "cPhrases": "420 everyday phrases in thirteen languages, with romanization and voice.",
     "dueCount": "{n} due",
     "howH": "How it works",
     "how1": "Open a subtitle file with your video, or paste a text.",
@@ -963,7 +982,122 @@
     "pronDone": "Play yours, or compare it with the model.",
     "pronDenied": "The microphone is blocked. Allow it in your browser settings to practise.",
     "pronNoMic": "This browser cannot record audio.",
-    "pronEmpty": "Nothing was recorded. Try again."
+    "pronEmpty": "Nothing was recorded. Try again.",
+    "d_who-is": "Who is this?",
+    "d_phone-call": "On the phone",
+    "d_birthday-invite": "Birthday invitation",
+    "d_weather-chat": "Talking about the weather",
+    "d_family-talk": "Talking about family",
+    "d_new-in-town": "New in town",
+    "d_make-plans": "Making plans",
+    "d_apology": "Saying sorry",
+    "d_language-swap": "Language exchange",
+    "d_farewell": "Saying goodbye",
+    "d_breakfast": "Breakfast",
+    "d_street-food": "Street food",
+    "d_chai-stall": "At a tea stall",
+    "d_veg-order": "Ordering vegetarian",
+    "d_allergy": "Food allergy",
+    "d_pay-bill": "Paying the bill",
+    "d_home-dinner": "Dinner at home",
+    "d_fruit-seller": "Buying fruit",
+    "d_buy-ticket": "Buying a ticket",
+    "d_train-info": "Train information",
+    "d_taxi-ride": "Taking a taxi",
+    "d_bus-ride": "On the bus",
+    "d_lost-way": "Lost your way",
+    "d_check-in": "Hotel check-in",
+    "d_check-out": "Hotel check-out",
+    "d_sightseeing": "Sightseeing",
+    "d_auto-rickshaw": "Auto-rickshaw ride",
+    "d_ask-time": "Asking the time",
+    "d_clothes": "Buying clothes",
+    "d_bargain": "Bargaining",
+    "d_pharmacy-buy": "At the pharmacy",
+    "d_grocery": "Grocery shopping",
+    "d_sim-card": "Getting a SIM card",
+    "d_exchange": "Returning an item",
+    "d_appointment": "Doctor’s appointment",
+    "d_stomach": "Stomach trouble",
+    "d_cold-fever": "Cold and fever",
+    "d_emergency": "Emergency",
+    "d_medicine-buy": "Buying medicine",
+    "d_interview": "Job interview",
+    "d_team-meeting": "Team meeting",
+    "d_office-call": "Office phone call",
+    "d_lunch-colleague": "Lunch with a colleague",
+    "d_it-help": "Tech support",
+    "d_guest": "Welcoming a guest",
+    "d_neighbour": "Meeting a neighbour",
+    "d_repairs": "Home repairs",
+    "d_rent": "Talking about rent",
+    "d_delivery": "A delivery",
+    "d_rainy-day": "A rainy day",
+    "grp_all": "All",
+    "grp_social": "Social",
+    "grp_food": "Food",
+    "grp_travel": "Travel",
+    "grp_shop": "Shopping",
+    "grp_health": "Health",
+    "grp_work": "Work",
+    "grp_home": "Home",
+    "drGroups": "Conversation groups",
+    "nav_kids": "Kids",
+    "nav_proverbs": "Sayings",
+    "nav_twisters": "Twisters",
+    "cKids": "Picture games for children: animals, fruits, colours and more.",
+    "cProverbs": "A proverb or idiom every day, with its meaning.",
+    "cTwisters": "Tongue twisters to train your mouth, with slow and fast audio.",
+    "prH": "Proverbs and idioms",
+    "prLede": "One saying a day in the language you are learning. Tap to hear it.",
+    "prToday": "Saying of the day",
+    "prAnother": "Another saying",
+    "prMeaning": "Meaning",
+    "prP": "Proverb",
+    "prI": "Idiom",
+    "prAll": "All sayings",
+    "twH": "Tongue twisters",
+    "twLede": "Say it slowly first, then faster. Record yourself to compare.",
+    "twSlow": "Slow",
+    "twNormal": "Normal",
+    "twFast": "Fast",
+    "kdH": "Kids corner",
+    "kdLede": "Big pictures, short games, no pressure. Listen, tap and collect stars.",
+    "kdG1": "Tap the picture",
+    "kdG2": "What is this?",
+    "kdG3": "Memory match",
+    "kdAll": "Everything",
+    "kdC_animals": "Animals",
+    "kdC_fruits": "Fruits",
+    "kdC_colours": "Colours",
+    "kdC_body": "Body",
+    "kdC_things": "Things",
+    "kdListen": "Listen, then tap the right picture.",
+    "kdWhat": "Tap the right word.",
+    "kdMatch": "Find the matching pairs.",
+    "kdStars": "Stars: {n}",
+    "kdWell": "Well done!",
+    "kdAgain": "Play again",
+    "kdBack": "All games",
+    "kdMode": "Kids mode",
+    "kdModeHint": "Bigger buttons and a simple menu.",
+    "wsH": "Videos to watch and learn",
+    "wsLede": "Bhasha does not play these. Each link opens a YouTube search for {l} in a new tab.",
+    "wsT_begin": "Beginner lessons",
+    "wsT_alpha": "Alphabet and sounds",
+    "wsT_kids": "Kids songs and rhymes",
+    "wsT_story": "Short stories",
+    "wsT_talk": "Everyday conversation",
+    "wsT_cook": "Cooking, in natural speech",
+    "wsT_travel": "Travel and street vlogs",
+    "wsT_school": "School lessons: science and maths",
+    "wsT_grammar": "Grammar explained",
+    "wsCh": "Named channels to search for",
+    "wsTip": "Tip: open a video on YouTube, copy its transcript and paste it into {r} to study the words.",
+    "vcVoice": "Voice",
+    "vcSpeed": "Speed",
+    "vcAuto": "Automatic (best available)",
+    "vcDefault": "Default speed"
   };
   I.hi = {
     "skip": "सामग्री पर जाएँ",
@@ -1008,7 +1142,7 @@
     "cWords": "आपके सहेजे सभी शब्द, CSV, Anki और बैकअप फ़ाइल में निर्यात के साथ।",
     "cReview": "फ़्लैशकार्ड जो भूलने से ठीक पहले लौटते हैं।",
     "cScripts": "अक्षर, मात्राएँ और अंक। सुनें, क्विज़ खेलें और लिखकर अभ्यास करें।",
-    "cPhrases": "तेरह भाषाओं में 250 रोज़मर्रा के वाक्यांश, रोमन उच्चारण और आवाज़ के साथ।",
+    "cPhrases": "तेरह भाषाओं में 420 रोज़मर्रा के वाक्यांश, रोमन उच्चारण और आवाज़ के साथ।",
     "dueCount": "{n} बाकी",
     "howH": "यह कैसे काम करता है",
     "how1": "अपने वीडियो के साथ उपशीर्षक फ़ाइल खोलें, या पाठ चिपकाएँ।",
@@ -1264,7 +1398,122 @@
     "pronDone": "अपनी रिकॉर्डिंग सुनें या नमूने से तुलना करें।",
     "pronDenied": "माइक्रोफ़ोन बंद है। अभ्यास के लिए ब्राउज़र की सेटिंग्स में उसे अनुमति दें।",
     "pronNoMic": "यह ब्राउज़र ऑडियो रिकॉर्ड नहीं कर सकता।",
-    "pronEmpty": "कुछ रिकॉर्ड नहीं हुआ। फिर कोशिश करें।"
+    "pronEmpty": "कुछ रिकॉर्ड नहीं हुआ। फिर कोशिश करें।",
+    "d_who-is": "यह कौन है?",
+    "d_phone-call": "फ़ोन पर",
+    "d_birthday-invite": "जन्मदिन का निमंत्रण",
+    "d_weather-chat": "मौसम की बातें",
+    "d_family-talk": "परिवार की बातें",
+    "d_new-in-town": "शहर में नए",
+    "d_make-plans": "योजना बनाना",
+    "d_apology": "माफ़ी माँगना",
+    "d_language-swap": "भाषा का आदान-प्रदान",
+    "d_farewell": "विदा लेना",
+    "d_breakfast": "नाश्ता",
+    "d_street-food": "स्ट्रीट फ़ूड",
+    "d_chai-stall": "चाय की दुकान पर",
+    "d_veg-order": "शाकाहारी खाना मँगाना",
+    "d_allergy": "खाने से एलर्जी",
+    "d_pay-bill": "बिल चुकाना",
+    "d_home-dinner": "घर पर रात का खाना",
+    "d_fruit-seller": "फल खरीदना",
+    "d_buy-ticket": "टिकट खरीदना",
+    "d_train-info": "ट्रेन की जानकारी",
+    "d_taxi-ride": "टैक्सी लेना",
+    "d_bus-ride": "बस में",
+    "d_lost-way": "रास्ता भटकना",
+    "d_check-in": "होटल चेक-इन",
+    "d_check-out": "होटल चेक-आउट",
+    "d_sightseeing": "घूमना-फिरना",
+    "d_auto-rickshaw": "ऑटो-रिक्शा की सवारी",
+    "d_ask-time": "समय पूछना",
+    "d_clothes": "कपड़े खरीदना",
+    "d_bargain": "मोल-भाव",
+    "d_pharmacy-buy": "दवा की दुकान पर",
+    "d_grocery": "किराने की खरीदारी",
+    "d_sim-card": "सिम कार्ड लेना",
+    "d_exchange": "सामान बदलना",
+    "d_appointment": "डॉक्टर का अपॉइंटमेंट",
+    "d_stomach": "पेट की परेशानी",
+    "d_cold-fever": "सर्दी-बुख़ार",
+    "d_emergency": "आपातकाल",
+    "d_medicine-buy": "दवा खरीदना",
+    "d_interview": "नौकरी का इंटरव्यू",
+    "d_team-meeting": "टीम मीटिंग",
+    "d_office-call": "दफ़्तर का फ़ोन",
+    "d_lunch-colleague": "सहकर्मी के साथ लंच",
+    "d_it-help": "टेक सहायता",
+    "d_guest": "मेहमान का स्वागत",
+    "d_neighbour": "पड़ोसी से मिलना",
+    "d_repairs": "घर की मरम्मत",
+    "d_rent": "किराये की बात",
+    "d_delivery": "डिलीवरी",
+    "d_rainy-day": "बारिश का दिन",
+    "grp_all": "सभी",
+    "grp_social": "मेल-जोल",
+    "grp_food": "खान-पान",
+    "grp_travel": "यात्रा",
+    "grp_shop": "खरीदारी",
+    "grp_health": "स्वास्थ्य",
+    "grp_work": "काम",
+    "grp_home": "घर",
+    "drGroups": "बातचीत के समूह",
+    "nav_kids": "बच्चे",
+    "nav_proverbs": "कहावतें",
+    "nav_twisters": "ज़ुबान-तोड़",
+    "cKids": "बच्चों के लिए चित्र वाले खेल: जानवर, फल, रंग और बहुत कुछ।",
+    "cProverbs": "हर दिन एक कहावत या मुहावरा, उसके अर्थ के साथ।",
+    "cTwisters": "ज़बान की कसरत के लिए ज़ुबान-तोड़ वाक्य, धीमी और तेज़ आवाज़ के साथ।",
+    "prH": "कहावतें और मुहावरे",
+    "prLede": "आप जो भाषा सीख रहे हैं उसमें रोज़ एक कहावत। सुनने के लिए छुएँ।",
+    "prToday": "आज की कहावत",
+    "prAnother": "एक और कहावत",
+    "prMeaning": "अर्थ",
+    "prP": "कहावत",
+    "prI": "मुहावरा",
+    "prAll": "सभी कहावतें",
+    "twH": "ज़ुबान-तोड़ वाक्य",
+    "twLede": "पहले धीरे बोलिए, फिर तेज़। तुलना के लिए अपनी आवाज़ रिकॉर्ड कीजिए।",
+    "twSlow": "धीमा",
+    "twNormal": "सामान्य",
+    "twFast": "तेज़",
+    "kdH": "बच्चों का कोना",
+    "kdLede": "बड़े चित्र, छोटे खेल, कोई दबाव नहीं। सुनिए, छुइए और सितारे जमा कीजिए।",
+    "kdG1": "चित्र को छुइए",
+    "kdG2": "यह क्या है?",
+    "kdG3": "याद की जोड़ियाँ",
+    "kdAll": "सब कुछ",
+    "kdC_animals": "जानवर",
+    "kdC_fruits": "फल",
+    "kdC_colours": "रंग",
+    "kdC_body": "शरीर",
+    "kdC_things": "चीज़ें",
+    "kdListen": "सुनिए, फिर सही चित्र छुइए।",
+    "kdWhat": "सही शब्द छुइए।",
+    "kdMatch": "मिलती जोड़ियाँ ढूँढिए।",
+    "kdStars": "सितारे: {n}",
+    "kdWell": "शाबाश!",
+    "kdAgain": "फिर से खेलिए",
+    "kdBack": "सभी खेल",
+    "kdMode": "बच्चों का मोड",
+    "kdModeHint": "बड़े बटन और सरल मेन्यू।",
+    "wsH": "देखने और सीखने के लिए वीडियो",
+    "wsLede": "Bhasha इन्हें नहीं चलाता। हर लिंक नए टैब में {l} के लिए YouTube खोज खोलता है।",
+    "wsT_begin": "शुरुआती पाठ",
+    "wsT_alpha": "वर्णमाला और उच्चारण",
+    "wsT_kids": "बच्चों के गीत और कविताएँ",
+    "wsT_story": "छोटी कहानियाँ",
+    "wsT_talk": "रोज़मर्रा की बातचीत",
+    "wsT_cook": "स्वाभाविक बोली में खाना पकाना",
+    "wsT_travel": "यात्रा और सड़क के वीडियो",
+    "wsT_school": "स्कूली पाठ: विज्ञान और गणित",
+    "wsT_grammar": "व्याकरण की व्याख्या",
+    "wsCh": "खोजने के लिए चैनलों के नाम",
+    "wsTip": "सुझाव: YouTube पर वीडियो खोलें, उसका ट्रांसक्रिप्ट कॉपी करें और शब्द सीखने के लिए {r} में चिपकाएँ।",
+    "vcVoice": "आवाज़",
+    "vcSpeed": "गति",
+    "vcAuto": "स्वचालित (सर्वश्रेष्ठ उपलब्ध)",
+    "vcDefault": "सामान्य गति"
   };
   I.te = {
     "skip": "కంటెంట్‌కు వెళ్లండి",
@@ -1309,7 +1558,7 @@
     "cWords": "మీరు సేవ్ చేసినవన్నీ, CSV, Anki, బ్యాకప్ ఫైల్‌కు ఎగుమతితో.",
     "cReview": "మరచిపోయే ముందే తిరిగి వచ్చే ఫ్లాష్‌కార్డులు.",
     "cScripts": "అక్షరాలు, గుణింతాలు, అంకెలు. వినండి, క్విజ్ చేయండి, రాసి చూడండి.",
-    "cPhrases": "పదమూడు భాషల్లో 250 రోజువారీ వాక్యాలు, రోమన్ ఉచ్చారణ మరియు స్వరంతో.",
+    "cPhrases": "పదమూడు భాషల్లో 420 రోజువారీ వాక్యాలు, రోమన్ ఉచ్చారణ మరియు స్వరంతో.",
     "dueCount": "{n} మిగిలాయి",
     "howH": "ఇది ఎలా పనిచేస్తుంది",
     "how1": "మీ వీడియోతో పాటు సబ్‌టైటిల్ ఫైల్ తెరవండి, లేదా టెక్స్ట్ పేస్ట్ చేయండి.",
@@ -1565,7 +1814,122 @@
     "pronDone": "మీ రికార్డింగ్ వినండి లేదా నమూనాతో పోల్చండి.",
     "pronDenied": "మైక్రోఫోన్ బ్లాక్ అయింది. సాధన కోసం బ్రౌజర్ సెట్టింగ్‌లలో అనుమతించండి.",
     "pronNoMic": "ఈ బ్రౌజర్ ఆడియో రికార్డ్ చేయలేదు.",
-    "pronEmpty": "ఏదీ రికార్డ్ కాలేదు. మళ్ళీ ప్రయత్నించండి."
+    "pronEmpty": "ఏదీ రికార్డ్ కాలేదు. మళ్ళీ ప్రయత్నించండి.",
+    "d_who-is": "ఇది ఎవరు?",
+    "d_phone-call": "ఫోన్‌లో",
+    "d_birthday-invite": "పుట్టినరోజు ఆహ్వానం",
+    "d_weather-chat": "వాతావరణం గురించి",
+    "d_family-talk": "కుటుంబం గురించి",
+    "d_new-in-town": "పట్టణానికి కొత్త",
+    "d_make-plans": "ప్రణాళిక వేసుకోవడం",
+    "d_apology": "క్షమాపణ చెప్పడం",
+    "d_language-swap": "భాషా మార్పిడి",
+    "d_farewell": "వీడ్కోలు చెప్పడం",
+    "d_breakfast": "అల్పాహారం",
+    "d_street-food": "వీధి ఆహారం",
+    "d_chai-stall": "టీ దుకాణంలో",
+    "d_veg-order": "శాకాహారం ఆర్డర్ చేయడం",
+    "d_allergy": "ఆహార అలెర్జీ",
+    "d_pay-bill": "బిల్లు చెల్లించడం",
+    "d_home-dinner": "ఇంట్లో రాత్రి భోజనం",
+    "d_fruit-seller": "పండ్లు కొనడం",
+    "d_buy-ticket": "టికెట్ కొనడం",
+    "d_train-info": "రైలు సమాచారం",
+    "d_taxi-ride": "టాక్సీలో వెళ్లడం",
+    "d_bus-ride": "బస్సులో",
+    "d_lost-way": "దారి తప్పడం",
+    "d_check-in": "హోటల్ చెక్-ఇన్",
+    "d_check-out": "హోటల్ చెక్-అవుట్",
+    "d_sightseeing": "సందర్శన",
+    "d_auto-rickshaw": "ఆటో ప్రయాణం",
+    "d_ask-time": "సమయం అడగడం",
+    "d_clothes": "బట్టలు కొనడం",
+    "d_bargain": "బేరమాడటం",
+    "d_pharmacy-buy": "మందుల దుకాణంలో",
+    "d_grocery": "సరుకులు కొనడం",
+    "d_sim-card": "సిమ్ కార్డ్ తీసుకోవడం",
+    "d_exchange": "వస్తువు మార్చడం",
+    "d_appointment": "డాక్టర్ అపాయింట్‌మెంట్",
+    "d_stomach": "కడుపు సమస్య",
+    "d_cold-fever": "జలుబు, జ్వరం",
+    "d_emergency": "అత్యవసరం",
+    "d_medicine-buy": "మందులు కొనడం",
+    "d_interview": "ఉద్యోగ ఇంటర్వ్యూ",
+    "d_team-meeting": "టీమ్ మీటింగ్",
+    "d_office-call": "ఆఫీసు ఫోన్ కాల్",
+    "d_lunch-colleague": "సహోద్యోగితో భోజనం",
+    "d_it-help": "టెక్ సహాయం",
+    "d_guest": "అతిథికి స్వాగతం",
+    "d_neighbour": "పొరుగువారిని కలవడం",
+    "d_repairs": "ఇంటి మరమ్మతులు",
+    "d_rent": "అద్దె గురించి",
+    "d_delivery": "డెలివరీ",
+    "d_rainy-day": "వర్షపు రోజు",
+    "grp_all": "అన్నీ",
+    "grp_social": "సామాజికం",
+    "grp_food": "ఆహారం",
+    "grp_travel": "ప్రయాణం",
+    "grp_shop": "షాపింగ్",
+    "grp_health": "ఆరోగ్యం",
+    "grp_work": "పని",
+    "grp_home": "ఇల్లు",
+    "drGroups": "సంభాషణ విభాగాలు",
+    "nav_kids": "పిల్లలు",
+    "nav_proverbs": "సామెతలు",
+    "nav_twisters": "పలుకుబడులు",
+    "cKids": "జంతువులు, పండ్లు, రంగులతో పిల్లల కోసం బొమ్మల ఆటలు.",
+    "cProverbs": "ప్రతిరోజూ ఒక సామెత లేదా పలుకుబడి, దాని అర్థంతో.",
+    "cTwisters": "నాలుకకు సాధన కోసం పలుకుబడులు, నెమ్మది మరియు వేగమైన ఆడియోతో.",
+    "prH": "సామెతలు మరియు పలుకుబడులు",
+    "prLede": "మీరు నేర్చుకుంటున్న భాషలో రోజుకో సామెత. వినడానికి తాకండి.",
+    "prToday": "నేటి సామెత",
+    "prAnother": "మరొక సామెత",
+    "prMeaning": "అర్థం",
+    "prP": "సామెత",
+    "prI": "పలుకుబడి",
+    "prAll": "అన్ని సామెతలు",
+    "twH": "నాలుక తిప్పే వాక్యాలు",
+    "twLede": "ముందు నెమ్మదిగా, తర్వాత వేగంగా చెప్పండి. పోల్చుకోవడానికి రికార్డ్ చేయండి.",
+    "twSlow": "నెమ్మది",
+    "twNormal": "సాధారణ",
+    "twFast": "వేగంగా",
+    "kdH": "పిల్లల మూల",
+    "kdLede": "పెద్ద బొమ్మలు, చిన్న ఆటలు, ఒత్తిడి లేదు. వినండి, తాకండి, నక్షత్రాలు సేకరించండి.",
+    "kdG1": "బొమ్మను తాకండి",
+    "kdG2": "ఇది ఏమిటి?",
+    "kdG3": "జ్ఞాపకశక్తి జంటలు",
+    "kdAll": "అన్నీ",
+    "kdC_animals": "జంతువులు",
+    "kdC_fruits": "పండ్లు",
+    "kdC_colours": "రంగులు",
+    "kdC_body": "శరీరం",
+    "kdC_things": "వస్తువులు",
+    "kdListen": "వినండి, సరైన బొమ్మను తాకండి.",
+    "kdWhat": "సరైన పదాన్ని తాకండి.",
+    "kdMatch": "సరిపోయే జంటలను కనుగొనండి.",
+    "kdStars": "నక్షత్రాలు: {n}",
+    "kdWell": "చాలా బాగుంది!",
+    "kdAgain": "మళ్లీ ఆడండి",
+    "kdBack": "అన్ని ఆటలు",
+    "kdMode": "పిల్లల మోడ్",
+    "kdModeHint": "పెద్ద బటన్లు, సులభమైన మెనూ.",
+    "wsH": "చూసి నేర్చుకోవడానికి వీడియోలు",
+    "wsLede": "వీటిని Bhasha ప్లే చేయదు. ప్రతి లింక్ {l} కోసం YouTube శోధనను కొత్త ట్యాబ్‌లో తెరుస్తుంది.",
+    "wsT_begin": "ప్రారంభ పాఠాలు",
+    "wsT_alpha": "అక్షరాలు మరియు ధ్వనులు",
+    "wsT_kids": "పిల్లల పాటలు, గేయాలు",
+    "wsT_story": "చిన్న కథలు",
+    "wsT_talk": "రోజువారీ సంభాషణ",
+    "wsT_cook": "సహజ మాటలతో వంటలు",
+    "wsT_travel": "ప్రయాణ, వీధి వ్లాగ్‌లు",
+    "wsT_school": "పాఠశాల పాఠాలు: సైన్స్, గణితం",
+    "wsT_grammar": "వ్యాకరణ వివరణ",
+    "wsCh": "వెతకడానికి ఛానెల్ పేర్లు",
+    "wsTip": "సూచన: YouTubeలో వీడియో తెరిచి, ట్రాన్స్‌క్రిప్ట్ కాపీ చేసి, పదాలు నేర్చుకోవడానికి {r}లో అతికించండి.",
+    "vcVoice": "స్వరం",
+    "vcSpeed": "వేగం",
+    "vcAuto": "స్వయంచాలకం (ఉత్తమమైనది)",
+    "vcDefault": "సాధారణ వేగం"
   };
   I.kn = {
     "skip": "ವಿಷಯಕ್ಕೆ ಹೋಗಿ",
@@ -1610,7 +1974,7 @@
     "cWords": "ನೀವು ಉಳಿಸಿದ್ದೆಲ್ಲವೂ, CSV, Anki ಮತ್ತು ಬ್ಯಾಕಪ್ ಫೈಲ್‌ಗೆ ರಫ್ತು ಸಹಿತ.",
     "cReview": "ಮರೆಯುವ ಮೊದಲೇ ಮರಳಿ ಬರುವ ಫ್ಲ್ಯಾಶ್‌ಕಾರ್ಡ್‌ಗಳು.",
     "cScripts": "ಅಕ್ಷರಗಳು, ಸ್ವರ ಚಿಹ್ನೆಗಳು, ಅಂಕೆಗಳು. ಕೇಳಿ, ರಸಪ್ರಶ್ನೆ ಆಡಿ, ಬರೆದು ಅಭ್ಯಾಸ ಮಾಡಿ.",
-    "cPhrases": "ಹದಿಮೂರು ಭಾಷೆಗಳಲ್ಲಿ 250 ದಿನನಿತ್ಯದ ವಾಕ್ಯಗಳು, ರೋಮನ್ ಉಚ್ಚಾರಣೆ ಮತ್ತು ಧ್ವನಿಯೊಂದಿಗೆ.",
+    "cPhrases": "ಹದಿಮೂರು ಭಾಷೆಗಳಲ್ಲಿ 420 ದಿನನಿತ್ಯದ ವಾಕ್ಯಗಳು, ರೋಮನ್ ಉಚ್ಚಾರಣೆ ಮತ್ತು ಧ್ವನಿಯೊಂದಿಗೆ.",
     "dueCount": "{n} ಬಾಕಿ",
     "howH": "ಇದು ಹೇಗೆ ಕೆಲಸ ಮಾಡುತ್ತದೆ",
     "how1": "ನಿಮ್ಮ ವೀಡಿಯೊದೊಂದಿಗೆ ಉಪಶೀರ್ಷಿಕೆ ಫೈಲ್ ತೆರೆಯಿರಿ, ಅಥವಾ ಪಠ್ಯ ಅಂಟಿಸಿ.",
@@ -1866,7 +2230,122 @@
     "pronDone": "ನಿಮ್ಮ ರೆಕಾರ್ಡಿಂಗ್ ಕೇಳಿ ಅಥವಾ ಮಾದರಿಯೊಂದಿಗೆ ಹೋಲಿಸಿ.",
     "pronDenied": "ಮೈಕ್ರೋಫೋನ್ ನಿರ್ಬಂಧಿಸಲಾಗಿದೆ. ಅಭ್ಯಾಸಕ್ಕಾಗಿ ಬ್ರೌಸರ್ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಅನುಮತಿಸಿ.",
     "pronNoMic": "ಈ ಬ್ರೌಸರ್ ಆಡಿಯೊ ರೆಕಾರ್ಡ್ ಮಾಡಲಾರದು.",
-    "pronEmpty": "ಏನೂ ರೆಕಾರ್ಡ್ ಆಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ."
+    "pronEmpty": "ಏನೂ ರೆಕಾರ್ಡ್ ಆಗಲಿಲ್ಲ. ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.",
+    "d_who-is": "ಇವರು ಯಾರು?",
+    "d_phone-call": "ಫೋನ್‌ನಲ್ಲಿ",
+    "d_birthday-invite": "ಹುಟ್ಟುಹಬ್ಬದ ಆಹ್ವಾನ",
+    "d_weather-chat": "ಹವಾಮಾನದ ಮಾತು",
+    "d_family-talk": "ಕುಟುಂಬದ ಬಗ್ಗೆ",
+    "d_new-in-town": "ಊರಿಗೆ ಹೊಸಬರು",
+    "d_make-plans": "ಯೋಜನೆ ಮಾಡುವುದು",
+    "d_apology": "ಕ್ಷಮೆ ಕೇಳುವುದು",
+    "d_language-swap": "ಭಾಷಾ ವಿನಿಮಯ",
+    "d_farewell": "ವಿದಾಯ ಹೇಳುವುದು",
+    "d_breakfast": "ಉಪಾಹಾರ",
+    "d_street-food": "ಬೀದಿ ತಿಂಡಿ",
+    "d_chai-stall": "ಚಹಾ ಅಂಗಡಿಯಲ್ಲಿ",
+    "d_veg-order": "ಸಸ್ಯಾಹಾರ ಆರ್ಡರ್",
+    "d_allergy": "ಆಹಾರ ಅಲರ್ಜಿ",
+    "d_pay-bill": "ಬಿಲ್ ಪಾವತಿ",
+    "d_home-dinner": "ಮನೆಯಲ್ಲಿ ರಾತ್ರಿ ಊಟ",
+    "d_fruit-seller": "ಹಣ್ಣು ಖರೀದಿ",
+    "d_buy-ticket": "ಟಿಕೆಟ್ ಖರೀದಿ",
+    "d_train-info": "ರೈಲು ಮಾಹಿತಿ",
+    "d_taxi-ride": "ಟ್ಯಾಕ್ಸಿ ಪ್ರಯಾಣ",
+    "d_bus-ride": "ಬಸ್ಸಿನಲ್ಲಿ",
+    "d_lost-way": "ದಾರಿ ತಪ್ಪುವುದು",
+    "d_check-in": "ಹೋಟೆಲ್ ಚೆಕ್-ಇನ್",
+    "d_check-out": "ಹೋಟೆಲ್ ಚೆಕ್-ಔಟ್",
+    "d_sightseeing": "ಪ್ರೇಕ್ಷಣೀಯ ಸ್ಥಳಗಳು",
+    "d_auto-rickshaw": "ಆಟೋ ಪ್ರಯಾಣ",
+    "d_ask-time": "ಸಮಯ ಕೇಳುವುದು",
+    "d_clothes": "ಬಟ್ಟೆ ಖರೀದಿ",
+    "d_bargain": "ಚೌಕಾಸಿ",
+    "d_pharmacy-buy": "ಔಷಧಿ ಅಂಗಡಿಯಲ್ಲಿ",
+    "d_grocery": "ದಿನಸಿ ಖರೀದಿ",
+    "d_sim-card": "ಸಿಮ್ ಕಾರ್ಡ್ ಪಡೆಯುವುದು",
+    "d_exchange": "ವಸ್ತು ಬದಲಾವಣೆ",
+    "d_appointment": "ವೈದ್ಯರ ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್",
+    "d_stomach": "ಹೊಟ್ಟೆ ತೊಂದರೆ",
+    "d_cold-fever": "ಶೀತ ಮತ್ತು ಜ್ವರ",
+    "d_emergency": "ತುರ್ತು ಪರಿಸ್ಥಿತಿ",
+    "d_medicine-buy": "ಔಷಧಿ ಖರೀದಿ",
+    "d_interview": "ಉದ್ಯೋಗ ಸಂದರ್ಶನ",
+    "d_team-meeting": "ತಂಡದ ಸಭೆ",
+    "d_office-call": "ಕಚೇರಿ ಫೋನ್ ಕರೆ",
+    "d_lunch-colleague": "ಸಹೋದ್ಯೋಗಿಯೊಂದಿಗೆ ಊಟ",
+    "d_it-help": "ತಾಂತ್ರಿಕ ಸಹಾಯ",
+    "d_guest": "ಅತಿಥಿ ಸ್ವಾಗತ",
+    "d_neighbour": "ನೆರೆಯವರ ಭೇಟಿ",
+    "d_repairs": "ಮನೆ ದುರಸ್ತಿ",
+    "d_rent": "ಬಾಡಿಗೆ ಬಗ್ಗೆ",
+    "d_delivery": "ಡೆಲಿವರಿ",
+    "d_rainy-day": "ಮಳೆಯ ದಿನ",
+    "grp_all": "ಎಲ್ಲಾ",
+    "grp_social": "ಸಾಮಾಜಿಕ",
+    "grp_food": "ಆಹಾರ",
+    "grp_travel": "ಪ್ರಯಾಣ",
+    "grp_shop": "ಖರೀದಿ",
+    "grp_health": "ಆರೋಗ್ಯ",
+    "grp_work": "ಕೆಲಸ",
+    "grp_home": "ಮನೆ",
+    "drGroups": "ಸಂಭಾಷಣೆ ವಿಭಾಗಗಳು",
+    "nav_kids": "ಮಕ್ಕಳು",
+    "nav_proverbs": "ಗಾದೆಗಳು",
+    "nav_twisters": "నాలుక తిప్పు",
+    "cKids": "ಮಕ್ಕಳಿಗಾಗಿ ಚಿತ್ರ ಆಟಗಳು: ಪ್ರಾಣಿ, ಹಣ್ಣು, ಬಣ್ಣ ಮತ್ತು ಇನ್ನಷ್ಟು.",
+    "cProverbs": "ಪ್ರತಿದಿನ ಒಂದು ಗಾದೆ ಅಥವಾ ನುಡಿಗಟ್ಟು, ಅದರ ಅರ್ಥದೊಂದಿಗೆ.",
+    "cTwisters": "ನಾಲಿಗೆ ತಾಲೀಮಿಗೆ ನಾಲಿಗೆ ತಿರುಚುವ ವಾಕ್ಯಗಳು, ನಿಧಾನ ಮತ್ತು ವೇಗದ ಧ್ವನಿಯೊಂದಿಗೆ.",
+    "prH": "ಗಾದೆಗಳು ಮತ್ತು ನುಡಿಗಟ್ಟುಗಳು",
+    "prLede": "ನೀವು ಕಲಿಯುತ್ತಿರುವ ಭಾಷೆಯಲ್ಲಿ ದಿನಕ್ಕೊಂದು ಗಾದೆ. ಕೇಳಲು ಒತ್ತಿ.",
+    "prToday": "ಇಂದಿನ ಗಾದೆ",
+    "prAnother": "ಇನ್ನೊಂದು ಗಾದೆ",
+    "prMeaning": "ಅರ್ಥ",
+    "prP": "ಗಾದೆ",
+    "prI": "ನುಡಿಗಟ್ಟು",
+    "prAll": "ಎಲ್ಲಾ ಗಾದೆಗಳು",
+    "twH": "ನಾಲಿಗೆ ತಿರುಚುವ ವಾಕ್ಯಗಳು",
+    "twLede": "ಮೊದಲು ನಿಧಾನವಾಗಿ, ನಂತರ ವೇಗವಾಗಿ ಹೇಳಿ. ಹೋಲಿಸಲು ರೆಕಾರ್ಡ್ ಮಾಡಿ.",
+    "twSlow": "ನಿಧಾನ",
+    "twNormal": "ಸಾಮಾನ್ಯ",
+    "twFast": "ವೇಗ",
+    "kdH": "ಮಕ್ಕಳ ಮೂಲೆ",
+    "kdLede": "ದೊಡ್ಡ ಚಿತ್ರಗಳು, ಚಿಕ್ಕ ಆಟಗಳು, ಒತ್ತಡವಿಲ್ಲ. ಕೇಳಿ, ಒತ್ತಿ, ನಕ್ಷತ್ರ ಗಳಿಸಿ.",
+    "kdG1": "ಚಿತ್ರವನ್ನು ಒತ್ತಿ",
+    "kdG2": "ಇದು ಏನು?",
+    "kdG3": "ನೆನಪಿನ ಜೋಡಿ",
+    "kdAll": "ಎಲ್ಲವೂ",
+    "kdC_animals": "ಪ್ರಾಣಿಗಳು",
+    "kdC_fruits": "ಹಣ್ಣುಗಳು",
+    "kdC_colours": "ಬಣ್ಣಗಳು",
+    "kdC_body": "ದೇಹ",
+    "kdC_things": "ವಸ್ತುಗಳು",
+    "kdListen": "ಕೇಳಿ, ಸರಿಯಾದ ಚಿತ್ರವನ್ನು ಒತ್ತಿ.",
+    "kdWhat": "ಸರಿಯಾದ ಪದವನ್ನು ಒತ್ತಿ.",
+    "kdMatch": "ಹೊಂದುವ ಜೋಡಿಗಳನ್ನು ಹುಡುಕಿ.",
+    "kdStars": "ನಕ್ಷತ್ರಗಳು: {n}",
+    "kdWell": "ಭೇಷ್!",
+    "kdAgain": "ಮತ್ತೆ ಆಡಿ",
+    "kdBack": "ಎಲ್ಲಾ ಆಟಗಳು",
+    "kdMode": "ಮಕ್ಕಳ ಮೋಡ್",
+    "kdModeHint": "ದೊಡ್ಡ ಬಟನ್‌ಗಳು ಮತ್ತು ಸರಳ ಮೆನು.",
+    "wsH": "ನೋಡಿ ಕಲಿಯಲು ವಿಡಿಯೋಗಳು",
+    "wsLede": "Bhasha ಇವನ್ನು ಪ್ಲೇ ಮಾಡುವುದಿಲ್ಲ. ಪ್ರತಿ ಲಿಂಕ್ {l} ಗಾಗಿ YouTube ಹುಡುಕಾಟವನ್ನು ಹೊಸ ಟ್ಯಾಬ್‌ನಲ್ಲಿ ತೆರೆಯುತ್ತದೆ.",
+    "wsT_begin": "ಆರಂಭಿಕ ಪಾಠಗಳು",
+    "wsT_alpha": "ಅಕ್ಷರ ಮತ್ತು ಧ್ವನಿಗಳು",
+    "wsT_kids": "ಮಕ್ಕಳ ಹಾಡು ಮತ್ತು ಪದ್ಯಗಳು",
+    "wsT_story": "ಚಿಕ್ಕ ಕಥೆಗಳು",
+    "wsT_talk": "ದಿನನಿತ್ಯದ ಸಂಭಾಷಣೆ",
+    "wsT_cook": "ಸಹಜ ಮಾತಿನಲ್ಲಿ ಅಡುಗೆ",
+    "wsT_travel": "ಪ್ರಯಾಣ ಮತ್ತು ಬೀದಿ ವ್ಲಾಗ್‌ಗಳು",
+    "wsT_school": "ಶಾಲಾ ಪಾಠಗಳು: ವಿಜ್ಞಾನ, ಗಣಿತ",
+    "wsT_grammar": "ವ್ಯಾಕರಣ ವಿವರಣೆ",
+    "wsCh": "ಹುಡುಕಲು ಚಾನೆಲ್ ಹೆಸರುಗಳು",
+    "wsTip": "ಸಲಹೆ: YouTube ನಲ್ಲಿ ವಿಡಿಯೋ ತೆರೆದು, ಟ್ರಾನ್ಸ್‌ಕ್ರಿಪ್ಟ್ ನಕಲಿಸಿ, ಪದಗಳನ್ನು ಕಲಿಯಲು {r} ನಲ್ಲಿ ಅಂಟಿಸಿ.",
+    "vcVoice": "ಧ್ವನಿ",
+    "vcSpeed": "ವೇಗ",
+    "vcAuto": "ಸ್ವಯಂಚಾಲಿತ (ಲಭ್ಯವಿರುವ ಉತ್ತಮ)",
+    "vcDefault": "ಸಾಮಾನ್ಯ ವೇಗ"
   };
   I.ta = {
     "skip": "உள்ளடக்கத்துக்குச் செல்லவும்",
@@ -1911,7 +2390,7 @@
     "cWords": "நீங்கள் சேமித்தவை அனைத்தும், CSV, Anki, காப்புக் கோப்பாக ஏற்றுமதியுடன்.",
     "cReview": "மறப்பதற்கு முன்பே திரும்பி வரும் ஃபிளாஷ் கார்டுகள்.",
     "cScripts": "எழுத்துகள், உயிர்மெய் குறிகள், எண்கள். கேளுங்கள், வினாடி வினா, எழுதிப் பழகுங்கள்.",
-    "cPhrases": "பதின்மூன்று மொழிகளில் 250 அன்றாட வாக்கியங்கள், ரோமன் உச்சரிப்பு மற்றும் குரலுடன்.",
+    "cPhrases": "பதின்மூன்று மொழிகளில் 420 அன்றாட வாக்கியங்கள், ரோமன் உச்சரிப்பு மற்றும் குரலுடன்.",
     "dueCount": "{n} நிலுவை",
     "howH": "இது எப்படி வேலை செய்கிறது",
     "how1": "உங்கள் வீடியோவுடன் வசனக் கோப்பைத் திறக்கவும், அல்லது உரையை ஒட்டவும்.",
@@ -2167,7 +2646,122 @@
     "pronDone": "உங்கள் பதிவைக் கேளுங்கள் அல்லது மாதிரியுடன் ஒப்பிடுங்கள்.",
     "pronDenied": "மைக்ரோஃபோன் தடுக்கப்பட்டுள்ளது. பயிற்சிக்கு உலாவி அமைப்புகளில் அனுமதியுங்கள்.",
     "pronNoMic": "இந்த உலாவியால் ஆடியோ பதிவு செய்ய முடியாது.",
-    "pronEmpty": "எதுவும் பதிவாகவில்லை. மீண்டும் முயலுங்கள்."
+    "pronEmpty": "எதுவும் பதிவாகவில்லை. மீண்டும் முயலுங்கள்.",
+    "d_who-is": "இது யார்?",
+    "d_phone-call": "தொலைபேசியில்",
+    "d_birthday-invite": "பிறந்தநாள் அழைப்பு",
+    "d_weather-chat": "வானிலை பற்றி",
+    "d_family-talk": "குடும்பம் பற்றி",
+    "d_new-in-town": "ஊருக்குப் புதியவர்",
+    "d_make-plans": "திட்டமிடுதல்",
+    "d_apology": "மன்னிப்புக் கேட்டல்",
+    "d_language-swap": "மொழிப் பரிமாற்றம்",
+    "d_farewell": "விடைபெறுதல்",
+    "d_breakfast": "காலை உணவு",
+    "d_street-food": "தெருவோர உணவு",
+    "d_chai-stall": "தேநீர்க் கடையில்",
+    "d_veg-order": "சைவ உணவு ஆர்டர்",
+    "d_allergy": "உணவு ஒவ்வாமை",
+    "d_pay-bill": "கட்டணம் செலுத்துதல்",
+    "d_home-dinner": "வீட்டில் இரவு உணவு",
+    "d_fruit-seller": "பழம் வாங்குதல்",
+    "d_buy-ticket": "சீட்டு வாங்குதல்",
+    "d_train-info": "ரயில் தகவல்",
+    "d_taxi-ride": "டாக்சி பயணம்",
+    "d_bus-ride": "பேருந்தில்",
+    "d_lost-way": "வழி தவறுதல்",
+    "d_check-in": "ஹோட்டல் செக்-இன்",
+    "d_check-out": "ஹோட்டல் செக்-அவுட்",
+    "d_sightseeing": "சுற்றுலா",
+    "d_auto-rickshaw": "ஆட்டோ பயணம்",
+    "d_ask-time": "நேரம் கேட்டல்",
+    "d_clothes": "துணி வாங்குதல்",
+    "d_bargain": "பேரம் பேசுதல்",
+    "d_pharmacy-buy": "மருந்துக் கடையில்",
+    "d_grocery": "மளிகைப் பொருள் வாங்குதல்",
+    "d_sim-card": "சிம் கார்டு வாங்குதல்",
+    "d_exchange": "பொருளை மாற்றுதல்",
+    "d_appointment": "மருத்துவர் முன்பதிவு",
+    "d_stomach": "வயிற்றுப் பிரச்சினை",
+    "d_cold-fever": "சளி, காய்ச்சல்",
+    "d_emergency": "அவசர நிலை",
+    "d_medicine-buy": "மருந்து வாங்குதல்",
+    "d_interview": "வேலை நேர்காணல்",
+    "d_team-meeting": "குழுக் கூட்டம்",
+    "d_office-call": "அலுவலக அழைப்பு",
+    "d_lunch-colleague": "சக ஊழியருடன் மதிய உணவு",
+    "d_it-help": "தொழில்நுட்ப உதவி",
+    "d_guest": "விருந்தினர் வரவேற்பு",
+    "d_neighbour": "அண்டை வீட்டாரைச் சந்தித்தல்",
+    "d_repairs": "வீட்டுப் பழுதுபார்ப்பு",
+    "d_rent": "வாடகை பற்றி",
+    "d_delivery": "டெலிவரி",
+    "d_rainy-day": "மழை நாள்",
+    "grp_all": "அனைத்தும்",
+    "grp_social": "சமூகம்",
+    "grp_food": "உணவு",
+    "grp_travel": "பயணம்",
+    "grp_shop": "கடை",
+    "grp_health": "ஆரோக்கியம்",
+    "grp_work": "வேலை",
+    "grp_home": "வீடு",
+    "drGroups": "உரையாடல் பிரிவுகள்",
+    "nav_kids": "குழந்தைகள்",
+    "nav_proverbs": "பழமொழிகள்",
+    "nav_twisters": "நாக்கு சுழற்றி",
+    "cKids": "குழந்தைகளுக்கான படவிளையாட்டுகள்: விலங்கு, பழம், நிறம் மற்றும் பல.",
+    "cProverbs": "ஒவ்வொரு நாளும் ஒரு பழமொழி அல்லது சொலவடை, அதன் பொருளுடன்.",
+    "cTwisters": "நாக்குக்குப் பயிற்சி தரும் நாக்கு சுழற்றிகள், மெதுவான மற்றும் வேகமான ஒலியுடன்.",
+    "prH": "பழமொழிகளும் சொலவடைகளும்",
+    "prLede": "நீங்கள் கற்கும் மொழியில் நாளுக்கொரு பழமொழி. கேட்கத் தட்டவும்.",
+    "prToday": "இன்றைய பழமொழி",
+    "prAnother": "இன்னொரு பழமொழி",
+    "prMeaning": "பொருள்",
+    "prP": "பழமொழி",
+    "prI": "சொலவடை",
+    "prAll": "அனைத்துப் பழமொழிகள்",
+    "twH": "நாக்கு சுழற்றிகள்",
+    "twLede": "முதலில் மெதுவாக, பிறகு வேகமாகச் சொல்லுங்கள். ஒப்பிட உங்கள் குரலைப் பதிவு செய்யுங்கள்.",
+    "twSlow": "மெதுவாக",
+    "twNormal": "சாதாரணம்",
+    "twFast": "வேகமாக",
+    "kdH": "குழந்தைகள் பகுதி",
+    "kdLede": "பெரிய படங்கள், சிறு விளையாட்டுகள், அழுத்தம் இல்லை. கேளுங்கள், தட்டுங்கள், நட்சத்திரங்களைச் சேருங்கள்.",
+    "kdG1": "படத்தைத் தட்டுங்கள்",
+    "kdG2": "இது என்ன?",
+    "kdG3": "நினைவுப் பொருத்தம்",
+    "kdAll": "எல்லாம்",
+    "kdC_animals": "விலங்குகள்",
+    "kdC_fruits": "பழங்கள்",
+    "kdC_colours": "நிறங்கள்",
+    "kdC_body": "உடல்",
+    "kdC_things": "பொருட்கள்",
+    "kdListen": "கேளுங்கள், சரியான படத்தைத் தட்டுங்கள்.",
+    "kdWhat": "சரியான சொல்லைத் தட்டுங்கள்.",
+    "kdMatch": "பொருந்தும் ஜோடிகளைக் கண்டுபிடியுங்கள்.",
+    "kdStars": "நட்சத்திரங்கள்: {n}",
+    "kdWell": "நன்று!",
+    "kdAgain": "மீண்டும் விளையாடு",
+    "kdBack": "அனைத்து விளையாட்டுகள்",
+    "kdMode": "குழந்தைகள் பயன்முறை",
+    "kdModeHint": "பெரிய பொத்தான்கள், எளிய பட்டி.",
+    "wsH": "பார்த்துக் கற்க வீடியோக்கள்",
+    "wsLede": "Bhasha இவற்றை இயக்காது. ஒவ்வொரு இணைப்பும் {l} க்கான YouTube தேடலைப் புதிய தாவலில் திறக்கும்.",
+    "wsT_begin": "தொடக்கப் பாடங்கள்",
+    "wsT_alpha": "எழுத்துகளும் ஒலிகளும்",
+    "wsT_kids": "குழந்தைப் பாடல்கள்",
+    "wsT_story": "சிறுகதைகள்",
+    "wsT_talk": "அன்றாட உரையாடல்",
+    "wsT_cook": "இயல்பான பேச்சில் சமையல்",
+    "wsT_travel": "பயண, தெரு வீடியோக்கள்",
+    "wsT_school": "பள்ளிப் பாடங்கள்: அறிவியல், கணிதம்",
+    "wsT_grammar": "இலக்கண விளக்கம்",
+    "wsCh": "தேட வேண்டிய சேனல் பெயர்கள்",
+    "wsTip": "குறிப்பு: YouTube இல் வீடியோவைத் திறந்து, எழுத்துப்படியை நகலெடுத்து, சொற்களைக் கற்க {r} இல் ஒட்டுங்கள்.",
+    "vcVoice": "குரல்",
+    "vcSpeed": "வேகம்",
+    "vcAuto": "தானியங்கி (சிறந்தது)",
+    "vcDefault": "இயல்பு வேகம்"
   };
   I.ml = {
     "skip": "ഉള്ളടക്കത്തിലേക്ക് പോകുക",
@@ -2212,7 +2806,7 @@
     "cWords": "നിങ്ങൾ സേവ് ചെയ്തതെല്ലാം, CSV, Anki, ബാക്കപ്പ് ഫയൽ എന്നിവയിലേക്ക് എക്സ്പോർട്ട് സഹിതം.",
     "cReview": "മറക്കുന്നതിന് തൊട്ടുമുമ്പ് തിരികെ വരുന്ന ഫ്ലാഷ്‌കാർഡുകൾ.",
     "cScripts": "അക്ഷരങ്ങൾ, സ്വരചിഹ്നങ്ങൾ, അക്കങ്ങൾ. കേൾക്കൂ, ക്വിസ് ചെയ്യൂ, എഴുതി പഠിക്കൂ.",
-    "cPhrases": "പതിമൂന്ന് ഭാഷകളിൽ 250 ദൈനംദിന വാക്യങ്ങൾ, റോമൻ ഉച്ചാരണവും ശബ്ദവും സഹിതം.",
+    "cPhrases": "പതിമൂന്ന് ഭാഷകളിൽ 420 ദൈനംദിന വാക്യങ്ങൾ, റോമൻ ഉച്ചാരണവും ശബ്ദവും സഹിതം.",
     "dueCount": "{n} ബാക്കി",
     "howH": "ഇത് എങ്ങനെ പ്രവർത്തിക്കുന്നു",
     "how1": "നിങ്ങളുടെ വീഡിയോയ്ക്കൊപ്പം സബ്‌ടൈറ്റിൽ ഫയൽ തുറക്കുക, അല്ലെങ്കിൽ ടെക്സ്റ്റ് പേസ്റ്റ് ചെയ്യുക.",
@@ -2468,7 +3062,122 @@
     "pronDone": "നിങ്ങളുടെ റെക്കോർഡിംഗ് കേൾക്കൂ, അല്ലെങ്കിൽ മാതൃകയുമായി താരതമ്യം ചെയ്യൂ.",
     "pronDenied": "മൈക്രോഫോൺ തടഞ്ഞിരിക്കുന്നു. പരിശീലിക്കാൻ ബ്രൗസർ ക്രമീകരണങ്ങളിൽ അനുവദിക്കൂ.",
     "pronNoMic": "ഈ ബ്രൗസറിന് ഓഡിയോ റെക്കോർഡ് ചെയ്യാനാവില്ല.",
-    "pronEmpty": "ഒന്നും റെക്കോർഡ് ആയില്ല. വീണ്ടും ശ്രമിക്കൂ."
+    "pronEmpty": "ഒന്നും റെക്കോർഡ് ആയില്ല. വീണ്ടും ശ്രമിക്കൂ.",
+    "d_who-is": "ഇത് ആരാണ്?",
+    "d_phone-call": "ഫോണിൽ",
+    "d_birthday-invite": "ജന്മദിന ക്ഷണം",
+    "d_weather-chat": "കാലാവസ്ഥയെക്കുറിച്ച്",
+    "d_family-talk": "കുടുംബത്തെക്കുറിച്ച്",
+    "d_new-in-town": "നാട്ടിൽ പുതിയതായി",
+    "d_make-plans": "പദ്ധതി ഇടൽ",
+    "d_apology": "ക്ഷമ ചോദിക്കൽ",
+    "d_language-swap": "ഭാഷാ കൈമാറ്റം",
+    "d_farewell": "യാത്ര പറയൽ",
+    "d_breakfast": "പ്രഭാതഭക്ഷണം",
+    "d_street-food": "തെരുവ് ഭക്ഷണം",
+    "d_chai-stall": "ചായക്കടയിൽ",
+    "d_veg-order": "വെജിറ്റേറിയൻ ഓർഡർ",
+    "d_allergy": "ഭക്ഷണ അലർജി",
+    "d_pay-bill": "ബിൽ അടയ്ക്കൽ",
+    "d_home-dinner": "വീട്ടിലെ അത്താഴം",
+    "d_fruit-seller": "പഴം വാങ്ങൽ",
+    "d_buy-ticket": "ടിക്കറ്റ് വാങ്ങൽ",
+    "d_train-info": "ട്രെയിൻ വിവരം",
+    "d_taxi-ride": "ടാക്സി യാത്ര",
+    "d_bus-ride": "ബസിൽ",
+    "d_lost-way": "വഴി തെറ്റൽ",
+    "d_check-in": "ഹോട്ടൽ ചെക്ക്-ഇൻ",
+    "d_check-out": "ഹോട്ടൽ ചെക്ക്-ഔട്ട്",
+    "d_sightseeing": "കാഴ്ചകൾ കാണൽ",
+    "d_auto-rickshaw": "ഓട്ടോ യാത്ര",
+    "d_ask-time": "സമയം ചോദിക്കൽ",
+    "d_clothes": "വസ്ത്രം വാങ്ങൽ",
+    "d_bargain": "വിലപേശൽ",
+    "d_pharmacy-buy": "മെഡിക്കൽ ഷോപ്പിൽ",
+    "d_grocery": "പലചരക്ക് വാങ്ങൽ",
+    "d_sim-card": "സിം കാർഡ് എടുക്കൽ",
+    "d_exchange": "സാധനം മാറ്റൽ",
+    "d_appointment": "ഡോക്ടറുടെ അപ്പോയിന്റ്മെന്റ്",
+    "d_stomach": "വയറ്റിലെ പ്രശ്നം",
+    "d_cold-fever": "ജലദോഷവും പനിയും",
+    "d_emergency": "അടിയന്തര സാഹചര്യം",
+    "d_medicine-buy": "മരുന്ന് വാങ്ങൽ",
+    "d_interview": "ജോലി അഭിമുഖം",
+    "d_team-meeting": "ടീം മീറ്റിംഗ്",
+    "d_office-call": "ഓഫീസ് ഫോൺ വിളി",
+    "d_lunch-colleague": "സഹപ്രവർത്തകനോടൊപ്പം ഉച്ചഭക്ഷണം",
+    "d_it-help": "ടെക് സഹായം",
+    "d_guest": "അതിഥിയെ സ്വീകരിക്കൽ",
+    "d_neighbour": "അയൽക്കാരനെ കാണൽ",
+    "d_repairs": "വീട് അറ്റകുറ്റപ്പണി",
+    "d_rent": "വാടകയെക്കുറിച്ച്",
+    "d_delivery": "ഡെലിവറി",
+    "d_rainy-day": "മഴയുള്ള ദിവസം",
+    "grp_all": "എല്ലാം",
+    "grp_social": "സാമൂഹികം",
+    "grp_food": "ഭക്ഷണം",
+    "grp_travel": "യാത്ര",
+    "grp_shop": "ഷോപ്പിംഗ്",
+    "grp_health": "ആരോഗ്യം",
+    "grp_work": "ജോലി",
+    "grp_home": "വീട്",
+    "drGroups": "സംഭാഷണ വിഭാഗങ്ങൾ",
+    "nav_kids": "കുട്ടികൾ",
+    "nav_proverbs": "പഴഞ്ചൊല്ലുകൾ",
+    "nav_twisters": "നാവുളുക്കികൾ",
+    "cKids": "കുട്ടികൾക്കുള്ള ചിത്രക്കളികൾ: മൃഗങ്ങൾ, പഴങ്ങൾ, നിറങ്ങൾ എന്നിവ.",
+    "cProverbs": "ദിവസവും ഒരു പഴഞ്ചൊല്ലോ ശൈലിയോ, അർഥത്തോടെ.",
+    "cTwisters": "നാവിന് പരിശീലനം നൽകുന്ന നാവുളുക്കികൾ, പതിയെയും വേഗത്തിലും കേൾക്കാം.",
+    "prH": "പഴഞ്ചൊല്ലുകളും ശൈലികളും",
+    "prLede": "നിങ്ങൾ പഠിക്കുന്ന ഭാഷയിൽ ദിവസവും ഒരു ചൊല്ല്. കേൾക്കാൻ തൊടുക.",
+    "prToday": "ഇന്നത്തെ ചൊല്ല്",
+    "prAnother": "மற്റൊരു ചൊല്ല്",
+    "prMeaning": "അർഥം",
+    "prP": "പഴഞ്ചൊല്ല്",
+    "prI": "ശൈലി",
+    "prAll": "എല്ലാ ചൊല്ലുകളും",
+    "twH": "നാവുളുക്കി വാക്യങ്ങൾ",
+    "twLede": "ആദ്യം പതിയെ, പിന്നെ വേഗത്തിൽ പറയൂ. താരതമ്യം ചെയ്യാൻ റെക്കോർഡ് ചെയ്യൂ.",
+    "twSlow": "പതിയെ",
+    "twNormal": "സാധാരണ",
+    "twFast": "വേഗം",
+    "kdH": "കുട്ടികളുടെ കോർണർ",
+    "kdLede": "വലിയ ചിത്രങ്ങൾ, ചെറിയ കളികൾ, സമ്മർദമില്ല. കേൾക്കൂ, തൊടൂ, നക്ഷത്രങ്ങൾ നേടൂ.",
+    "kdG1": "ചിത്രം തൊടൂ",
+    "kdG2": "ഇത് എന്താണ്?",
+    "kdG3": "ഓർമ്മ ജോടികൾ",
+    "kdAll": "എല്ലാം",
+    "kdC_animals": "മൃഗങ്ങൾ",
+    "kdC_fruits": "പഴങ്ങൾ",
+    "kdC_colours": "നിറങ്ങൾ",
+    "kdC_body": "ശരീരം",
+    "kdC_things": "വസ്തുക്കൾ",
+    "kdListen": "കേൾക്കൂ, ശരിയായ ചിത്രം തൊടൂ.",
+    "kdWhat": "ശരിയായ വാക്ക് തൊടൂ.",
+    "kdMatch": "യോജിക്കുന്ന ജോടികൾ കണ്ടെത്തൂ.",
+    "kdStars": "നക്ഷത്രങ്ങൾ: {n}",
+    "kdWell": "കൊള്ളാം!",
+    "kdAgain": "വീണ്ടും കളിക്കൂ",
+    "kdBack": "എല്ലാ കളികളും",
+    "kdMode": "കുട്ടികളുടെ മോഡ്",
+    "kdModeHint": "വലിയ ബട്ടണുകളും ലളിതമായ മെനുവും.",
+    "wsH": "കണ്ടു പഠിക്കാൻ വീഡിയോകൾ",
+    "wsLede": "Bhasha ഇവ പ്ലേ ചെയ്യില്ല. ഓരോ ലിങ്കും {l} നുള്ള YouTube തിരയൽ പുതിയ ടാബിൽ തുറക്കും.",
+    "wsT_begin": "തുടക്ക പാഠങ്ങൾ",
+    "wsT_alpha": "അക്ഷരങ്ങളും ശബ്ദങ്ങളും",
+    "wsT_kids": "കുട്ടിപ്പാട്ടുകൾ",
+    "wsT_story": "ചെറുകഥകൾ",
+    "wsT_talk": "ദൈനംദിന സംഭാഷണം",
+    "wsT_cook": "സ്വാഭാവിക സംസാരത്തിൽ പാചകം",
+    "wsT_travel": "യാത്ര, തെരുവ് വ്ലോഗുകൾ",
+    "wsT_school": "സ്കൂൾ പാഠങ്ങൾ: ശാസ്ത്രം, ഗണിതം",
+    "wsT_grammar": "വ്യാകരണ വിശദീകരണം",
+    "wsCh": "തിരയാൻ ചാനലുകളുടെ പേരുകൾ",
+    "wsTip": "ടിപ്പ്: YouTube ൽ വീഡിയോ തുറന്ന് ട്രാൻസ്ക്രിപ്റ്റ് പകർത്തി, വാക്കുകൾ പഠിക്കാൻ {r} ൽ ഒട്ടിക്കൂ.",
+    "vcVoice": "ശബ്ദം",
+    "vcSpeed": "വേഗത",
+    "vcAuto": "സ്വയം (ലഭ്യമായതിൽ മികച്ചത്)",
+    "vcDefault": "സാധാരണ വേഗത"
   };
   I.bn = {
     "skip": "মূল বিষয়ে যান",
@@ -2514,7 +3223,7 @@
     "cWords": "আপনার সংরক্ষিত সবকিছু, CSV, Anki ও ব্যাকআপ ফাইলে রপ্তানিসহ।",
     "cReview": "ফ্ল্যাশকার্ড যা ভুলে যাওয়ার ঠিক আগে ফিরে আসে।",
     "cScripts": "অক্ষর, স্বরচিহ্ন ও সংখ্যা। শুনুন, কুইজ করুন, লিখে অভ্যাস করুন।",
-    "cPhrases": "তেরোটি ভাষায় ২৫০টি দৈনন্দিন বাক্যাংশ, রোমান উচ্চারণ ও কণ্ঠস্বরসহ।",
+    "cPhrases": "তেরোটি ভাষায় ৪২০টি দৈনন্দিন বাক্যাংশ, রোমান উচ্চারণ ও কণ্ঠস্বরসহ।",
     "cSay": "ইংরেজিতে বাক্য লিখুন এবং তেলুগু, হিন্দি, কন্নড়, তামিল, মালায়ালম, বাংলা, মারাঠি, গুজরাটি, অসমীয়া, কোরিয়ান, স্প্যানিশ, জার্মান বা ফরাসিতে শুনুন।",
     "dueCount": "{n}টি বাকি",
     "howH": "এটি কীভাবে কাজ করে",
@@ -2769,7 +3478,122 @@
     "pronDone": "নিজের রেকর্ডিং শুনুন বা নমুনার সঙ্গে তুলনা করুন।",
     "pronDenied": "মাইক্রোফোন বন্ধ আছে। অনুশীলনের জন্য ব্রাউজারের সেটিংসে অনুমতি দিন।",
     "pronNoMic": "এই ব্রাউজার অডিও রেকর্ড করতে পারে না।",
-    "pronEmpty": "কিছু রেকর্ড হয়নি। আবার চেষ্টা করুন।"
+    "pronEmpty": "কিছু রেকর্ড হয়নি। আবার চেষ্টা করুন।",
+    "d_who-is": "ইনি কে?",
+    "d_phone-call": "ফোনে",
+    "d_birthday-invite": "জন্মদিনের নিমন্ত্রণ",
+    "d_weather-chat": "আবহাওয়ার কথা",
+    "d_family-talk": "পরিবারের কথা",
+    "d_new-in-town": "শহরে নতুন",
+    "d_make-plans": "পরিকল্পনা করা",
+    "d_apology": "ক্ষমা চাওয়া",
+    "d_language-swap": "ভাষা বিনিময়",
+    "d_farewell": "বিদায় নেওয়া",
+    "d_breakfast": "সকালের জলখাবার",
+    "d_street-food": "রাস্তার খাবার",
+    "d_chai-stall": "চায়ের দোকানে",
+    "d_veg-order": "নিরামিষ খাবার অর্ডার",
+    "d_allergy": "খাবারে অ্যালার্জি",
+    "d_pay-bill": "বিল মেটানো",
+    "d_home-dinner": "বাড়িতে রাতের খাবার",
+    "d_fruit-seller": "ফল কেনা",
+    "d_buy-ticket": "টিকিট কাটা",
+    "d_train-info": "ট্রেনের তথ্য",
+    "d_taxi-ride": "ট্যাক্সি নেওয়া",
+    "d_bus-ride": "বাসে",
+    "d_lost-way": "পথ হারানো",
+    "d_check-in": "হোটেল চেক-ইন",
+    "d_check-out": "হোটেল চেক-আউট",
+    "d_sightseeing": "দর্শনীয় স্থান",
+    "d_auto-rickshaw": "অটোরিকশায় চড়া",
+    "d_ask-time": "সময় জিজ্ঞাসা",
+    "d_clothes": "পোশাক কেনা",
+    "d_bargain": "দরদাম করা",
+    "d_pharmacy-buy": "ওষুধের দোকানে",
+    "d_grocery": "মুদিখানার কেনাকাটা",
+    "d_sim-card": "সিম কার্ড নেওয়া",
+    "d_exchange": "জিনিস বদলানো",
+    "d_appointment": "ডাক্তারের অ্যাপয়েন্টমেন্ট",
+    "d_stomach": "পেটের সমস্যা",
+    "d_cold-fever": "সর্দি-জ্বর",
+    "d_emergency": "জরুরি অবস্থা",
+    "d_medicine-buy": "ওষুধ কেনা",
+    "d_interview": "চাকরির ইন্টারভিউ",
+    "d_team-meeting": "টিম মিটিং",
+    "d_office-call": "অফিসের ফোন",
+    "d_lunch-colleague": "সহকর্মীর সঙ্গে দুপুরের খাবার",
+    "d_it-help": "প্রযুক্তি সহায়তা",
+    "d_guest": "অতিথিকে স্বাগত",
+    "d_neighbour": "প্রতিবেশীর সঙ্গে দেখা",
+    "d_repairs": "বাড়ি মেরামত",
+    "d_rent": "ভাড়ার কথা",
+    "d_delivery": "ডেলিভারি",
+    "d_rainy-day": "বৃষ্টির দিন",
+    "grp_all": "সব",
+    "grp_social": "সামাজিক",
+    "grp_food": "খাবার",
+    "grp_travel": "ভ্রমণ",
+    "grp_shop": "কেনাকাটা",
+    "grp_health": "স্বাস্থ্য",
+    "grp_work": "কাজ",
+    "grp_home": "বাড়ি",
+    "drGroups": "কথোপকথনের বিভাগ",
+    "nav_kids": "শিশুরা",
+    "nav_proverbs": "প্রবাদ",
+    "nav_twisters": "জিভ-জড়ানো",
+    "cKids": "শিশুদের জন্য ছবির খেলা: প্রাণী, ফল, রং আরও অনেক কিছু।",
+    "cProverbs": "প্রতিদিন একটি প্রবাদ বা বাগধারা, অর্থসহ।",
+    "cTwisters": "জিভের অনুশীলনের জন্য জিভ-জড়ানো বাক্য, ধীর ও দ্রুত অডিওসহ।",
+    "prH": "প্রবাদ ও বাগধারা",
+    "prLede": "আপনার শেখা ভাষায় প্রতিদিন একটি কথা। শুনতে ট্যাপ করুন।",
+    "prToday": "আজকের প্রবাদ",
+    "prAnother": "আরেকটি প্রবাদ",
+    "prMeaning": "অর্থ",
+    "prP": "প্রবাদ",
+    "prI": "বাগধারা",
+    "prAll": "সব প্রবাদ",
+    "twH": "জিভ-জড়ানো বাক্য",
+    "twLede": "আগে ধীরে, তারপর দ্রুত বলুন। তুলনার জন্য রেকর্ড করুন।",
+    "twSlow": "ধীর",
+    "twNormal": "স্বাভাবিক",
+    "twFast": "দ্রুত",
+    "kdH": "শিশুদের কোণ",
+    "kdLede": "বড় ছবি, ছোট খেলা, কোনো চাপ নেই। শুনুন, ট্যাপ করুন, তারা জমান।",
+    "kdG1": "ছবিতে ট্যাপ করুন",
+    "kdG2": "এটা কী?",
+    "kdG3": "স্মৃতি মিলানো",
+    "kdAll": "সব",
+    "kdC_animals": "প্রাণী",
+    "kdC_fruits": "ফল",
+    "kdC_colours": "রং",
+    "kdC_body": "শরীর",
+    "kdC_things": "জিনিস",
+    "kdListen": "শুনুন, তারপর সঠিক ছবিতে ট্যাপ করুন।",
+    "kdWhat": "সঠিক শব্দে ট্যাপ করুন।",
+    "kdMatch": "মিলে যাওয়া জোড়া খুঁজুন।",
+    "kdStars": "তারা: {n}",
+    "kdWell": "চমৎকার!",
+    "kdAgain": "আবার খেলুন",
+    "kdBack": "সব খেলা",
+    "kdMode": "শিশু মোড",
+    "kdModeHint": "বড় বোতাম আর সহজ মেনু।",
+    "wsH": "দেখে শেখার ভিডিও",
+    "wsLede": "Bhasha এগুলো চালায় না। প্রতিটি লিংক নতুন ট্যাবে {l}-এর জন্য YouTube অনুসন্ধান খোলে।",
+    "wsT_begin": "শুরুর পাঠ",
+    "wsT_alpha": "বর্ণমালা ও উচ্চারণ",
+    "wsT_kids": "শিশুদের গান ও ছড়া",
+    "wsT_story": "ছোট গল্প",
+    "wsT_talk": "দৈনন্দিন কথোপকথন",
+    "wsT_cook": "স্বাভাবিক কথায় রান্না",
+    "wsT_travel": "ভ্রমণ ও রাস্তার ভ্লগ",
+    "wsT_school": "স্কুলের পাঠ: বিজ্ঞান ও গণিত",
+    "wsT_grammar": "ব্যাকরণ ব্যাখ্যা",
+    "wsCh": "খোঁজার জন্য চ্যানেলের নাম",
+    "wsTip": "পরামর্শ: YouTube-এ ভিডিও খুলে ট্রান্সক্রিপ্ট কপি করে শব্দ শিখতে {r}-এ পেস্ট করুন।",
+    "vcVoice": "কণ্ঠ",
+    "vcSpeed": "গতি",
+    "vcAuto": "স্বয়ংক্রিয় (সেরা উপলব্ধ)",
+    "vcDefault": "ডিফল্ট গতি"
   };
   I.mr = {
     "skip": "मुख्य मजकुराकडे जा",
@@ -2815,7 +3639,7 @@
     "cWords": "तुम्ही साठवलेले सर्व काही, CSV, Anki आणि बॅकअप फाइलमध्ये निर्यातीसह.",
     "cReview": "विसरण्याआधीच परत येणारी फ्लॅशकार्ड्स.",
     "cScripts": "अक्षरे, स्वरचिन्हे आणि अंक. ऐका, प्रश्नमंजुषा खेळा, गिरवून सराव करा.",
-    "cPhrases": "तेरा भाषांमध्ये २५० रोजचे वाक्प्रचार, रोमन उच्चार आणि आवाजासह.",
+    "cPhrases": "तेरा भाषांमध्ये ४२० रोजचे वाक्प्रचार, रोमन उच्चार आणि आवाजासह.",
     "cSay": "इंग्रजीत वाक्य लिहा आणि ते तेलुगू, हिंदी, कन्नड, तमिळ, मल्याळम, बंगाली, मराठी, गुजराती, आसामी, कोरियन, स्पॅनिश, जर्मन किंवा फ्रेंचमध्ये ऐका.",
     "dueCount": "{n} बाकी",
     "howH": "हे कसे चालते",
@@ -3070,7 +3894,122 @@
     "pronDone": "तुमचे रेकॉर्डिंग ऐका किंवा नमुन्याशी तुलना करा.",
     "pronDenied": "मायक्रोफोन बंद आहे. सरावासाठी ब्राउझर सेटिंग्जमध्ये परवानगी द्या.",
     "pronNoMic": "हा ब्राउझर ऑडिओ रेकॉर्ड करू शकत नाही.",
-    "pronEmpty": "काहीही रेकॉर्ड झाले नाही. पुन्हा प्रयत्न करा."
+    "pronEmpty": "काहीही रेकॉर्ड झाले नाही. पुन्हा प्रयत्न करा.",
+    "d_who-is": "हे कोण आहे?",
+    "d_phone-call": "फोनवर",
+    "d_birthday-invite": "वाढदिवसाचं आमंत्रण",
+    "d_weather-chat": "हवामानाबद्दल गप्पा",
+    "d_family-talk": "कुटुंबाबद्दल गप्पा",
+    "d_new-in-town": "शहरात नवीन",
+    "d_make-plans": "योजना आखणे",
+    "d_apology": "माफी मागणे",
+    "d_language-swap": "भाषा देवाणघेवाण",
+    "d_farewell": "निरोप घेणे",
+    "d_breakfast": "न्याहारी",
+    "d_street-food": "रस्त्यावरचे खाद्यपदार्थ",
+    "d_chai-stall": "चहाच्या टपरीवर",
+    "d_veg-order": "शाकाहारी जेवण मागवणे",
+    "d_allergy": "अन्नाची ॲलर्जी",
+    "d_pay-bill": "बिल भरणे",
+    "d_home-dinner": "घरी रात्रीचं जेवण",
+    "d_fruit-seller": "फळं खरेदी",
+    "d_buy-ticket": "तिकीट काढणे",
+    "d_train-info": "रेल्वेची माहिती",
+    "d_taxi-ride": "टॅक्सीने जाणे",
+    "d_bus-ride": "बसमध्ये",
+    "d_lost-way": "वाट चुकणे",
+    "d_check-in": "हॉटेल चेक-इन",
+    "d_check-out": "हॉटेल चेक-आउट",
+    "d_sightseeing": "पर्यटन",
+    "d_auto-rickshaw": "रिक्षाचा प्रवास",
+    "d_ask-time": "वेळ विचारणे",
+    "d_clothes": "कपडे खरेदी",
+    "d_bargain": "घासाघीस",
+    "d_pharmacy-buy": "औषधांच्या दुकानात",
+    "d_grocery": "किराणा खरेदी",
+    "d_sim-card": "सिम कार्ड घेणे",
+    "d_exchange": "वस्तू बदलणे",
+    "d_appointment": "डॉक्टरची अपॉइंटमेंट",
+    "d_stomach": "पोटाचा त्रास",
+    "d_cold-fever": "सर्दी-ताप",
+    "d_emergency": "आणीबाणी",
+    "d_medicine-buy": "औषध खरेदी",
+    "d_interview": "नोकरीची मुलाखत",
+    "d_team-meeting": "टीम मीटिंग",
+    "d_office-call": "कार्यालयातला फोन",
+    "d_lunch-colleague": "सहकाऱ्यासोबत जेवण",
+    "d_it-help": "तांत्रिक मदत",
+    "d_guest": "पाहुण्याचं स्वागत",
+    "d_neighbour": "शेजाऱ्याची भेट",
+    "d_repairs": "घरदुरुस्ती",
+    "d_rent": "भाड्याबद्दल बोलणे",
+    "d_delivery": "डिलिव्हरी",
+    "d_rainy-day": "पावसाळी दिवस",
+    "grp_all": "सर्व",
+    "grp_social": "सामाजिक",
+    "grp_food": "खाणंपिणं",
+    "grp_travel": "प्रवास",
+    "grp_shop": "खरेदी",
+    "grp_health": "आरोग्य",
+    "grp_work": "काम",
+    "grp_home": "घर",
+    "drGroups": "संभाषण गट",
+    "nav_kids": "मुले",
+    "nav_proverbs": "म्हणी",
+    "nav_twisters": "जीभ-वळवणी",
+    "cKids": "मुलांसाठी चित्रांचे खेळ: प्राणी, फळं, रंग आणि बरंच काही.",
+    "cProverbs": "दररोज एक म्हण किंवा वाक्प्रचार, अर्थासह.",
+    "cTwisters": "जिभेच्या सरावासाठी जीभ-वळवणारी वाक्यं, हळू आणि वेगवान आवाजासह.",
+    "prH": "म्हणी आणि वाक्प्रचार",
+    "prLede": "तुम्ही शिकत असलेल्या भाषेत रोज एक म्हण. ऐकण्यासाठी स्पर्श करा.",
+    "prToday": "आजची म्हण",
+    "prAnother": "आणखी एक म्हण",
+    "prMeaning": "अर्थ",
+    "prP": "म्हण",
+    "prI": "वाक्प्रचार",
+    "prAll": "सर्व म्हणी",
+    "twH": "जीभ-वळवणारी वाक्यं",
+    "twLede": "आधी हळू, मग वेगात म्हणा. तुलना करण्यासाठी रेकॉर्ड करा.",
+    "twSlow": "हळू",
+    "twNormal": "सामान्य",
+    "twFast": "वेगात",
+    "kdH": "मुलांचा कोपरा",
+    "kdLede": "मोठी चित्रं, छोटे खेळ, कसलाही दबाव नाही. ऐका, स्पर्श करा, तारे मिळवा.",
+    "kdG1": "चित्राला स्पर्श करा",
+    "kdG2": "हे काय आहे?",
+    "kdG3": "आठवणीच्या जोड्या",
+    "kdAll": "सगळं",
+    "kdC_animals": "प्राणी",
+    "kdC_fruits": "फळं",
+    "kdC_colours": "रंग",
+    "kdC_body": "शरीर",
+    "kdC_things": "वस्तू",
+    "kdListen": "ऐका, मग योग्य चित्राला स्पर्श करा.",
+    "kdWhat": "योग्य शब्दाला स्पर्श करा.",
+    "kdMatch": "जुळणाऱ्या जोड्या शोधा.",
+    "kdStars": "तारे: {n}",
+    "kdWell": "शाब्बास!",
+    "kdAgain": "पुन्हा खेळा",
+    "kdBack": "सर्व खेळ",
+    "kdMode": "मुलांचा मोड",
+    "kdModeHint": "मोठी बटणं आणि साधा मेन्यू.",
+    "wsH": "पाहून शिकण्यासाठी व्हिडिओ",
+    "wsLede": "Bhasha हे चालवत नाही. प्रत्येक लिंक नव्या टॅबमध्ये {l} साठी YouTube शोध उघडते.",
+    "wsT_begin": "सुरुवातीचे धडे",
+    "wsT_alpha": "वर्णमाला आणि उच्चार",
+    "wsT_kids": "बालगीतं आणि कविता",
+    "wsT_story": "छोट्या गोष्टी",
+    "wsT_talk": "रोजचं संभाषण",
+    "wsT_cook": "नैसर्गिक बोलीतला स्वयंपाक",
+    "wsT_travel": "प्रवास आणि रस्त्यावरचे व्हिडिओ",
+    "wsT_school": "शालेय धडे: विज्ञान आणि गणित",
+    "wsT_grammar": "व्याकरण स्पष्टीकरण",
+    "wsCh": "शोधण्यासाठी चॅनेलची नावं",
+    "wsTip": "सूचना: YouTube वर व्हिडिओ उघडा, ट्रान्स्क्रिप्ट कॉपी करा आणि शब्द शिकण्यासाठी {r} मध्ये चिकटवा.",
+    "vcVoice": "आवाज",
+    "vcSpeed": "वेग",
+    "vcAuto": "स्वयंचलित (सर्वोत्तम उपलब्ध)",
+    "vcDefault": "सामान्य वेग"
   };
   I.ko = {
     "skip": "본문으로 건너뛰기",
@@ -3116,7 +4055,7 @@
     "cWords": "저장한 모든 단어를 CSV, Anki, 백업 파일로 내보낼 수 있습니다.",
     "cReview": "잊기 직전에 다시 나타나는 플래시카드.",
     "cScripts": "글자, 모음 기호, 숫자. 듣고, 퀴즈를 풀고, 쓰기를 연습하세요.",
-    "cPhrases": "13개 언어의 일상 표현 250개, 로마자 발음과 음성 포함.",
+    "cPhrases": "13개 언어의 일상 표현 420개, 로마자 발음과 음성 포함.",
     "cSay": "영어로 문장을 쓰고 텔루구어, 힌디어, 칸나다어, 타밀어, 말라얄람어, 벵골어, 마라티어, 구자라트어, 아삼어, 한국어, 스페인어, 독일어, 프랑스어로 들어 보세요.",
     "dueCount": "{n}개 남음",
     "howH": "사용 방법",
@@ -3371,7 +4310,122 @@
     "pronDone": "내 녹음을 듣거나 예시와 비교해 보세요.",
     "pronDenied": "마이크가 차단되어 있습니다. 연습하려면 브라우저 설정에서 허용해 주세요.",
     "pronNoMic": "이 브라우저는 오디오를 녹음할 수 없습니다.",
-    "pronEmpty": "녹음된 내용이 없습니다. 다시 시도하세요."
+    "pronEmpty": "녹음된 내용이 없습니다. 다시 시도하세요.",
+    "d_who-is": "누구세요?",
+    "d_phone-call": "전화 통화",
+    "d_birthday-invite": "생일 초대",
+    "d_weather-chat": "날씨 이야기",
+    "d_family-talk": "가족 이야기",
+    "d_new-in-town": "새로 온 동네",
+    "d_make-plans": "약속 잡기",
+    "d_apology": "사과하기",
+    "d_language-swap": "언어 교환",
+    "d_farewell": "작별 인사",
+    "d_breakfast": "아침 식사",
+    "d_street-food": "길거리 음식",
+    "d_chai-stall": "찻집에서",
+    "d_veg-order": "채식 주문",
+    "d_allergy": "음식 알레르기",
+    "d_pay-bill": "계산하기",
+    "d_home-dinner": "집에서 저녁 식사",
+    "d_fruit-seller": "과일 사기",
+    "d_buy-ticket": "표 사기",
+    "d_train-info": "기차 정보",
+    "d_taxi-ride": "택시 타기",
+    "d_bus-ride": "버스에서",
+    "d_lost-way": "길을 잃음",
+    "d_check-in": "호텔 체크인",
+    "d_check-out": "호텔 체크아웃",
+    "d_sightseeing": "관광",
+    "d_auto-rickshaw": "오토릭샤 타기",
+    "d_ask-time": "시간 묻기",
+    "d_clothes": "옷 사기",
+    "d_bargain": "흥정하기",
+    "d_pharmacy-buy": "약국에서",
+    "d_grocery": "장보기",
+    "d_sim-card": "유심 개통",
+    "d_exchange": "교환하기",
+    "d_appointment": "진료 예약",
+    "d_stomach": "배탈",
+    "d_cold-fever": "감기와 열",
+    "d_emergency": "응급 상황",
+    "d_medicine-buy": "약 사기",
+    "d_interview": "면접",
+    "d_team-meeting": "팀 회의",
+    "d_office-call": "회사 전화",
+    "d_lunch-colleague": "동료와 점심",
+    "d_it-help": "기술 지원",
+    "d_guest": "손님 맞이",
+    "d_neighbour": "이웃 만나기",
+    "d_repairs": "집 수리",
+    "d_rent": "월세 이야기",
+    "d_delivery": "배달",
+    "d_rainy-day": "비 오는 날",
+    "grp_all": "전체",
+    "grp_social": "사교",
+    "grp_food": "음식",
+    "grp_travel": "여행",
+    "grp_shop": "쇼핑",
+    "grp_health": "건강",
+    "grp_work": "일",
+    "grp_home": "집",
+    "drGroups": "대화 분류",
+    "nav_kids": "어린이",
+    "nav_proverbs": "속담",
+    "nav_twisters": "잰말놀이",
+    "cKids": "동물, 과일, 색깔 등 어린이를 위한 그림 게임.",
+    "cProverbs": "매일 속담이나 관용구 하나와 그 뜻.",
+    "cTwisters": "느린 소리와 빠른 소리로 입을 훈련하는 잰말놀이.",
+    "prH": "속담과 관용구",
+    "prLede": "배우는 언어로 하루 한 문장. 눌러서 들어 보세요.",
+    "prToday": "오늘의 속담",
+    "prAnother": "다른 속담",
+    "prMeaning": "뜻",
+    "prP": "속담",
+    "prI": "관용구",
+    "prAll": "전체 목록",
+    "twH": "잰말놀이",
+    "twLede": "먼저 천천히, 그다음 빠르게 말해 보세요. 녹음해서 비교해 보세요.",
+    "twSlow": "느리게",
+    "twNormal": "보통",
+    "twFast": "빠르게",
+    "kdH": "어린이 코너",
+    "kdLede": "큰 그림, 짧은 게임, 부담 없이. 듣고, 누르고, 별을 모으세요.",
+    "kdG1": "그림을 누르세요",
+    "kdG2": "이게 뭐예요?",
+    "kdG3": "기억력 짝 맞추기",
+    "kdAll": "전체",
+    "kdC_animals": "동물",
+    "kdC_fruits": "과일",
+    "kdC_colours": "색깔",
+    "kdC_body": "몸",
+    "kdC_things": "사물",
+    "kdListen": "듣고 알맞은 그림을 누르세요.",
+    "kdWhat": "알맞은 낱말을 누르세요.",
+    "kdMatch": "짝이 맞는 카드를 찾으세요.",
+    "kdStars": "별: {n}",
+    "kdWell": "잘했어요!",
+    "kdAgain": "다시 하기",
+    "kdBack": "모든 게임",
+    "kdMode": "어린이 모드",
+    "kdModeHint": "큰 버튼과 간단한 메뉴.",
+    "wsH": "보고 배우는 영상",
+    "wsLede": "Bhasha는 이 영상을 재생하지 않습니다. 각 링크는 새 탭에서 {l} YouTube 검색을 엽니다.",
+    "wsT_begin": "초급 강의",
+    "wsT_alpha": "문자와 발음",
+    "wsT_kids": "동요",
+    "wsT_story": "짧은 이야기",
+    "wsT_talk": "일상 대화",
+    "wsT_cook": "자연스러운 말투의 요리",
+    "wsT_travel": "여행·거리 브이로그",
+    "wsT_school": "학교 수업: 과학과 수학",
+    "wsT_grammar": "문법 설명",
+    "wsCh": "검색해 볼 채널 이름",
+    "wsTip": "팁: YouTube에서 영상을 열고 자막 대본을 복사해 {r}에 붙여 넣으면 낱말을 공부할 수 있어요.",
+    "vcVoice": "목소리",
+    "vcSpeed": "속도",
+    "vcAuto": "자동 (가장 좋은 목소리)",
+    "vcDefault": "기본 속도"
   };
   I.es = {
     "skip": "Saltar al contenido",
@@ -3417,7 +4471,7 @@
     "cWords": "Todo lo que has guardado, con exportación a CSV, Anki y archivo de copia.",
     "cReview": "Tarjetas que vuelven justo antes de que las olvides.",
     "cScripts": "Letras, signos vocálicos y números. Escucha, haz un test y practica el trazo.",
-    "cPhrases": "250 frases cotidianas en trece idiomas, con pronunciación y voz.",
+    "cPhrases": "420 frases cotidianas en trece idiomas, con pronunciación y voz.",
     "cSay": "Escribe una frase en inglés y escúchala en telugu, hindi, canarés, tamil, malayalam, bengalí, maratí, guyaratí, asamés, coreano, español, alemán o francés.",
     "dueCount": "{n} pendientes",
     "howH": "Cómo funciona",
@@ -3672,7 +4726,122 @@
     "pronDone": "Escucha la tuya o compárala con el modelo.",
     "pronDenied": "El micrófono está bloqueado. Permítelo en los ajustes del navegador para practicar.",
     "pronNoMic": "Este navegador no puede grabar audio.",
-    "pronEmpty": "No se grabó nada. Inténtalo de nuevo."
+    "pronEmpty": "No se grabó nada. Inténtalo de nuevo.",
+    "d_who-is": "¿Quién es?",
+    "d_phone-call": "Al teléfono",
+    "d_birthday-invite": "Invitación de cumpleaños",
+    "d_weather-chat": "Hablar del tiempo",
+    "d_family-talk": "Hablar de la familia",
+    "d_new-in-town": "Nuevo en la ciudad",
+    "d_make-plans": "Hacer planes",
+    "d_apology": "Pedir disculpas",
+    "d_language-swap": "Intercambio de idiomas",
+    "d_farewell": "Despedirse",
+    "d_breakfast": "Desayuno",
+    "d_street-food": "Comida callejera",
+    "d_chai-stall": "En el puesto de té",
+    "d_veg-order": "Pedir comida vegetariana",
+    "d_allergy": "Alergia alimentaria",
+    "d_pay-bill": "Pagar la cuenta",
+    "d_home-dinner": "Cena en casa",
+    "d_fruit-seller": "Comprar fruta",
+    "d_buy-ticket": "Comprar un billete",
+    "d_train-info": "Información del tren",
+    "d_taxi-ride": "Tomar un taxi",
+    "d_bus-ride": "En el autobús",
+    "d_lost-way": "Perderse",
+    "d_check-in": "Registro en el hotel",
+    "d_check-out": "Salida del hotel",
+    "d_sightseeing": "Turismo",
+    "d_auto-rickshaw": "Viaje en mototaxi",
+    "d_ask-time": "Preguntar la hora",
+    "d_clothes": "Comprar ropa",
+    "d_bargain": "Regatear",
+    "d_pharmacy-buy": "En la farmacia",
+    "d_grocery": "Comprar comestibles",
+    "d_sim-card": "Conseguir una SIM",
+    "d_exchange": "Cambiar un artículo",
+    "d_appointment": "Cita médica",
+    "d_stomach": "Problemas de estómago",
+    "d_cold-fever": "Resfriado y fiebre",
+    "d_emergency": "Emergencia",
+    "d_medicine-buy": "Comprar medicinas",
+    "d_interview": "Entrevista de trabajo",
+    "d_team-meeting": "Reunión de equipo",
+    "d_office-call": "Llamada de oficina",
+    "d_lunch-colleague": "Almuerzo con un colega",
+    "d_it-help": "Soporte técnico",
+    "d_guest": "Recibir a un invitado",
+    "d_neighbour": "Conocer a un vecino",
+    "d_repairs": "Reparaciones del hogar",
+    "d_rent": "Hablar del alquiler",
+    "d_delivery": "Una entrega",
+    "d_rainy-day": "Un día de lluvia",
+    "grp_all": "Todas",
+    "grp_social": "Social",
+    "grp_food": "Comida",
+    "grp_travel": "Viajes",
+    "grp_shop": "Compras",
+    "grp_health": "Salud",
+    "grp_work": "Trabajo",
+    "grp_home": "Hogar",
+    "drGroups": "Grupos de conversaciones",
+    "nav_kids": "Niños",
+    "nav_proverbs": "Dichos",
+    "nav_twisters": "Trabalenguas",
+    "cKids": "Juegos con imágenes para niños: animales, frutas, colores y más.",
+    "cProverbs": "Un dicho o modismo cada día, con su significado.",
+    "cTwisters": "Trabalenguas para entrenar la boca, con audio lento y rápido.",
+    "prH": "Dichos y modismos",
+    "prLede": "Un dicho al día en el idioma que aprendes. Toca para oírlo.",
+    "prToday": "Dicho del día",
+    "prAnother": "Otro dicho",
+    "prMeaning": "Significado",
+    "prP": "Dicho",
+    "prI": "Modismo",
+    "prAll": "Todos los dichos",
+    "twH": "Trabalenguas",
+    "twLede": "Dilo primero despacio y luego más rápido. Grábate para comparar.",
+    "twSlow": "Lento",
+    "twNormal": "Normal",
+    "twFast": "Rápido",
+    "kdH": "Rincón infantil",
+    "kdLede": "Imágenes grandes, juegos cortos, sin presión. Escucha, toca y reúne estrellas.",
+    "kdG1": "Toca la imagen",
+    "kdG2": "¿Qué es esto?",
+    "kdG3": "Parejas de memoria",
+    "kdAll": "Todo",
+    "kdC_animals": "Animales",
+    "kdC_fruits": "Frutas",
+    "kdC_colours": "Colores",
+    "kdC_body": "Cuerpo",
+    "kdC_things": "Cosas",
+    "kdListen": "Escucha y toca la imagen correcta.",
+    "kdWhat": "Toca la palabra correcta.",
+    "kdMatch": "Encuentra las parejas.",
+    "kdStars": "Estrellas: {n}",
+    "kdWell": "¡Muy bien!",
+    "kdAgain": "Jugar otra vez",
+    "kdBack": "Todos los juegos",
+    "kdMode": "Modo infantil",
+    "kdModeHint": "Botones grandes y menú sencillo.",
+    "wsH": "Vídeos para ver y aprender",
+    "wsLede": "Bhasha no reproduce estos vídeos. Cada enlace abre una búsqueda de YouTube de {l} en una pestaña nueva.",
+    "wsT_begin": "Lecciones para principiantes",
+    "wsT_alpha": "Alfabeto y sonidos",
+    "wsT_kids": "Canciones infantiles",
+    "wsT_story": "Cuentos cortos",
+    "wsT_talk": "Conversación diaria",
+    "wsT_cook": "Cocina con habla natural",
+    "wsT_travel": "Vlogs de viajes y calle",
+    "wsT_school": "Clases escolares: ciencias y matemáticas",
+    "wsT_grammar": "Gramática explicada",
+    "wsCh": "Canales para buscar",
+    "wsTip": "Consejo: abre un vídeo en YouTube, copia su transcripción y pégala en {r} para estudiar las palabras.",
+    "vcVoice": "Voz",
+    "vcSpeed": "Velocidad",
+    "vcAuto": "Automático (la mejor disponible)",
+    "vcDefault": "Velocidad predeterminada"
   };
   I.de = {
     "skip": "Zum Inhalt springen",
@@ -3718,7 +4887,7 @@
     "cWords": "Alles, was du gespeichert hast, mit Export als CSV, Anki und Sicherungsdatei.",
     "cReview": "Karteikarten, die kurz vor dem Vergessen wiederkommen.",
     "cScripts": "Buchstaben, Vokalzeichen und Ziffern. Anhören, Quiz machen, Schreiben üben.",
-    "cPhrases": "250 Alltagssätze in dreizehn Sprachen, mit Umschrift und Sprachausgabe.",
+    "cPhrases": "420 Alltagssätze in dreizehn Sprachen, mit Umschrift und Sprachausgabe.",
     "cSay": "Schreibe einen Satz auf Englisch und höre ihn auf Telugu, Hindi, Kannada, Tamil, Malayalam, Bengalisch, Marathi, Gujarati, Assamesisch, Koreanisch, Spanisch, Deutsch oder Französisch.",
     "dueCount": "{n} fällig",
     "howH": "So funktioniert es",
@@ -3973,7 +5142,122 @@
     "pronDone": "Spiel deine Aufnahme ab oder vergleiche sie mit dem Vorbild.",
     "pronDenied": "Das Mikrofon ist gesperrt. Erlaube es in den Browsereinstellungen, um zu üben.",
     "pronNoMic": "Dieser Browser kann kein Audio aufnehmen.",
-    "pronEmpty": "Es wurde nichts aufgenommen. Versuche es erneut."
+    "pronEmpty": "Es wurde nichts aufgenommen. Versuche es erneut.",
+    "d_who-is": "Wer ist das?",
+    "d_phone-call": "Am Telefon",
+    "d_birthday-invite": "Geburtstagseinladung",
+    "d_weather-chat": "Über das Wetter",
+    "d_family-talk": "Über die Familie",
+    "d_new-in-town": "Neu in der Stadt",
+    "d_make-plans": "Pläne machen",
+    "d_apology": "Sich entschuldigen",
+    "d_language-swap": "Sprachaustausch",
+    "d_farewell": "Sich verabschieden",
+    "d_breakfast": "Frühstück",
+    "d_street-food": "Straßenessen",
+    "d_chai-stall": "Am Teestand",
+    "d_veg-order": "Vegetarisch bestellen",
+    "d_allergy": "Lebensmittelallergie",
+    "d_pay-bill": "Die Rechnung zahlen",
+    "d_home-dinner": "Abendessen zu Hause",
+    "d_fruit-seller": "Obst kaufen",
+    "d_buy-ticket": "Ein Ticket kaufen",
+    "d_train-info": "Zuginformation",
+    "d_taxi-ride": "Taxi fahren",
+    "d_bus-ride": "Im Bus",
+    "d_lost-way": "Sich verlaufen",
+    "d_check-in": "Hotel-Check-in",
+    "d_check-out": "Hotel-Check-out",
+    "d_sightseeing": "Sightseeing",
+    "d_auto-rickshaw": "Fahrt im Tuk-Tuk",
+    "d_ask-time": "Nach der Uhrzeit fragen",
+    "d_clothes": "Kleidung kaufen",
+    "d_bargain": "Feilschen",
+    "d_pharmacy-buy": "In der Apotheke",
+    "d_grocery": "Lebensmittel einkaufen",
+    "d_sim-card": "Eine SIM-Karte holen",
+    "d_exchange": "Einen Artikel umtauschen",
+    "d_appointment": "Arzttermin",
+    "d_stomach": "Magenprobleme",
+    "d_cold-fever": "Erkältung und Fieber",
+    "d_emergency": "Notfall",
+    "d_medicine-buy": "Medikamente kaufen",
+    "d_interview": "Vorstellungsgespräch",
+    "d_team-meeting": "Teambesprechung",
+    "d_office-call": "Bürotelefonat",
+    "d_lunch-colleague": "Mittagessen mit Kollegen",
+    "d_it-help": "Technischer Support",
+    "d_guest": "Einen Gast empfangen",
+    "d_neighbour": "Den Nachbarn treffen",
+    "d_repairs": "Reparaturen im Haus",
+    "d_rent": "Über die Miete",
+    "d_delivery": "Eine Lieferung",
+    "d_rainy-day": "Ein Regentag",
+    "grp_all": "Alle",
+    "grp_social": "Gesellschaft",
+    "grp_food": "Essen",
+    "grp_travel": "Reisen",
+    "grp_shop": "Einkaufen",
+    "grp_health": "Gesundheit",
+    "grp_work": "Arbeit",
+    "grp_home": "Zuhause",
+    "drGroups": "Gesprächsgruppen",
+    "nav_kids": "Kinder",
+    "nav_proverbs": "Sprichwörter",
+    "nav_twisters": "Zungenbrecher",
+    "cKids": "Bildspiele für Kinder: Tiere, Obst, Farben und mehr.",
+    "cProverbs": "Jeden Tag ein Sprichwort oder eine Redewendung mit Bedeutung.",
+    "cTwisters": "Zungenbrecher zum Üben, mit langsamem und schnellem Audio.",
+    "prH": "Sprichwörter und Redewendungen",
+    "prLede": "Täglich ein Spruch in deiner Lernsprache. Tippe zum Anhören.",
+    "prToday": "Spruch des Tages",
+    "prAnother": "Noch ein Spruch",
+    "prMeaning": "Bedeutung",
+    "prP": "Sprichwort",
+    "prI": "Redewendung",
+    "prAll": "Alle Sprüche",
+    "twH": "Zungenbrecher",
+    "twLede": "Sprich es erst langsam, dann schneller. Nimm dich auf und vergleiche.",
+    "twSlow": "Langsam",
+    "twNormal": "Normal",
+    "twFast": "Schnell",
+    "kdH": "Kinderecke",
+    "kdLede": "Große Bilder, kurze Spiele, kein Druck. Hören, tippen, Sterne sammeln.",
+    "kdG1": "Tippe auf das Bild",
+    "kdG2": "Was ist das?",
+    "kdG3": "Memory-Paare",
+    "kdAll": "Alles",
+    "kdC_animals": "Tiere",
+    "kdC_fruits": "Obst",
+    "kdC_colours": "Farben",
+    "kdC_body": "Körper",
+    "kdC_things": "Dinge",
+    "kdListen": "Hör zu und tippe auf das richtige Bild.",
+    "kdWhat": "Tippe auf das richtige Wort.",
+    "kdMatch": "Finde die passenden Paare.",
+    "kdStars": "Sterne: {n}",
+    "kdWell": "Gut gemacht!",
+    "kdAgain": "Nochmal spielen",
+    "kdBack": "Alle Spiele",
+    "kdMode": "Kindermodus",
+    "kdModeHint": "Größere Tasten und ein einfaches Menü.",
+    "wsH": "Videos zum Lernen",
+    "wsLede": "Bhasha spielt diese Videos nicht ab. Jeder Link öffnet in einem neuen Tab eine YouTube-Suche für {l}.",
+    "wsT_begin": "Anfängerkurse",
+    "wsT_alpha": "Alphabet und Laute",
+    "wsT_kids": "Kinderlieder",
+    "wsT_story": "Kurzgeschichten",
+    "wsT_talk": "Alltagsgespräche",
+    "wsT_cook": "Kochen in natürlicher Sprache",
+    "wsT_travel": "Reise- und Straßen-Vlogs",
+    "wsT_school": "Schulstoff: Naturwissenschaften und Mathe",
+    "wsT_grammar": "Grammatik erklärt",
+    "wsCh": "Kanäle zum Suchen",
+    "wsTip": "Tipp: Öffne ein Video auf YouTube, kopiere das Transkript und füge es in {r} ein, um die Wörter zu lernen.",
+    "vcVoice": "Stimme",
+    "vcSpeed": "Tempo",
+    "vcAuto": "Automatisch (beste verfügbare)",
+    "vcDefault": "Standardtempo"
   };
   I.fr = {
     "skip": "Aller au contenu",
@@ -4019,7 +5303,7 @@
     "cWords": "Tout ce que vous avez enregistré, avec export en CSV, Anki et fichier de sauvegarde.",
     "cReview": "Des fiches qui reviennent juste avant que vous les oubliiez.",
     "cScripts": "Lettres, signes vocaliques et chiffres. Écoutez, faites un quiz et entraînez-vous à tracer.",
-    "cPhrases": "250 phrases du quotidien en treize langues, avec romanisation et voix.",
+    "cPhrases": "420 phrases du quotidien en treize langues, avec romanisation et voix.",
     "cSay": "Écrivez une phrase en anglais et écoutez-la en télougou, hindi, kannada, tamoul, malayalam, bengali, marathi, gujarati, assamais, coréen, espagnol, allemand ou français.",
     "dueCount": "{n} à réviser",
     "howH": "Comment ça marche",
@@ -4274,7 +5558,122 @@
     "pronDone": "Écoutez votre voix ou comparez-la avec le modèle.",
     "pronDenied": "Le microphone est bloqué. Autorisez-le dans les réglages du navigateur pour vous entraîner.",
     "pronNoMic": "Ce navigateur ne peut pas enregistrer d’audio.",
-    "pronEmpty": "Rien n’a été enregistré. Réessayez."
+    "pronEmpty": "Rien n’a été enregistré. Réessayez.",
+    "d_who-is": "Qui est-ce ?",
+    "d_phone-call": "Au téléphone",
+    "d_birthday-invite": "Invitation d’anniversaire",
+    "d_weather-chat": "Parler de la météo",
+    "d_family-talk": "Parler de la famille",
+    "d_new-in-town": "Nouveau en ville",
+    "d_make-plans": "Faire des projets",
+    "d_apology": "S’excuser",
+    "d_language-swap": "Échange linguistique",
+    "d_farewell": "Dire au revoir",
+    "d_breakfast": "Petit-déjeuner",
+    "d_street-food": "Cuisine de rue",
+    "d_chai-stall": "Au stand de thé",
+    "d_veg-order": "Commander végétarien",
+    "d_allergy": "Allergie alimentaire",
+    "d_pay-bill": "Payer l’addition",
+    "d_home-dinner": "Dîner à la maison",
+    "d_fruit-seller": "Acheter des fruits",
+    "d_buy-ticket": "Acheter un billet",
+    "d_train-info": "Infos sur le train",
+    "d_taxi-ride": "Prendre un taxi",
+    "d_bus-ride": "Dans le bus",
+    "d_lost-way": "Se perdre",
+    "d_check-in": "Enregistrement à l’hôtel",
+    "d_check-out": "Départ de l’hôtel",
+    "d_sightseeing": "Visite touristique",
+    "d_auto-rickshaw": "Course en tuk-tuk",
+    "d_ask-time": "Demander l’heure",
+    "d_clothes": "Acheter des vêtements",
+    "d_bargain": "Marchander",
+    "d_pharmacy-buy": "À la pharmacie",
+    "d_grocery": "Faire les courses",
+    "d_sim-card": "Obtenir une carte SIM",
+    "d_exchange": "Échanger un article",
+    "d_appointment": "Rendez-vous médical",
+    "d_stomach": "Mal au ventre",
+    "d_cold-fever": "Rhume et fièvre",
+    "d_emergency": "Urgence",
+    "d_medicine-buy": "Acheter des médicaments",
+    "d_interview": "Entretien d’embauche",
+    "d_team-meeting": "Réunion d’équipe",
+    "d_office-call": "Appel de bureau",
+    "d_lunch-colleague": "Déjeuner avec un collègue",
+    "d_it-help": "Assistance technique",
+    "d_guest": "Accueillir un invité",
+    "d_neighbour": "Rencontrer un voisin",
+    "d_repairs": "Réparations à la maison",
+    "d_rent": "Parler du loyer",
+    "d_delivery": "Une livraison",
+    "d_rainy-day": "Un jour de pluie",
+    "grp_all": "Toutes",
+    "grp_social": "Social",
+    "grp_food": "Repas",
+    "grp_travel": "Voyage",
+    "grp_shop": "Achats",
+    "grp_health": "Santé",
+    "grp_work": "Travail",
+    "grp_home": "Maison",
+    "drGroups": "Groupes de conversations",
+    "nav_kids": "Enfants",
+    "nav_proverbs": "Dictons",
+    "nav_twisters": "Virelangues",
+    "cKids": "Jeux d’images pour enfants : animaux, fruits, couleurs et plus.",
+    "cProverbs": "Un proverbe ou une expression par jour, avec son sens.",
+    "cTwisters": "Des virelangues pour entraîner la bouche, avec audio lent et rapide.",
+    "prH": "Proverbes et expressions",
+    "prLede": "Un dicton par jour dans la langue que vous apprenez. Touchez pour l’écouter.",
+    "prToday": "Dicton du jour",
+    "prAnother": "Un autre dicton",
+    "prMeaning": "Sens",
+    "prP": "Proverbe",
+    "prI": "Expression",
+    "prAll": "Tous les dictons",
+    "twH": "Virelangues",
+    "twLede": "Dites-le d’abord lentement, puis plus vite. Enregistrez-vous pour comparer.",
+    "twSlow": "Lent",
+    "twNormal": "Normal",
+    "twFast": "Rapide",
+    "kdH": "Coin des enfants",
+    "kdLede": "De grandes images, des jeux courts, sans pression. Écoutez, touchez et gagnez des étoiles.",
+    "kdG1": "Touchez l’image",
+    "kdG2": "Qu’est-ce que c’est ?",
+    "kdG3": "Jeu de mémoire",
+    "kdAll": "Tout",
+    "kdC_animals": "Animaux",
+    "kdC_fruits": "Fruits",
+    "kdC_colours": "Couleurs",
+    "kdC_body": "Corps",
+    "kdC_things": "Choses",
+    "kdListen": "Écoutez, puis touchez la bonne image.",
+    "kdWhat": "Touchez le bon mot.",
+    "kdMatch": "Trouvez les paires.",
+    "kdStars": "Étoiles : {n}",
+    "kdWell": "Bravo !",
+    "kdAgain": "Rejouer",
+    "kdBack": "Tous les jeux",
+    "kdMode": "Mode enfant",
+    "kdModeHint": "Gros boutons et menu simple.",
+    "wsH": "Vidéos pour apprendre",
+    "wsLede": "Bhasha ne lit pas ces vidéos. Chaque lien ouvre une recherche YouTube pour {l} dans un nouvel onglet.",
+    "wsT_begin": "Leçons pour débutants",
+    "wsT_alpha": "Alphabet et sons",
+    "wsT_kids": "Comptines et chansons",
+    "wsT_story": "Histoires courtes",
+    "wsT_talk": "Conversation courante",
+    "wsT_cook": "Cuisine en langage naturel",
+    "wsT_travel": "Vlogs de voyage et de rue",
+    "wsT_school": "Cours scolaires : sciences et maths",
+    "wsT_grammar": "Grammaire expliquée",
+    "wsCh": "Chaînes à rechercher",
+    "wsTip": "Astuce : ouvrez une vidéo sur YouTube, copiez sa transcription et collez-la dans {r} pour étudier les mots.",
+    "vcVoice": "Voix",
+    "vcSpeed": "Vitesse",
+    "vcAuto": "Automatique (la meilleure disponible)",
+    "vcDefault": "Vitesse par défaut"
   };
   I.gu = {
     "skip": "મુખ્ય સામગ્રી પર જાઓ",
@@ -4320,7 +5719,7 @@
     "cWords": "તમે સાચવેલું બધું, CSV, Anki અને બેકઅપ ફાઇલમાં નિકાસ સાથે.",
     "cReview": "ભૂલી જાઓ તે પહેલાં પાછા આવતા ફ્લૅશકાર્ડ.",
     "cScripts": "અક્ષરો, સ્વરચિહ્નો અને અંકો. સાંભળો, ક્વિઝ કરો, લખીને પ્રૅક્ટિસ કરો.",
-    "cPhrases": "તેર ભાષાઓમાં 250 રોજિંદા વાક્યો, રોમન ઉચ્ચાર અને અવાજ સાથે.",
+    "cPhrases": "તેર ભાષાઓમાં 420 રોજિંદા વાક્યો, રોમન ઉચ્ચાર અને અવાજ સાથે.",
     "cSay": "અંગ્રેજીમાં વાક્ય લખો અને તેને તેલુગુ, હિન્દી, કન્નડ, તમિલ, મલયાલમ, બંગાળી, મરાઠી, ગુજરાતી, આસામી, કોરિયન, સ્પૅનિશ, જર્મન કે ફ્રેન્ચમાં સાંભળો.",
     "dueCount": "{n} બાકી",
     "howH": "આ કેવી રીતે કામ કરે છે",
@@ -4575,7 +5974,122 @@
     "pronDone": "તમારું રેકોર્ડિંગ સાંભળો અથવા નમૂના સાથે સરખાવો.",
     "pronDenied": "માઇક્રોફોન બંધ છે. મહાવરા માટે બ્રાઉઝર સેટિંગ્સમાં મંજૂરી આપો.",
     "pronNoMic": "આ બ્રાઉઝર ઑડિયો રેકોર્ડ કરી શકતું નથી.",
-    "pronEmpty": "કંઈ રેકોર્ડ થયું નથી. ફરી પ્રયત્ન કરો."
+    "pronEmpty": "કંઈ રેકોર્ડ થયું નથી. ફરી પ્રયત્ન કરો.",
+    "d_who-is": "આ કોણ છે?",
+    "d_phone-call": "ફોન પર",
+    "d_birthday-invite": "જન્મદિવસનું આમંત્રણ",
+    "d_weather-chat": "હવામાનની વાતો",
+    "d_family-talk": "પરિવારની વાતો",
+    "d_new-in-town": "શહેરમાં નવા",
+    "d_make-plans": "યોજના બનાવવી",
+    "d_apology": "માફી માંગવી",
+    "d_language-swap": "ભાષા વિનિમય",
+    "d_farewell": "વિદાય લેવી",
+    "d_breakfast": "નાસ્તો",
+    "d_street-food": "સ્ટ્રીટ ફૂડ",
+    "d_chai-stall": "ચાની દુકાને",
+    "d_veg-order": "શાકાહારી ઓર્ડર",
+    "d_allergy": "ખોરાકની એલર્જી",
+    "d_pay-bill": "બિલ ચૂકવવું",
+    "d_home-dinner": "ઘરે રાત્રિભોજન",
+    "d_fruit-seller": "ફળ ખરીદવાં",
+    "d_buy-ticket": "ટિકિટ ખરીદવી",
+    "d_train-info": "ટ્રેનની માહિતી",
+    "d_taxi-ride": "ટૅક્સી લેવી",
+    "d_bus-ride": "બસમાં",
+    "d_lost-way": "રસ્તો ભૂલવો",
+    "d_check-in": "હોટેલ ચેક-ઇન",
+    "d_check-out": "હોટેલ ચેક-આઉટ",
+    "d_sightseeing": "ફરવા જવું",
+    "d_auto-rickshaw": "ઓટો રિક્ષાની સવારી",
+    "d_ask-time": "સમય પૂછવો",
+    "d_clothes": "કપડાં ખરીદવાં",
+    "d_bargain": "ભાવતાલ",
+    "d_pharmacy-buy": "દવાની દુકાને",
+    "d_grocery": "કરિયાણાની ખરીદી",
+    "d_sim-card": "સિમ કાર્ડ લેવું",
+    "d_exchange": "વસ્તુ બદલવી",
+    "d_appointment": "ડૉક્ટરની અપૉઇન્ટમેન્ટ",
+    "d_stomach": "પેટની તકલીફ",
+    "d_cold-fever": "શરદી-તાવ",
+    "d_emergency": "કટોકટી",
+    "d_medicine-buy": "દવા ખરીદવી",
+    "d_interview": "નોકરીનો ઇન્ટરવ્યૂ",
+    "d_team-meeting": "ટીમ મીટિંગ",
+    "d_office-call": "ઓફિસનો ફોન",
+    "d_lunch-colleague": "સહકર્મી સાથે લંચ",
+    "d_it-help": "ટેક સહાય",
+    "d_guest": "મહેમાનનું સ્વાગત",
+    "d_neighbour": "પાડોશીને મળવું",
+    "d_repairs": "ઘરની મરામત",
+    "d_rent": "ભાડાની વાત",
+    "d_delivery": "ડિલિવરી",
+    "d_rainy-day": "વરસાદનો દિવસ",
+    "grp_all": "બધી",
+    "grp_social": "સામાજિક",
+    "grp_food": "ખોરાક",
+    "grp_travel": "મુસાફરી",
+    "grp_shop": "ખરીદી",
+    "grp_health": "સ્વાસ્થ્ય",
+    "grp_work": "કામ",
+    "grp_home": "ઘર",
+    "drGroups": "વાર્તાલાપ જૂથો",
+    "nav_kids": "બાળકો",
+    "nav_proverbs": "કહેવતો",
+    "nav_twisters": "જીભ-વળણ",
+    "cKids": "બાળકો માટે ચિત્રોની રમતો: પ્રાણી, ફળ, રંગ અને ઘણું બધું.",
+    "cProverbs": "દરરોજ એક કહેવત કે રૂઢિપ્રયોગ, તેના અર્થ સાથે.",
+    "cTwisters": "જીભની કસરત માટે જીભ-વળણ વાક્યો, ધીમા અને ઝડપી અવાજ સાથે.",
+    "prH": "કહેવતો અને રૂઢિપ્રયોગો",
+    "prLede": "તમે જે ભાષા શીખો છો તેમાં રોજ એક કહેવત. સાંભળવા ટૅપ કરો.",
+    "prToday": "આજની કહેવત",
+    "prAnother": "બીજી કહેવત",
+    "prMeaning": "અર્થ",
+    "prP": "કહેવત",
+    "prI": "રૂઢિપ્રયોગ",
+    "prAll": "બધી કહેવતો",
+    "twH": "જીભ-વળણ વાક્યો",
+    "twLede": "પહેલાં ધીમેથી, પછી ઝડપથી બોલો. સરખામણી માટે રેકોર્ડ કરો.",
+    "twSlow": "ધીમું",
+    "twNormal": "સામાન્ય",
+    "twFast": "ઝડપી",
+    "kdH": "બાળકોનો ખૂણો",
+    "kdLede": "મોટા ચિત્રો, ટૂંકી રમતો, કોઈ દબાણ નહીં. સાંભળો, ટૅપ કરો, તારા મેળવો.",
+    "kdG1": "ચિત્ર પર ટૅપ કરો",
+    "kdG2": "આ શું છે?",
+    "kdG3": "યાદશક્તિની જોડી",
+    "kdAll": "બધું",
+    "kdC_animals": "પ્રાણીઓ",
+    "kdC_fruits": "ફળો",
+    "kdC_colours": "રંગો",
+    "kdC_body": "શરીર",
+    "kdC_things": "વસ્તુઓ",
+    "kdListen": "સાંભળો, પછી સાચા ચિત્ર પર ટૅપ કરો.",
+    "kdWhat": "સાચા શબ્દ પર ટૅપ કરો.",
+    "kdMatch": "મેળ ખાતી જોડી શોધો.",
+    "kdStars": "તારા: {n}",
+    "kdWell": "શાબાશ!",
+    "kdAgain": "ફરી રમો",
+    "kdBack": "બધી રમતો",
+    "kdMode": "બાળ મોડ",
+    "kdModeHint": "મોટા બટન અને સરળ મેનુ.",
+    "wsH": "જોઈને શીખવા માટે વીડિયો",
+    "wsLede": "Bhasha આને ચલાવતું નથી. દરેક લિંક નવા ટૅબમાં {l} માટે YouTube શોધ ખોલે છે.",
+    "wsT_begin": "શરૂઆતના પાઠ",
+    "wsT_alpha": "વર્ણમાળા અને ઉચ્ચાર",
+    "wsT_kids": "બાળગીતો અને કવિતાઓ",
+    "wsT_story": "ટૂંકી વાર્તાઓ",
+    "wsT_talk": "રોજિંદી વાતચીત",
+    "wsT_cook": "સહજ બોલીમાં રસોઈ",
+    "wsT_travel": "મુસાફરી અને શેરી વ્લૉગ",
+    "wsT_school": "શાળાના પાઠ: વિજ્ઞાન અને ગણિત",
+    "wsT_grammar": "વ્યાકરણની સમજૂતી",
+    "wsCh": "શોધવા માટે ચેનલોનાં નામ",
+    "wsTip": "સૂચન: YouTube પર વીડિયો ખોલી, ટ્રાન્સક્રિપ્ટ કૉપિ કરી, શબ્દો શીખવા {r} માં પેસ્ટ કરો.",
+    "vcVoice": "અવાજ",
+    "vcSpeed": "ઝડપ",
+    "vcAuto": "સ્વચાલિત (ઉપલબ્ધમાં શ્રેષ્ઠ)",
+    "vcDefault": "સામાન્ય ઝડપ"
   };
   I.as = {
     "skip": "মূল বিষয়লৈ যাওক",
@@ -4621,7 +6135,7 @@
     "cWords": "আপুনি সংৰক্ষণ কৰা সকলো, CSV, Anki আৰু বেকআপ ফাইলত ৰপ্তানিৰ সৈতে।",
     "cReview": "পাহৰি যোৱাৰ আগতে উভতি অহা ফ্লেছকাৰ্ড।",
     "cScripts": "আখৰ, স্বৰচিহ্ন আৰু সংখ্যা। শুনক, কুইজ খেলক, লিখি অভ্যাস কৰক।",
-    "cPhrases": "তেৰটা ভাষাত ২৫০টা দৈনন্দিন বাক্যাংশ, ৰোমান উচ্চাৰণ আৰু মাতৰ সৈতে।",
+    "cPhrases": "তেৰটা ভাষাত ৪২০টা দৈনন্দিন বাক্যাংশ, ৰোমান উচ্চাৰণ আৰু মাতৰ সৈতে।",
     "cSay": "ইংৰাজীত বাক্য লিখক আৰু তেলুগু, হিন্দী, কন্নড়, তামিল, মালয়ালম, বঙালী, মাৰাঠী, গুজৰাটী, অসমীয়া, কোৰিয়ান, স্পেনিছ, জাৰ্মান বা ফৰাচীত শুনক।",
     "dueCount": "{n}টা বাকী",
     "howH": "ই কেনেকৈ কাম কৰে",
@@ -4876,12 +6390,127 @@
     "pronDone": "নিজৰ ৰেকৰ্ডিং শুনক বা নমুনাৰ লগত তুলনা কৰক।",
     "pronDenied": "মাইক্ৰ’ফোন অৱৰুদ্ধ। অনুশীলনৰ বাবে ব্ৰাউজাৰৰ ছেটিংছত অনুমতি দিয়ক।",
     "pronNoMic": "এই ব্ৰাউজাৰে অডিঅ’ ৰেকৰ্ড কৰিব নোৱাৰে।",
-    "pronEmpty": "একো ৰেকৰ্ড হোৱা নাই। আকৌ চেষ্টা কৰক।"
+    "pronEmpty": "একো ৰেকৰ্ড হোৱা নাই। আকৌ চেষ্টা কৰক।",
+    "d_who-is": "এওঁ কোন?",
+    "d_phone-call": "ফোনত",
+    "d_birthday-invite": "জন্মদিনৰ নিমন্ত্ৰণ",
+    "d_weather-chat": "বতৰৰ কথা",
+    "d_family-talk": "পৰিয়ালৰ কথা",
+    "d_new-in-town": "নগৰলৈ নতুন",
+    "d_make-plans": "পৰিকল্পনা কৰা",
+    "d_apology": "ক্ষমা খোজা",
+    "d_language-swap": "ভাষা বিনিময়",
+    "d_farewell": "বিদায় লোৱা",
+    "d_breakfast": "ৰাতিপুৱাৰ আহাৰ",
+    "d_street-food": "পথৰ খাদ্য",
+    "d_chai-stall": "চাহৰ দোকানত",
+    "d_veg-order": "নিৰামিষ অৰ্ডাৰ",
+    "d_allergy": "খাদ্যৰ এলাৰ্জি",
+    "d_pay-bill": "বিল পৰিশোধ",
+    "d_home-dinner": "ঘৰত নিশাৰ আহাৰ",
+    "d_fruit-seller": "ফল কিনা",
+    "d_buy-ticket": "টিকিট কিনা",
+    "d_train-info": "ৰেলৰ তথ্য",
+    "d_taxi-ride": "টেক্সি লোৱা",
+    "d_bus-ride": "বাছত",
+    "d_lost-way": "বাট হেৰুওৱা",
+    "d_check-in": "হোটেল চেক-ইন",
+    "d_check-out": "হোটেল চেক-আউট",
+    "d_sightseeing": "ভ্ৰমণ",
+    "d_auto-rickshaw": "অটো ৰিক্সাত যোৱা",
+    "d_ask-time": "সময় সোধা",
+    "d_clothes": "কাপোৰ কিনা",
+    "d_bargain": "দৰ-দাম কৰা",
+    "d_pharmacy-buy": "ঔষধৰ দোকানত",
+    "d_grocery": "বজাৰ কৰা",
+    "d_sim-card": "ছিম কাৰ্ড লোৱা",
+    "d_exchange": "বস্তু সলনি কৰা",
+    "d_appointment": "ডাক্তৰৰ এপইণ্টমেণ্ট",
+    "d_stomach": "পেটৰ সমস্যা",
+    "d_cold-fever": "সৰ্দি-জ্বৰ",
+    "d_emergency": "জৰুৰীকালীন অৱস্থা",
+    "d_medicine-buy": "ঔষধ কিনা",
+    "d_interview": "চাকৰিৰ সাক্ষাৎকাৰ",
+    "d_team-meeting": "টিম বৈঠক",
+    "d_office-call": "অফিচৰ ফোন",
+    "d_lunch-colleague": "সহকৰ্মীৰ লগত দুপৰীয়াৰ আহাৰ",
+    "d_it-help": "প্ৰযুক্তি সহায়",
+    "d_guest": "অতিথিক আদৰা",
+    "d_neighbour": "চুবুৰীয়াক লগ পোৱা",
+    "d_repairs": "ঘৰ মেৰামতি",
+    "d_rent": "ভাড়াৰ কথা",
+    "d_delivery": "ডেলিভাৰী",
+    "d_rainy-day": "বৰষুণৰ দিন",
+    "grp_all": "সকলো",
+    "grp_social": "সামাজিক",
+    "grp_food": "খাদ্য",
+    "grp_travel": "ভ্ৰমণ",
+    "grp_shop": "কিনা-বেচা",
+    "grp_health": "স্বাস্থ্য",
+    "grp_work": "কাম",
+    "grp_home": "ঘৰ",
+    "drGroups": "কথোপকথনৰ বিভাগ",
+    "nav_kids": "শিশু",
+    "nav_proverbs": "জতুৱা ঠাৰ",
+    "nav_twisters": "জিভা-ঘূৰণী",
+    "cKids": "শিশুৰ বাবে ছবিৰ খেল: জন্তু, ফল, ৰং আৰু বহুতো।",
+    "cProverbs": "প্ৰতিদিনে এটা জতুৱা ঠাৰ বা বাগধাৰা, অৰ্থসহ।",
+    "cTwisters": "জিভাৰ অনুশীলনৰ বাবে জিভা-ঘূৰণী বাক্য, লাহে আৰু দ্ৰুত অডিঅ’সহ।",
+    "prH": "জতুৱা ঠাৰ আৰু বাগধাৰা",
+    "prLede": "আপুনি শিকি থকা ভাষাত প্ৰতিদিনে এটা কথা। শুনিবলৈ টিপক।",
+    "prToday": "আজিৰ জতুৱা ঠাৰ",
+    "prAnother": "আন এটা জতুৱা ঠাৰ",
+    "prMeaning": "অৰ্থ",
+    "prP": "জতুৱা ঠাৰ",
+    "prI": "বাগধাৰা",
+    "prAll": "সকলো জতুৱা ঠাৰ",
+    "twH": "জিভা-ঘূৰণী বাক্য",
+    "twLede": "প্ৰথমে লাহে লাহে, তাৰ পিছত দ্ৰুতকৈ কওক। তুলনাৰ বাবে ৰেকৰ্ড কৰক।",
+    "twSlow": "লাহে",
+    "twNormal": "সাধাৰণ",
+    "twFast": "দ্ৰুত",
+    "kdH": "শিশুৰ চুক",
+    "kdLede": "ডাঙৰ ছবি, চুটি খেল, কোনো চাপ নাই। শুনক, টিপক, তৰা গোটাওক।",
+    "kdG1": "ছবিত টিপক",
+    "kdG2": "এইটো কি?",
+    "kdG3": "স্মৃতি মিলোৱা",
+    "kdAll": "সকলো",
+    "kdC_animals": "জন্তু",
+    "kdC_fruits": "ফল",
+    "kdC_colours": "ৰং",
+    "kdC_body": "শৰীৰ",
+    "kdC_things": "বস্তু",
+    "kdListen": "শুনক, তাৰ পিছত শুদ্ধ ছবিত টিপক।",
+    "kdWhat": "শুদ্ধ শব্দত টিপক।",
+    "kdMatch": "মিলা যোৰা বিচাৰক।",
+    "kdStars": "তৰা: {n}",
+    "kdWell": "বঢ়িয়া!",
+    "kdAgain": "পুনৰ খেলক",
+    "kdBack": "সকলো খেল",
+    "kdMode": "শিশু মোড",
+    "kdModeHint": "ডাঙৰ বুটাম আৰু সহজ মেনু।",
+    "wsH": "চাই শিকিবলৈ ভিডিঅ’",
+    "wsLede": "Bhasha এইবোৰ নচলায়। প্ৰতিটো লিংকে নতুন টেবত {l}ৰ বাবে YouTube সন্ধান খোলে।",
+    "wsT_begin": "আৰম্ভণিৰ পাঠ",
+    "wsT_alpha": "বৰ্ণমালা আৰু উচ্চাৰণ",
+    "wsT_kids": "শিশুৰ গান আৰু কবিতা",
+    "wsT_story": "চুটি সাধু",
+    "wsT_talk": "দৈনন্দিন কথা-বতৰা",
+    "wsT_cook": "স্বাভাৱিক কথাৰে ৰন্ধা-বঢ়া",
+    "wsT_travel": "ভ্ৰমণ আৰু পথৰ ভ্লগ",
+    "wsT_school": "বিদ্যালয়ৰ পাঠ: বিজ্ঞান আৰু গণিত",
+    "wsT_grammar": "ব্যাকৰণ ব্যাখ্যা",
+    "wsCh": "বিচাৰিবলৈ চেনেলৰ নাম",
+    "wsTip": "পৰামৰ্শ: YouTubeত ভিডিঅ’ খুলি ট্ৰান্সক্ৰিপ্ট কপি কৰি শব্দ শিকিবলৈ {r}ত পেষ্ট কৰক।",
+    "vcVoice": "কণ্ঠ",
+    "vcSpeed": "গতি",
+    "vcAuto": "স্বয়ংক্ৰিয় (উপলব্ধৰ ভিতৰত শ্ৰেষ্ঠ)",
+    "vcDefault": "ডিফল্ট গতি"
   };
 })(window.B = window.B || {});
 
 ;
-/* Bhasha phrasebook, part 2: French, Gujarati and Assamese for the first 100 phrases, plus 150 more phrases
+/* Bhasha phrasebook, part 2: French, Gujarati and Assamese for the first 100 phrases, plus 320 more phrases
    (conversation lines, feelings, work, home, travel and more) in all 13 languages.
    Drafts: must be reviewed by native speakers (see README). Generated; edit with care. */
 (function (B) {
@@ -4890,7 +6519,7 @@
   var OLD3 = {"hello": ["Bonjour", "નમસ્તે", "নমস্কাৰ"], "morning": ["Bonne matinée", "સુપ્રભાત", "শুভ ৰাতিপুৱা"], "night": ["Bonne nuit", "શુભ રાત્રિ", "শুভ ৰাতি"], "bye": ["À bientôt", "ફરી મળીશું", "পুনৰ লগ পাম"], "thanks": ["Merci", "આભાર", "ধন্যবাদ"], "welcome": ["Je vous en prie", "કંઈ વાંધો નહીં", "একো কথা নাই"], "please": ["S’il vous plaît", "મહેરબાની કરીને", "অনুগ্ৰহ কৰি"], "sorry": ["Désolé", "માફ કરશો", "ক্ষমা কৰিব"], "yes": ["Oui", "હા", "হয়"], "no": ["Non", "ના", "নহয়"], "name-q": ["Comment vous appelez-vous ?", "તમારું નામ શું છે?", "আপোনাৰ নাম কি?"], "name-is": ["Je m’appelle …", "મારું નામ … છે.", "মোৰ নাম …"], "from-q": ["D’où venez-vous ?", "તમે ક્યાંથી આવો છો?", "আপুনি ক’ৰ পৰা আহিছে?"], "from-india": ["Je viens de l’Inde.", "હું ભારતથી આવ્યો છું.", "মই ভাৰতৰ পৰা আহিছোঁ।"], "nice": ["Enchanté de faire votre connaissance.", "તમને મળીને આનંદ થયો.", "আপোনাক লগ পাই ভাল লাগিল।"], "how": ["Comment allez-vous ?", "તમે કેમ છો?", "আপুনি কেনে আছে?"], "fine": ["Je vais bien.", "હું મજામાં છું.", "মই ভালে আছোঁ।"], "dont-understand": ["Je ne comprends pas.", "મને સમજાયું નહીં.", "মই বুজি পোৱা নাই।"], "english-q": ["Parlez-vous anglais ?", "શું તમે અંગ્રેજી બોલો છો?", "আপুনি ইংৰাজী কয়নে?"], "slowly": ["Parlez lentement, s’il vous plaît.", "મહેરબાની કરીને ધીમે બોલો.", "অনুগ্ৰহ কৰি লাহে লাহে কওক।"], "price": ["Combien ça coûte ?", "આની કિંમત કેટલી છે?", "এইটোৰ দাম কিমান?"], "toilet": ["Où sont les toilettes ?", "શૌચાલય ક્યાં છે?", "শৌচালয় ক’ত?"], "help": ["J’ai besoin d’aide.", "મને મદદની જરૂર છે.", "মোক সহায় লাগে।"], "water": ["De l’eau, s’il vous plaît.", "મહેરબાની કરીને પાણી આપો.", "অনুগ্ৰহ কৰি পানী দিয়ক।"], "hungry": ["J’ai faim.", "મને ભૂખ લાગી છે.", "মোৰ ভোক লাগিছে।"], "delicious": ["Le repas est délicieux.", "ભોજન ખૂબ સ્વાદિષ્ટ છે.", "আহাৰ বহুত সুস্বাদু।"], "bus": ["Où est l’arrêt de bus ?", "બસ સ્ટોપ ક્યાં છે?", "বাছ ষ্টপ ক’ত?"], "doctor": ["Appelez un médecin, s’il vous plaît.", "મહેરબાની કરીને ડૉક્ટરને બોલાવો.", "অনুগ্ৰহ কৰি ডাক্তৰ মাতক।"], "time": ["Quelle heure est-il ?", "અત્યારે કેટલા વાગ્યા છે?", "এতিয়া কিমান বাজিছে?"], "learn": ["Je veux apprendre le français.", "મારે ગુજરાતી શીખવી છે.", "মই অসমীয়া শিকিব বিচাৰোঁ।"], "today": ["Aujourd’hui", "આજે", "আজি"], "tomorrow": ["Demain", "કાલે", "কাইলৈ"], "yesterday": ["Hier", "ગઈકાલે", "কালি"], "n-one": ["Un", "એક", "এক"], "n-two": ["Deux", "બે", "দুই"], "n-three": ["Trois", "ત્રણ", "তিনি"], "n-four": ["Quatre", "ચાર", "চাৰি"], "n-five": ["Cinq", "પાંચ", "পাঁচ"], "n-six": ["Six", "છ", "ছয়"], "n-seven": ["Sept", "સાત", "সাত"], "n-eight": ["Huit", "આઠ", "আঠ"], "n-nine": ["Neuf", "નવ", "ন"], "n-ten": ["Dix", "દસ", "দহ"], "mon": ["Lundi", "સોમવાર", "সোমবাৰ"], "tue": ["Mardi", "મંગળવાર", "মঙ্গলবাৰ"], "wed": ["Mercredi", "બુધવાર", "বুধবাৰ"], "thu": ["Jeudi", "ગુરુવાર", "বৃহস্পতিবাৰ"], "fri": ["Vendredi", "શુક્રવાર", "শুক্ৰবাৰ"], "sat": ["Samedi", "શનિવાર", "শনিবাৰ"], "sun": ["Dimanche", "રવિવાર", "দেওবাৰ"], "rice": ["Du riz", "ભાત", "ভাত"], "bread": ["Du pain", "બ્રેડ", "পাউৰুটি"], "tea": ["Du thé", "ચા", "চাহ"], "coffee": ["Du café", "કૉફી", "কফি"], "milk": ["Du lait", "દૂધ", "গাখীৰ"], "veg": ["Des légumes", "શાકભાજી", "পাচলি"], "fruit": ["Des fruits", "ફળ", "ফল"], "vegetarian": ["Je suis végétarien.", "હું શાકાહારી છું.", "মই নিৰামিষভোজী।"], "notspicy": ["Pas épicé, s’il vous plaît.", "મહેરબાની કરીને તીખું નહીં.", "অনুগ্ৰহ কৰি জলফাই নিদিব।"], "bill": ["L’addition, s’il vous plaît.", "મહેરબાની કરીને બિલ આપો.", "অনুগ্ৰহ কৰি বিলটো দিয়ক।"], "station": ["Où est la gare ?", "રેલવે સ્ટેશન ક્યાં છે?", "ৰেল ষ্টেচন ক’ত?"], "airport": ["Où est l’aéroport ?", "એરપોર્ટ ક્યાં છે?", "বিমানবন্দৰ ক’ত?"], "hotel": ["Où est l’hôtel ?", "હોટેલ ક્યાં છે?", "হোটেল ক’ত?"], "taxi": ["J’ai besoin d’un taxi.", "મને ટેક્સી જોઈએ છે.", "মোক এখন টেক্সী লাগে।"], "far": ["C’est à quelle distance ?", "કેટલું દૂર છે?", "কিমান দূৰ?"], "left": ["Tournez à gauche.", "ડાબી બાજુ વળો.", "বাওঁফালে ঘূৰক।"], "right": ["Tournez à droite.", "જમણી બાજુ વળો.", "সোঁফালে ঘূৰক।"], "straight": ["Allez tout droit.", "સીધા જાઓ.", "পোনে যাওক।"], "stop": ["Arrêtez-vous ici, s’il vous plaît.", "મહેરબાની કરીને અહીં રોકો.", "অনুগ্ৰহ কৰি ইয়াতে ৰখাওক।"], "ticket": ["Un billet, s’il vous plaît.", "મહેરબાની કરીને એક ટિકિટ આપો.", "অনুগ্ৰহ কৰি এখন টিকট দিয়ক।"], "hospital": ["Où est l’hôpital ?", "હોસ્પિટલ ક્યાં છે?", "চিকিৎসালয় ক’ত?"], "lost": ["Je suis perdu.", "હું રસ્તો ભૂલી ગયો છું.", "মই বাট হেৰুৱালোঁ।"], "expensive": ["C’est trop cher.", "આ બહુ મોંઘું છે.", "এইটো বেছি দামী।"], "reduce": ["Pouvez-vous baisser le prix ?", "શું તમે ભાવ ઘટાડી શકો?", "আপুনি দাম অলপ কমাব পাৰিবনে?"], "take": ["Je prends celui-ci.", "હું આ લઈશ.", "মই এইটো ল’ম।"], "card": ["Acceptez-vous les cartes ?", "શું તમે કાર્ડ સ્વીકારો છો?", "আপুনি কাৰ্ড লয়নে?"], "market": ["Où est le marché ?", "બજાર ક્યાં છે?", "বজাৰ ক’ত?"], "another": ["Montrez-m’en un autre, s’il vous plaît.", "મહેરબાની કરીને બીજું બતાવો.", "অনুগ্ৰহ কৰি আন এটা দেখুৱাওক।"], "sick": ["Je ne me sens pas bien.", "મારી તબિયત સારી નથી.", "মোৰ শৰীৰ ভাল নহয়।"], "headache": ["J’ai mal à la tête.", "મને માથું દુખે છે.", "মোৰ মূৰ বিষাইছে।"], "police": ["Appelez la police, s’il vous plaît.", "મહેરબાની કરીને પોલીસને બોલાવો.", "অনুগ্ৰহ কৰি আৰক্ষী মাতক।"], "ambulance": ["Appelez une ambulance, s’il vous plaît.", "મહેરબાની કરીને એમ્બ્યુલન્સ બોલાવો.", "অনুগ্ৰহ কৰি এম্বুলেন্স মাতক।"], "medicine": ["J’ai besoin de médicaments.", "મને દવા જોઈએ છે.", "মোক ঔষধ লাগে।"], "hurts": ["J’ai mal ici.", "અહીં દુખે છે.", "ইয়াত বিষাইছে।"], "love": ["Je t’aime.", "હું તને પ્રેમ કરું છું.", "মই তোমাক ভালপাওঁ।"], "happy": ["Je suis heureux.", "હું ખુશ છું.", "মই সুখী।"], "tired": ["Je suis fatigué.", "હું થાકી ગયો છું.", "মই ভাগৰুৱা অনুভৱ কৰিছোঁ।"], "friend": ["Voici mon ami.", "આ મારો મિત્ર છે.", "ইও মোৰ বন্ধু।"], "family": ["Voici ma famille.", "આ મારો પરિવાર છે.", "এয়া মোৰ পৰিয়াল।"], "congrats": ["Félicitations !", "અભિનંદન!", "অভিনন্দন!"], "birthday": ["Joyeux anniversaire !", "જન્મદિવસની શુભેચ્છાઓ!", "জন্মদিনৰ শুভেচ্ছা!"], "luck": ["Bonne chance !", "શુભેચ્છાઓ!", "শুভকামনা!"], "n-eleven": ["Onze", "અગિયાર", "এঘাৰ"], "n-twelve": ["Douze", "બાર", "বাৰ"], "n-fifteen": ["Quinze", "પંદર", "পোন্ধৰ"], "n-twenty": ["Vingt", "વીસ", "বিশ"], "n-thirty": ["Trente", "ત્રીસ", "ত্ৰিশ"], "n-fifty": ["Cinquante", "પચાસ", "পঞ্চাশ"], "n-hundred": ["Cent", "સો", "এশ"], "n-thousand": ["Mille", "હજાર", "হাজাৰ"]};
   B.PHRASES.forEach(function (p) { var r = OLD3[p.id]; if (r) L3.forEach(function (l, i) { p[l] = r[i]; }); });
   var NL = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'ko', 'es', 'de', 'fr', 'gu', 'as'];
-  var NEW = [["little", "talk", "Only a little.", "కొంచెం మాత్రమే.", "थोड़ा-सा ही।", "ಸ್ವಲ್ಪ ಮಾತ್ರ.", "கொஞ்சம் தான்.", "കുറച്ച് മാത്രം.", "অল্প একটু।", "थोडंसंच.", "조금만요.", "Solo un poco.", "Nur ein bisschen.", "Seulement un peu.", "થોડું જ.", "অলপহে।"], ["nice-too", "talk", "Nice to meet you too.", "మిమ్మల్ని కలవడం నాకూ సంతోషం.", "मुझे भी आपसे मिलकर खुशी हुई।", "ನನಗೂ ನಿಮ್ಮನ್ನು ಭೇಟಿಯಾಗಿ ಸಂತೋಷವಾಯಿತು.", "உங்களைச் சந்தித்ததில் எனக்கும் மகிழ்ச்சி.", "നിങ്ങളെ കണ്ടതിൽ എനിക്കും സന്തോഷം.", "আমারও আপনার সঙ্গে দেখা হয়ে ভালো লাগল।", "मलाही तुम्हाला भेटून आनंद झाला.", "저도 만나서 반갑습니다.", "Encantado de conocerle también.", "Freut mich auch.", "Moi aussi, enchanté.", "મને પણ તમને મળીને આનંદ થયો.", "মোকো আপোনাক লগ পাই ভাল লাগিল।"], ["table-how-many", "food", "How many people?", "ఎంతమంది?", "कितने लोग हैं?", "ಎಷ್ಟು ಜನ?", "எத்தனை பேர்?", "എത്ര പേരുണ്ട്?", "কতজন?", "किती जण आहात?", "몇 분이세요?", "¿Cuántas personas?", "Für wie viele Personen?", "Combien de personnes ?", "કેટલા લોકો છો?", "কিমান জন?"], ["table-two", "food", "A table for two, please.", "దయచేసి ఇద్దరికి టేబుల్ ఇవ్వండి.", "कृपया दो लोगों के लिए मेज़ दीजिए।", "ದಯವಿಟ್ಟು ಇಬ್ಬರಿಗೆ ಟೇಬಲ್ ಕೊಡಿ.", "தயவுசெய்து இருவருக்கு ஒரு மேசை வேண்டும்.", "ദയവായി രണ്ടുപേർക്ക് ഒരു മേശ വേണം.", "দয়া করে দুজনের জন্য একটা টেবিল দিন।", "कृपया दोघांसाठी टेबल द्या.", "두 명 자리로 부탁합니다.", "Una mesa para dos, por favor.", "Einen Tisch für zwei, bitte.", "Une table pour deux, s’il vous plaît.", "મહેરબાની કરીને બે જણ માટે ટેબલ આપો.", "অনুগ্ৰহ কৰি দুজনৰ বাবে এখন টেবুল দিয়ক।"], ["drink-q", "food", "What would you like to drink?", "మీరు ఏం తాగుతారు?", "आप क्या पीना चाहेंगे?", "ನೀವು ಏನು ಕುಡಿಯುತ್ತೀರಿ?", "நீங்கள் என்ன குடிக்க விரும்புகிறீர்கள்?", "നിങ്ങൾ എന്താണ് കുടിക്കുക?", "আপনি কী পান করবেন?", "तुम्ही काय प्याल?", "음료는 무엇으로 하시겠어요?", "¿Qué desea beber?", "Was möchten Sie trinken?", "Que souhaitez-vous boire ?", "તમે શું પીશો?", "আপুনি কি পান কৰিব?"], ["eat-q", "food", "What would you like to eat?", "మీరు ఏం తింటారు?", "आप क्या खाना चाहेंगे?", "ನೀವು ಏನು ತಿನ್ನುತ್ತೀರಿ?", "நீங்கள் என்ன சாப்பிட விரும்புகிறீர்கள்?", "നിങ്ങൾ എന്താണ് കഴിക്കുക?", "আপনি কী খাবেন?", "तुम्ही काय खाणार?", "무엇을 드시겠어요?", "¿Qué desea comer?", "Was möchten Sie essen?", "Que souhaitez-vous manger ?", "તમે શું જમશો?", "আপুনি কি খাব?"], ["order-rice", "food", "I would like rice, please.", "నాకు అన్నం కావాలి.", "मुझे चावल चाहिए।", "ನನಗೆ ಅನ್ನ ಬೇಕು.", "எனக்கு சாதம் வேண்டும்.", "എനിക്ക് ചോറ് വേണം.", "আমি ভাত নেব।", "मला भात हवा आहे.", "밥을 주세요.", "Quisiera arroz, por favor.", "Ich hätte gern Reis.", "Je voudrais du riz, s’il vous plaît.", "મને ભાત જોઈએ છે.", "মোক ভাত লাগে।"], ["spicy-q", "food", "Would you like it spicy?", "కారంగా కావాలా?", "क्या आपको तीखा चाहिए?", "ಖಾರ ಬೇಕಾ?", "காரமாக வேண்டுமா?", "എരിവ് വേണോ?", "ঝাল চান?", "तिखट हवे का?", "맵게 해 드릴까요?", "¿Lo quiere picante?", "Möchten Sie es scharf?", "Vous le voulez épicé ?", "તીખું જોઈએ છે?", "জলফাই দিম নেকি?"], ["anything-else", "food", "Anything else?", "ఇంకేమైనా కావాలా?", "और कुछ चाहिए?", "ಇನ್ನೇನಾದರೂ ಬೇಕಾ?", "வேறு ஏதாவது வேண்டுமா?", "വേറെ എന്തെങ്കിലും വേണോ?", "আর কিছু লাগবে?", "आणखी काही हवे का?", "더 필요하신 것 있으세요?", "¿Algo más?", "Sonst noch etwas?", "Autre chose ?", "બીજું કંઈ જોઈએ છે?", "আৰু একো লাগিবনে?"], ["need-help-q", "talk", "Do you need help?", "మీకు సహాయం కావాలా?", "क्या आपको मदद चाहिए?", "ನಿಮಗೆ ಸಹಾಯ ಬೇಕಾ?", "உங்களுக்கு உதவி வேண்டுமா?", "നിങ്ങൾക്ക് സഹായം വേണോ?", "আপনার কি সাহায্য লাগবে?", "तुम्हाला मदत हवी आहे का?", "도움이 필요하세요?", "¿Necesita ayuda?", "Brauchen Sie Hilfe?", "Avez-vous besoin d’aide ?", "શું તમને મદદ જોઈએ છે?", "আপোনাক সহায় লাগিবনে?"], ["where-go", "travel", "Where do you want to go?", "మీరు ఎక్కడికి వెళ్ళాలి?", "आप कहाँ जाना चाहते हैं?", "ನೀವು ಎಲ್ಲಿಗೆ ಹೋಗಬೇಕು?", "நீங்கள் எங்கே போக வேண்டும்?", "നിങ്ങൾക്ക് എവിടെ പോകണം?", "আপনি কোথায় যেতে চান?", "तुम्हाला कुठे जायचे आहे?", "어디로 가고 싶으세요?", "¿A dónde quiere ir?", "Wohin möchten Sie gehen?", "Où voulez-vous aller ?", "તમારે ક્યાં જવું છે?", "আপুনি ক’লৈ যাব বিচাৰে?"], ["straight-then-left", "travel", "Go straight, then turn left.", "సూటిగా వెళ్ళి, తర్వాత ఎడమవైపు తిరగండి.", "सीधे जाइए, फिर बाएँ मुड़िए।", "ನೇರವಾಗಿ ಹೋಗಿ, ನಂತರ ಎಡಕ್ಕೆ ತಿರುಗಿ.", "நேராகப் போய், பிறகு இடதுபுறம் திரும்புங்கள்.", "നേരെ പോയി, പിന്നെ ഇടത്തോട്ട് തിരിയുക.", "সোজা যান, তারপর বাঁয়ে ঘুরুন।", "सरळ जा, मग डावीकडे वळा.", "직진한 다음 왼쪽으로 도세요.", "Siga recto y luego gire a la izquierda.", "Gehen Sie geradeaus und dann links.", "Allez tout droit, puis tournez à gauche.", "સીધા જાઓ, પછી ડાબી બાજુ વળો.", "পোনে যাওক, তাৰ পিছত বাওঁফালে ঘূৰক।"], ["five-min-walk", "travel", "It is five minutes on foot.", "నడిస్తే ఐదు నిమిషాలు పడుతుంది.", "पैदल पाँच मिनट लगते हैं।", "ನಡೆದರೆ ಐದು ನಿಮಿಷ.", "நடந்தால் ஐந்து நிமிடம்.", "നടന്നാൽ അഞ്ച് മിനിറ്റ്.", "হেঁটে পাঁচ মিনিট লাগে।", "चालत पाच मिनिटे लागतात.", "걸어서 5분 걸려요.", "Está a cinco minutos andando.", "Es sind fünf Minuten zu Fuß.", "C’est à cinq minutes à pied.", "ચાલીને પાંચ મિનિટ લાગે છે.", "খোজ কাঢ়ি গ’লে পাঁচ মিনিট লাগে।"], ["help-you-q", "shop", "Can I help you?", "నేను మీకు సహాయం చేయగలనా?", "क्या मैं आपकी मदद कर सकता हूँ?", "ನಾನು ನಿಮಗೆ ಸಹಾಯ ಮಾಡಲೇ?", "நான் உங்களுக்கு உதவலாமா?", "ഞാൻ സഹായിക്കണോ?", "আমি কি আপনাকে সাহায্য করতে পারি?", "मी तुम्हाला मदत करू का?", "도와드릴까요?", "¿En qué puedo ayudarle?", "Kann ich Ihnen helfen?", "Puis-je vous aider ?", "હું તમારી શું મદદ કરી શકું?", "মই আপোনাক সহায় কৰিব পাৰোঁনে?"], ["price-500", "shop", "It is five hundred rupees.", "ఐదు వందల రూపాయలు.", "पाँच सौ रुपये हैं।", "ಐನೂರು ರೂಪಾಯಿ.", "ஐந்நூறு ரூபாய்.", "അഞ്ഞൂറ് രൂപയാണ്.", "পাঁচশো টাকা।", "पाचशे रुपये आहेत.", "오백 루피예요.", "Son quinientas rupias.", "Es kostet fünfhundert Rupien.", "Ça fait cinq cents roupies.", "પાંચસો રૂપિયા છે.", "পাঁচশ টকা।"], ["price-400", "shop", "I can give it for four hundred.", "నాలుగు వందలకు ఇస్తాను.", "मैं इसे चार सौ में दे सकता हूँ।", "ನಾನು ನಾನೂರಕ್ಕೆ ಕೊಡುತ್ತೇನೆ.", "நாநூறுக்குத் தருகிறேன்.", "നാനൂറിന് തരാം.", "আমি চারশোতে দিতে পারি।", "मी हे चारशेला देऊ शकतो.", "사백에 드릴게요.", "Puedo dárselo por cuatrocientas.", "Ich gebe es Ihnen für vierhundert.", "Je peux vous le laisser à quatre cents.", "હું તે ચારસોમાં આપી શકું.", "মই এইটো চাৰিশ টকাত দিব পাৰোঁ।"], ["cash-or-card", "shop", "Cash or card?", "నగదా లేక కార్డా?", "नकद या कार्ड?", "ನಗದೋ ಕಾರ್ಡೋ?", "பணமா அல்லது கார்டா?", "പണമോ കാർഡോ?", "নগদ না কার্ড?", "रोख की कार्ड?", "현금이세요, 카드세요?", "¿Efectivo o tarjeta?", "Bar oder mit Karte?", "Espèces ou carte ?", "રોકડ કે કાર્ડ?", "নগদ নে কাৰ্ড?"], ["pay-card", "shop", "I will pay by card.", "నేను కార్డుతో చెల్లిస్తాను.", "मैं कार्ड से भुगतान करूँगा।", "ನಾನು ಕಾರ್ಡ್‌ನಿಂದ ಪಾವತಿಸುತ್ತೇನೆ.", "நான் கார்டில் பணம் செலுத்துகிறேன்.", "ഞാൻ കാർഡ് ഉപയോഗിച്ച് പണമടയ്ക്കാം.", "আমি কার্ডে টাকা দেব।", "मी कार्डने पैसे देईन.", "카드로 계산할게요.", "Pagaré con tarjeta.", "Ich zahle mit Karte.", "Je paierai par carte.", "હું કાર્ડથી ચૂકવીશ.", "মই কাৰ্ডেৰে দাম দিম।"], ["problem-q", "health", "What is the problem?", "సమస్య ఏమిటి?", "क्या समस्या है?", "ಸಮಸ್ಯೆ ಏನು?", "என்ன பிரச்சினை?", "എന്താണ് പ്രശ്നം?", "সমস্যা কী?", "काय त्रास आहे?", "어디가 불편하세요?", "¿Cuál es el problema?", "Was fehlt Ihnen?", "Quel est le problème ?", "શું તકલીફ છે?", "কি সমস্যা?"], ["where-hurt", "health", "Where does it hurt?", "ఎక్కడ నొప్పిగా ఉంది?", "कहाँ दर्द हो रहा है?", "ಎಲ್ಲಿ ನೋವಾಗುತ್ತಿದೆ?", "எங்கே வலிக்கிறது?", "എവിടെയാണ് വേദന?", "কোথায় ব্যথা করছে?", "कुठे दुखत आहे?", "어디가 아프세요?", "¿Dónde le duele?", "Wo tut es weh?", "Où avez-vous mal ?", "ક્યાં દુખે છે?", "ক’ত বিষাইছে?"], ["fever-q", "health", "Do you have a fever?", "మీకు జ్వరం ఉందా?", "क्या आपको बुखार है?", "ನಿಮಗೆ ಜ್ವರ ಇದೆಯಾ?", "உங்களுக்குக் காய்ச்சல் இருக்கிறதா?", "നിങ്ങൾക്ക് പനിയുണ്ടോ?", "আপনার কি জ্বর আছে?", "तुम्हाला ताप आहे का?", "열이 있으세요?", "¿Tiene fiebre?", "Haben Sie Fieber?", "Avez-vous de la fièvre ?", "શું તમને તાવ છે?", "আপোনাৰ জ্বৰ আছেনে?"], ["since-yesterday", "health", "Yes, since yesterday.", "అవును, నిన్నటి నుండి.", "हाँ, कल से।", "ಹೌದು, ನಿನ್ನೆಯಿಂದ.", "ஆம், நேற்றிலிருந்து.", "അതെ, ഇന്നലെ മുതൽ.", "হ্যাঁ, গতকাল থেকে।", "हो, कालपासून.", "네, 어제부터요.", "Sí, desde ayer.", "Ja, seit gestern.", "Oui, depuis hier.", "હા, ગઈકાલથી.", "হয়, কালিৰে পৰা।"], ["medicine-twice", "health", "Take this medicine twice a day.", "ఈ మందు రోజుకు రెండుసార్లు వేసుకోండి.", "यह दवा दिन में दो बार लीजिए।", "ಈ ಔಷಧಿಯನ್ನು ದಿನಕ್ಕೆ ಎರಡು ಬಾರಿ ತೆಗೆದುಕೊಳ್ಳಿ.", "இந்த மருந்தை தினமும் இரண்டு முறை சாப்பிடுங்கள்.", "ഈ മരുന്ന് ദിവസം രണ്ടു തവണ കഴിക്കുക.", "এই ওষুধ দিনে দুবার খান।", "हे औषध दिवसातून दोनदा घ्या.", "이 약을 하루에 두 번 드세요.", "Tome esta medicina dos veces al día.", "Nehmen Sie dieses Medikament zweimal täglich.", "Prenez ce médicament deux fois par jour.", "આ દવા દિવસમાં બે વાર લો.", "এই ঔষধ দিনত দুবাৰ খাওক।"], ["reservation-q", "travel", "Do you have a reservation?", "మీకు రిజర్వేషన్ ఉందా?", "क्या आपकी बुकिंग है?", "ನಿಮ್ಮ ಬುಕಿಂಗ್ ಇದೆಯಾ?", "உங்களிடம் முன்பதிவு இருக்கிறதா?", "നിങ്ങൾക്ക് ബുക്കിംഗ് ഉണ്ടോ?", "আপনার কি বুকিং আছে?", "तुमचे बुकिंग आहे का?", "예약하셨나요?", "¿Tiene una reserva?", "Haben Sie eine Reservierung?", "Avez-vous une réservation ?", "શું તમારું બુકિંગ છે?", "আপোনাৰ বুকিং আছেনে?"], ["have-reservation", "travel", "Yes, I have a reservation.", "అవును, నాకు రిజర్వేషన్ ఉంది.", "हाँ, मेरी बुकिंग है।", "ಹೌದು, ನನ್ನ ಬುಕಿಂಗ್ ಇದೆ.", "ஆம், என்னிடம் முன்பதிவு இருக்கிறது.", "അതെ, എനിക്ക് ബുക്കിംഗ് ഉണ്ട്.", "হ্যাঁ, আমার বুকিং আছে।", "हो, माझे बुकिंग आहे.", "네, 예약했어요.", "Sí, tengo una reserva.", "Ja, ich habe eine Reservierung.", "Oui, j’ai une réservation.", "હા, મારું બુકિંગ છે.", "হয়, মোৰ বুকিং আছে।"], ["nights-q", "travel", "How many nights?", "ఎన్ని రాత్రులు?", "कितनी रातें?", "ಎಷ್ಟು ರಾತ್ರಿ?", "எத்தனை இரவுகள்?", "എത്ര രാത്രി?", "কত রাত?", "किती रात्री?", "며칠 묵으세요?", "¿Cuántas noches?", "Wie viele Nächte?", "Pour combien de nuits ?", "કેટલી રાત?", "কিমান ৰাতি?"], ["two-nights", "travel", "Two nights.", "రెండు రాత్రులు.", "दो रातें।", "ಎರಡು ರಾತ್ರಿ.", "இரண்டு இரவுகள்.", "രണ്ട് രാത്രി.", "দুই রাত।", "दोन रात्री.", "이틀이요.", "Dos noches.", "Zwei Nächte.", "Deux nuits.", "બે રાત.", "দুটা ৰাতি।"], ["third-floor", "travel", "Your room is on the third floor.", "మీ గది మూడవ అంతస్తులో ఉంది.", "आपका कमरा तीसरी मंज़िल पर है।", "ನಿಮ್ಮ ಕೋಣೆ ಮೂರನೇ ಮಹಡಿಯಲ್ಲಿದೆ.", "உங்கள் அறை மூன்றாவது மாடியில் உள்ளது.", "നിങ്ങളുടെ മുറി മൂന്നാം നിലയിലാണ്.", "আপনার ঘর তিনতলায়।", "तुमची खोली तिसऱ्या मजल्यावर आहे.", "객실은 3층입니다.", "Su habitación está en el tercer piso.", "Ihr Zimmer ist im dritten Stock.", "Votre chambre est au troisième étage.", "તમારો રૂમ ત્રીજા માળે છે.", "আপোনাৰ কোঠাটো তৃতীয় মহলাত আছে।"], ["breakfast-incl", "travel", "Is breakfast included?", "అల్పాహారం కలిపి ఉందా?", "क्या नाश्ता शामिल है?", "ಉಪಾಹಾರ ಸೇರಿದೆಯಾ?", "காலை உணவு சேர்ந்ததா?", "പ്രഭാതഭക്ഷണം ഉൾപ്പെടുന്നുണ്ടോ?", "সকালের খাবার কি অন্তর্ভুক্ত?", "नाश्ता समाविष्ट आहे का?", "아침 식사가 포함되어 있나요?", "¿El desayuno está incluido?", "Ist das Frühstück inbegriffen?", "Le petit-déjeuner est-il compris ?", "શું નાસ્તો સામેલ છે?", "ৰাতিপুৱাৰ আহাৰ অন্তৰ্ভুক্ত নেকি?"], ["breakfast-8", "travel", "Yes, breakfast is at eight.", "అవును, అల్పాహారం ఎనిమిది గంటలకు.", "हाँ, नाश्ता आठ बजे है।", "ಹೌದು, ಉಪಾಹಾರ ಎಂಟು ಗಂಟೆಗೆ.", "ஆம், காலை உணவு எட்டு மணிக்கு.", "അതെ, പ്രഭാതഭക്ഷണം എട്ട് മണിക്കാണ്.", "হ্যাঁ, সকালের খাবার আটটায়।", "हो, नाश्ता आठ वाजता आहे.", "네, 아침 식사는 8시입니다.", "Sí, el desayuno es a las ocho.", "Ja, das Frühstück ist um acht Uhr.", "Oui, le petit-déjeuner est à huit heures.", "હા, નાસ્તો આઠ વાગ્યે છે.", "হয়, ৰাতিপুৱাৰ আহাৰ আঠ বজাত।"], ["repeat", "talk", "Could you repeat that?", "మళ్ళీ చెప్పగలరా?", "क्या आप दोहरा सकते हैं?", "ಮತ್ತೆ ಹೇಳಬಹುದೇ?", "மீண்டும் சொல்ல முடியுமா?", "ഒന്നുകൂടി പറയാമോ?", "আবার বলবেন?", "पुन्हा सांगाल का?", "다시 말씀해 주시겠어요?", "¿Puede repetirlo?", "Können Sie das wiederholen?", "Pouvez-vous répéter ?", "શું તમે ફરીથી કહેશો?", "আপুনি পুনৰ কব পাৰিবনে?"], ["what-mean", "talk", "What does this mean?", "దీని అర్థం ఏమిటి?", "इसका क्या मतलब है?", "ಇದರ ಅರ್ಥವೇನು?", "இதன் அர்த்தம் என்ன?", "ഇതിന്റെ അർത്ഥം എന്താണ്?", "এর মানে কী?", "याचा अर्थ काय आहे?", "이게 무슨 뜻이에요?", "¿Qué significa esto?", "Was bedeutet das?", "Que veut dire ceci ?", "આનો અર્થ શું છે?", "ইয়াৰ অৰ্থ কি?"], ["how-say", "talk", "How do you say this in English?", "దీన్ని ఇంగ్లీషులో ఎలా అంటారు?", "इसे अंग्रेज़ी में कैसे कहते हैं?", "ಇದನ್ನು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಹೇಗೆ ಹೇಳುತ್ತಾರೆ?", "இதை ஆங்கிலத்தில் எப்படிச் சொல்வது?", "ഇത് ഇംഗ്ലീഷിൽ എങ്ങനെ പറയും?", "এটা ইংরেজিতে কীভাবে বলে?", "हे इंग्रजीत कसे म्हणतात?", "이것을 영어로 어떻게 말해요?", "¿Cómo se dice esto en inglés?", "Wie sagt man das auf Englisch?", "Comment dit-on cela en anglais ?", "આને અંગ્રેજીમાં શું કહેવાય?", "ইয়াক ইংৰাজীত কেনেকৈ কয়?"], ["write-down", "talk", "Please write it down.", "దయచేసి రాసి ఇవ్వండి.", "कृपया इसे लिख दीजिए।", "ದಯವಿಟ್ಟು ಬರೆದುಕೊಡಿ.", "தயவுசெய்து எழுதிக் கொடுங்கள்.", "ദയവായി എഴുതിത്തരൂ.", "দয়া করে লিখে দিন।", "कृपया लिहून द्या.", "적어 주세요.", "Escríbalo, por favor.", "Bitte schreiben Sie es auf.", "Écrivez-le, s’il vous plaît.", "મહેરબાની કરીને લખી આપો.", "অনুগ্ৰহ কৰি লিখি দিয়ক।"], ["wait", "talk", "Please wait a moment.", "దయచేసి ఒక్క క్షణం ఆగండి.", "कृपया एक पल रुकिए।", "ದಯವಿಟ್ಟು ಒಂದು ಕ್ಷಣ ನಿಲ್ಲಿ.", "தயவுசெய்து ஒரு நிமிடம் காத்திருங்கள்.", "ദയവായി ഒരു നിമിഷം കാത്തിരിക്കൂ.", "দয়া করে এক মুহূর্ত অপেক্ষা করুন।", "कृपया थोडा वेळ थांबा.", "잠시만 기다려 주세요.", "Espere un momento, por favor.", "Bitte warten Sie einen Moment.", "Veuillez patienter un instant.", "મહેરબાની કરીને થોડી વાર રાહ જુઓ.", "অনুগ্ৰহ কৰি এক মুহূৰ্ত অপেক্ষা কৰক।"], ["dont-know", "talk", "I don't know.", "నాకు తెలియదు.", "मुझे नहीं पता।", "ನನಗೆ ಗೊತ್ತಿಲ್ಲ.", "எனக்குத் தெரியாது.", "എനിക്കറിയില്ല.", "আমি জানি না।", "मला माहीत नाही.", "모르겠어요.", "No lo sé.", "Ich weiß es nicht.", "Je ne sais pas.", "મને ખબર નથી.", "মই নাজানো।"], ["understand", "talk", "I understand.", "నాకు అర్థమైంది.", "मैं समझ गया।", "ನನಗೆ ಅರ್ಥವಾಯಿತು.", "எனக்குப் புரிகிறது.", "എനിക്ക് മനസ്സിലായി.", "আমি বুঝেছি।", "मला समजले.", "이해했어요.", "Entiendo.", "Ich verstehe.", "Je comprends.", "હું સમજી ગયો.", "মই বুজি পাইছোঁ।"], ["maybe", "talk", "Maybe.", "బహుశా.", "शायद।", "ಬಹುಶಃ.", "ஒருவேளை.", "ഒരുപക്ഷേ.", "হয়তো।", "कदाचित.", "아마도요.", "Quizás.", "Vielleicht.", "Peut-être.", "કદાચ.", "হয়তো।"], ["of-course", "talk", "Of course.", "తప్పకుండా.", "बिल्कुल।", "ಖಂಡಿತ.", "நிச்சயமாக.", "തീർച്ചയായും.", "অবশ্যই।", "नक्कीच.", "물론이죠.", "Por supuesto.", "Natürlich.", "Bien sûr.", "ચોક્કસ.", "অৱশ্যে।"], ["excuse", "talk", "Excuse me.", "ఏమండీ.", "सुनिए।", "ದಯವಿಟ್ಟು ಕೇಳಿ.", "கொஞ்சம் கேளுங்கள்.", "ഒന്നു കേൾക്കൂ.", "শুনুন তো।", "ऐका ना.", "실례합니다.", "Perdone.", "Verzeihung.", "Excusez-moi.", "સાંભળો ને.", "শুনিছেনে?"], ["correct", "talk", "That is correct.", "అది సరైనది.", "यह सही है।", "ಅದು ಸರಿ.", "அது சரி.", "അത് ശരിയാണ്.", "এটা ঠিক।", "ते बरोबर आहे.", "맞아요.", "Eso es correcto.", "Das stimmt.", "C’est exact.", "એ સાચું છે.", "সেয়া শুদ্ধ।"], ["really", "talk", "Really?", "నిజమా?", "सच में?", "ನಿಜವಾಗಿಯೂ?", "உண்மையாகவா?", "ശരിക്കും?", "সত্যি?", "खरंच?", "정말요?", "¿De verdad?", "Wirklich?", "Vraiment ?", "ખરેખર?", "সঁচাকৈ?"], ["can-help", "talk", "Can you help me?", "మీరు నాకు సహాయం చేయగలరా?", "क्या आप मेरी मदद कर सकते हैं?", "ನೀವು ನನಗೆ ಸಹಾಯ ಮಾಡಬಹುದೇ?", "நீங்கள் எனக்கு உதவ முடியுமா?", "നിങ്ങൾക്ക് എന്നെ സഹായിക്കാമോ?", "আপনি কি আমাকে সাহায্য করতে পারেন?", "तुम्ही माझी मदत करू शकता का?", "도와주실 수 있나요?", "¿Puede ayudarme?", "Können Sie mir helfen?", "Pouvez-vous m’aider ?", "શું તમે મારી મદદ કરી શકો?", "আপুনি মোক সহায় কৰিব পাৰিবনে?"], ["good-idea", "talk", "That is a good idea.", "అది మంచి ఆలోచన.", "यह अच्छा विचार है।", "ಅದು ಒಳ್ಳೆಯ ಯೋಚನೆ.", "அது நல்ல யோசனை.", "അത് നല്ല ആശയമാണ്.", "এটা ভালো ধারণা।", "ही चांगली कल्पना आहे.", "좋은 생각이에요.", "Es una buena idea.", "Das ist eine gute Idee.", "C’est une bonne idée.", "એ સારો વિચાર છે.", "সেয়া ভাল ধাৰণা।"], ["sad", "feel", "I am sad.", "నాకు బాధగా ఉంది.", "मैं उदास हूँ।", "ನನಗೆ ದುಃಖವಾಗಿದೆ.", "எனக்குச் சோகமாக இருக்கிறது.", "എനിക്ക് സങ്കടമുണ്ട്.", "আমার মন খারাপ।", "मी दुःखी आहे.", "슬퍼요.", "Estoy triste.", "Ich bin traurig.", "Je suis triste.", "હું દુઃખી છું.", "মোৰ দুখ লাগিছে।"], ["worried", "feel", "I am worried.", "నాకు ఆందోళనగా ఉంది.", "मुझे चिंता हो रही है।", "ನನಗೆ ಚಿಂತೆಯಾಗಿದೆ.", "எனக்குக் கவலையாக இருக்கிறது.", "എനിക്ക് ആശങ്കയുണ്ട്.", "আমি চিন্তিত।", "मला काळजी वाटते.", "걱정돼요.", "Estoy preocupado.", "Ich mache mir Sorgen.", "Je suis inquiet.", "મને ચિંતા થાય છે.", "মোৰ চিন্তা হৈছে।"], ["excited", "feel", "I am excited.", "నాకు ఉత్సాహంగా ఉంది.", "मैं उत्साहित हूँ।", "ನನಗೆ ಉತ್ಸಾಹವಾಗಿದೆ.", "எனக்கு உற்சாகமாக இருக்கிறது.", "എനിക്ക് ആവേശമുണ്ട്.", "আমি উত্তেজিত।", "मी उत्साहित आहे.", "신나요.", "Estoy emocionado.", "Ich freue mich sehr.", "Je suis enthousiaste.", "હું ઉત્સાહિત છું.", "মই উৎসাহিত।"], ["cold", "feel", "I am cold.", "నాకు చలిగా ఉంది.", "मुझे ठंड लग रही है।", "ನನಗೆ ಚಳಿಯಾಗುತ್ತಿದೆ.", "எனக்குக் குளிர்கிறது.", "എനിക്ക് തണുക്കുന്നു.", "আমার ঠান্ডা লাগছে।", "मला थंडी वाजत आहे.", "추워요.", "Tengo frío.", "Mir ist kalt.", "J’ai froid.", "મને ઠંડી લાગે છે.", "মোৰ ঠাণ্ডা লাগিছে।"], ["hot", "feel", "I am hot.", "నాకు వేడిగా ఉంది.", "मुझे गर्मी लग रही है।", "ನನಗೆ ಸೆಕೆಯಾಗುತ್ತಿದೆ.", "எனக்கு வெப்பமாக இருக்கிறது.", "എനിക്ക് ചൂടെടുക്കുന്നു.", "আমার গরম লাগছে।", "मला गरम होत आहे.", "더워요.", "Tengo calor.", "Mir ist heiß.", "J’ai chaud.", "મને ગરમી લાગે છે.", "মোৰ গৰম লাগিছে।"], ["sleepy", "feel", "I am sleepy.", "నాకు నిద్ర వస్తోంది.", "मुझे नींद आ रही है।", "ನನಗೆ ನಿದ್ರೆ ಬರುತ್ತಿದೆ.", "எனக்குத் தூக்கம் வருகிறது.", "എനിക്ക് ഉറക്കം വരുന്നു.", "আমার ঘুম পাচ্ছে।", "मला झोप येत आहे.", "졸려요.", "Tengo sueño.", "Ich bin schläfrig.", "J’ai sommeil.", "મને ઊંઘ આવે છે.", "মোৰ টোপনি আহিছে।"], ["thirsty", "feel", "I am thirsty.", "నాకు దాహంగా ఉంది.", "मुझे प्यास लगी है।", "ನನಗೆ ಬಾಯಾರಿಕೆಯಾಗಿದೆ.", "எனக்குத் தாகமாக இருக்கிறது.", "എനിക്ക് ദാഹിക്കുന്നു.", "আমার তেষ্টা পেয়েছে।", "मला तहान लागली आहे.", "목말라요.", "Tengo sed.", "Ich habe Durst.", "J’ai soif.", "મને તરસ લાગી છે.", "মোৰ পিয়াহ লাগিছে।"], ["bored", "feel", "I am bored.", "నాకు విసుగ్గా ఉంది.", "मैं ऊब गया हूँ।", "ನನಗೆ ಬೇಸರವಾಗಿದೆ.", "எனக்குச் சலிப்பாக இருக்கிறது.", "എനിക്ക് ബോറടിക്കുന്നു.", "আমার একঘেয়ে লাগছে।", "मला कंटाळा आला आहे.", "심심해요.", "Estoy aburrido.", "Mir ist langweilig.", "Je m’ennuie.", "મને કંટાળો આવે છે.", "মোৰ বিৰক্তি লাগিছে।"], ["job-q", "work", "What do you do?", "మీరు ఏం పని చేస్తారు?", "आप क्या काम करते हैं?", "ನೀವು ಏನು ಕೆಲಸ ಮಾಡುತ್ತೀರಿ?", "நீங்கள் என்ன வேலை செய்கிறீர்கள்?", "നിങ്ങൾ എന്ത് ജോലി ചെയ്യുന്നു?", "আপনি কী কাজ করেন?", "तुम्ही काय काम करता?", "무슨 일을 하세요?", "¿A qué se dedica?", "Was machen Sie beruflich?", "Que faites-vous dans la vie ?", "તમે શું કામ કરો છો?", "আপুনি কি কাম কৰে?"], ["engineer", "work", "I am an engineer.", "నేను ఇంజనీర్‌ని.", "मैं इंजीनियर हूँ।", "ನಾನು ಎಂಜಿನಿಯರ್.", "நான் ஒரு பொறியாளர்.", "ഞാൻ ഒരു എഞ്ചിനീയറാണ്.", "আমি একজন ইঞ্জিনিয়ার।", "मी अभियंता आहे.", "저는 엔지니어예요.", "Soy ingeniero.", "Ich bin Ingenieur.", "Je suis ingénieur.", "હું એન્જિનિયર છું.", "মই এজন ইঞ্জিনিয়াৰ।"], ["student", "work", "I am a student.", "నేను విద్యార్థిని.", "मैं विद्यार्थी हूँ।", "ನಾನು ವಿದ್ಯಾರ್ಥಿ.", "நான் ஒரு மாணவர்.", "ഞാൻ ഒരു വിദ്യാർത്ഥിയാണ്.", "আমি একজন ছাত্র।", "मी विद्यार्थी आहे.", "저는 학생이에요.", "Soy estudiante.", "Ich bin Student.", "Je suis étudiant.", "હું વિદ્યાર્થી છું.", "মই এজন ছাত্ৰ।"], ["busy", "work", "I am busy.", "నేను బిజీగా ఉన్నాను.", "मैं व्यस्त हूँ।", "ನಾನು ಬ್ಯುಸಿಯಾಗಿದ್ದೇನೆ.", "நான் வேலையாக இருக்கிறேன்.", "ഞാൻ തിരക്കിലാണ്.", "আমি ব্যস্ত।", "मी व्यस्त आहे.", "바빠요.", "Estoy ocupado.", "Ich bin beschäftigt.", "Je suis occupé.", "હું વ્યસ્ત છું.", "মই ব্যস্ত।"], ["free-today", "work", "I am free today.", "ఈ రోజు నేను ఖాళీగా ఉన్నాను.", "आज मैं खाली हूँ।", "ಇಂದು ನಾನು ಖಾಲಿಯಾಗಿದ್ದೇನೆ.", "இன்று நான் ஓய்வாக இருக்கிறேன்.", "ഇന്ന് ഞാൻ ഫ്രീയാണ്.", "আজ আমি ফাঁকা আছি।", "आज मी मोकळा आहे.", "오늘은 시간이 있어요.", "Hoy estoy libre.", "Heute habe ich Zeit.", "Je suis libre aujourd’hui.", "આજે હું ફ્રી છું.", "আজি মই মুকলি আছোঁ।"], ["meeting", "work", "I have a meeting today.", "ఈ రోజు నాకు మీటింగ్ ఉంది.", "आज मेरी एक बैठक है।", "ಇಂದು ನನಗೆ ಮೀಟಿಂಗ್ ಇದೆ.", "இன்று எனக்கு ஒரு கூட்டம் இருக்கிறது.", "ഇന്ന് എനിക്ക് ഒരു മീറ്റിംഗ് ഉണ്ട്.", "আজ আমার একটা মিটিং আছে।", "आज माझी एक बैठक आहे.", "오늘 회의가 있어요.", "Hoy tengo una reunión.", "Ich habe heute ein Meeting.", "J’ai une réunion aujourd’hui.", "આજે મારી એક મીટિંગ છે.", "আজি মোৰ এখন সভা আছে।"], ["call-me", "work", "Please call me.", "దయచేసి నాకు ఫోన్ చేయండి.", "कृपया मुझे फ़ोन कीजिए।", "ದಯವಿಟ್ಟು ನನಗೆ ಕರೆ ಮಾಡಿ.", "தயவுசெய்து என்னை அழையுங்கள்.", "ദയവായി എന്നെ വിളിക്കൂ.", "দয়া করে আমাকে ফোন করুন।", "कृपया मला फोन करा.", "저에게 전화해 주세요.", "Llámeme, por favor.", "Bitte rufen Sie mich an.", "Appelez-moi, s’il vous plaît.", "મહેરબાની કરીને મને ફોન કરો.", "অনুগ্ৰহ কৰি মোক ফোন কৰক।"], ["phone-q", "work", "What is your phone number?", "మీ ఫోన్ నంబర్ ఏమిటి?", "आपका फ़ोन नंबर क्या है?", "ನಿಮ್ಮ ಫೋನ್ ನಂಬರ್ ಏನು?", "உங்கள் தொலைபேசி எண் என்ன?", "നിങ്ങളുടെ ഫോൺ നമ്പർ എന്താണ്?", "আপনার ফোন নম্বর কত?", "तुमचा फोन नंबर काय आहे?", "전화번호가 어떻게 되세요?", "¿Cuál es su número de teléfono?", "Wie ist Ihre Telefonnummer?", "Quel est votre numéro de téléphone ?", "તમારો ફોન નંબર શું છે?", "আপোনাৰ ফোন নম্বৰ কি?"], ["wifi-q", "work", "Is there Wi-Fi here?", "ఇక్కడ వై-ఫై ఉందా?", "क्या यहाँ वाई-फ़ाई है?", "ಇಲ್ಲಿ ವೈ-ಫೈ ಇದೆಯಾ?", "இங்கே வைஃபை இருக்கிறதா?", "ഇവിടെ വൈ-ഫൈ ഉണ്ടോ?", "এখানে কি ওয়াই-ফাই আছে?", "इथे वाय-फाय आहे का?", "여기 와이파이 있나요?", "¿Hay Wi-Fi aquí?", "Gibt es hier WLAN?", "Y a-t-il du Wi-Fi ici ?", "અહીં વાઇ-ફાઇ છે?", "ইয়াত ৱাই-ফাই আছেনে?"], ["wifi-pass", "work", "What is the Wi-Fi password?", "వై-ఫై పాస్‌వర్డ్ ఏమిటి?", "वाई-फ़ाई का पासवर्ड क्या है?", "ವೈ-ಫೈ ಪಾಸ್‌ವರ್ಡ್ ಏನು?", "வைஃபை கடவுச்சொல் என்ன?", "വൈ-ഫൈ പാസ്‌വേഡ് എന്താണ്?", "ওয়াই-ফাইয়ের পাসওয়ার্ড কী?", "वाय-फायचा पासवर्ड काय आहे?", "와이파이 비밀번호가 뭐예요?", "¿Cuál es la contraseña del Wi-Fi?", "Wie lautet das WLAN-Passwort?", "Quel est le mot de passe du Wi-Fi ?", "વાઇ-ફાઇનો પાસવર્ડ શું છે?", "ৱাই-ফাইৰ পাছৱৰ্ড কি?"], ["weather-q", "home", "How is the weather today?", "ఈ రోజు వాతావరణం ఎలా ఉంది?", "आज मौसम कैसा है?", "ಇಂದು ಹವಾಮಾನ ಹೇಗಿದೆ?", "இன்று வானிலை எப்படி இருக்கிறது?", "ഇന്ന് കാലാവസ്ഥ എങ്ങനെയാണ്?", "আজ আবহাওয়া কেমন?", "आज हवामान कसे आहे?", "오늘 날씨가 어때요?", "¿Qué tiempo hace hoy?", "Wie ist das Wetter heute?", "Quel temps fait-il aujourd’hui ?", "આજે હવામાન કેવું છે?", "আজি বতৰ কেনে?"], ["hot-today", "home", "It is very hot today.", "ఈ రోజు చాలా వేడిగా ఉంది.", "आज बहुत गर्मी है।", "ಇಂದು ತುಂಬಾ ಬಿಸಿಲು.", "இன்று மிகவும் வெயிலாக இருக்கிறது.", "ഇന്ന് നല്ല ചൂടാണ്.", "আজ খুব গরম।", "आज खूप उकाडा आहे.", "오늘은 아주 더워요.", "Hoy hace mucho calor.", "Heute ist es sehr heiß.", "Il fait très chaud aujourd’hui.", "આજે બહુ ગરમી છે.", "আজি বহুত গৰম।"], ["raining", "home", "It is raining.", "వర్షం పడుతోంది.", "बारिश हो रही है।", "ಮಳೆ ಬರುತ್ತಿದೆ.", "மழை பெய்கிறது.", "മഴ പെയ്യുന്നു.", "বৃষ্টি হচ্ছে।", "पाऊस पडत आहे.", "비가 와요.", "Está lloviendo.", "Es regnet.", "Il pleut.", "વરસાદ પડે છે.", "বৰষুণ দিছে।"], ["date-q", "home", "What is the date today?", "ఈ రోజు తేదీ ఏమిటి?", "आज की तारीख़ क्या है?", "ಇಂದಿನ ದಿನಾಂಕ ಏನು?", "இன்றைய தேதி என்ன?", "ഇന്നത്തെ തീയതി എന്താണ്?", "আজ কত তারিখ?", "आज तारीख काय आहे?", "오늘 며칠이에요?", "¿Qué fecha es hoy?", "Welches Datum ist heute?", "Quelle est la date aujourd’hui ?", "આજે તારીખ શું છે?", "আজি কেইতাৰিখ?"], ["open-q", "home", "What time does it open?", "ఇది ఎన్ని గంటలకు తెరుస్తారు?", "यह कितने बजे खुलता है?", "ಇದು ಎಷ್ಟು ಗಂಟೆಗೆ ತೆರೆಯುತ್ತದೆ?", "இது எத்தனை மணிக்குத் திறக்கும்?", "ഇത് എപ്പോൾ തുറക്കും?", "এটা কখন খোলে?", "हे किती वाजता उघडते?", "몇 시에 열어요?", "¿A qué hora abre?", "Wann öffnet es?", "À quelle heure ça ouvre ?", "આ કેટલા વાગ્યે ખુલે છે?", "এইটো কেতিয়া খোলে?"], ["close-q", "home", "What time does it close?", "ఇది ఎన్ని గంటలకు మూసేస్తారు?", "यह कितने बजे बंद होता है?", "ಇದು ಎಷ್ಟು ಗಂಟೆಗೆ ಮುಚ್ಚುತ್ತದೆ?", "இது எத்தனை மணிக்கு மூடுவார்கள்?", "ഇത് എപ്പോൾ അടയ്ക്കും?", "এটা কখন বন্ধ হয়?", "हे किती वाजता बंद होते?", "몇 시에 닫아요?", "¿A qué hora cierra?", "Wann schließt es?", "À quelle heure ça ferme ?", "આ કેટલા વાગ્યે બંધ થાય છે?", "এইটো কেতিয়া বন্ধ হয়?"], ["right-now", "home", "Right now.", "ఇప్పుడే.", "अभी।", "ಈಗಲೇ.", "இப்போதே.", "ഇപ്പോൾ തന്നെ.", "এখনই।", "आत्ताच.", "지금요.", "Ahora mismo.", "Jetzt gleich.", "Tout de suite.", "હમણાં જ.", "এতিয়াই।"], ["come-in", "home", "Please come in.", "దయచేసి లోపలికి రండి.", "कृपया अंदर आइए।", "ದಯವಿಟ್ಟು ಒಳಗೆ ಬನ್ನಿ.", "தயவுசெய்து உள்ளே வாருங்கள்.", "ദയവായി അകത്തേക്ക് വരൂ.", "দয়া করে ভেতরে আসুন।", "कृपया आत या.", "들어오세요.", "Pase, por favor.", "Bitte kommen Sie herein.", "Entrez, s’il vous plaît.", "મહેરબાની કરીને અંદર આવો.", "অনুগ্ৰহ কৰি ভিতৰলৈ আহক।"], ["sit", "home", "Please sit down.", "దయచేసి కూర్చోండి.", "कृपया बैठिए।", "ದಯವಿಟ್ಟು ಕುಳಿತುಕೊಳ್ಳಿ.", "தயவுசெய்து உட்காருங்கள்.", "ദയവായി ഇരിക്കൂ.", "দয়া করে বসুন।", "कृपया बसा.", "앉으세요.", "Siéntese, por favor.", "Bitte setzen Sie sich.", "Asseyez-vous, s’il vous plaît.", "મહેરબાની કરીને બેસો.", "অনুগ্ৰহ কৰি বহক।"], ["open-door", "home", "Please open the door.", "దయచేసి తలుపు తెరవండి.", "कृपया दरवाज़ा खोलिए।", "ದಯವಿಟ್ಟು ಬಾಗಿಲು ತೆರೆಯಿರಿ.", "தயவுசெய்து கதவைத் திறங்கள்.", "ദയവായി വാതിൽ തുറക്കൂ.", "দয়া করে দরজা খুলুন।", "कृपया दार उघडा.", "문을 열어 주세요.", "Abra la puerta, por favor.", "Bitte öffnen Sie die Tür.", "Ouvrez la porte, s’il vous plaît.", "મહેરબાની કરીને દરવાજો ખોલો.", "অনুগ্ৰহ কৰি দুৱাৰ খোলক।"], ["glass-water", "food", "A glass of water, please.", "దయచేసి ఒక గ్లాసు నీళ్ళు ఇవ్వండి.", "कृपया एक गिलास पानी दीजिए।", "ದಯವಿಟ್ಟು ಒಂದು ಲೋಟ ನೀರು ಕೊಡಿ.", "தயவுசெய்து ஒரு டம்ளர் தண்ணீர் தாருங்கள்.", "ദയവായി ഒരു ഗ്ലാസ് വെള്ളം തരൂ.", "দয়া করে এক গ্লাস জল দিন।", "कृपया एक ग्लास पाणी द्या.", "물 한 잔 주세요.", "Un vaso de agua, por favor.", "Ein Glas Wasser, bitte.", "Un verre d’eau, s’il vous plaît.", "મહેરબાની કરીને એક ગ્લાસ પાણી આપો.", "অনুগ্ৰহ কৰি এগিলাছ পানী দিয়ক।"], ["breakfast-q", "food", "What is for breakfast?", "అల్పాహారానికి ఏముంది?", "नाश्ते में क्या है?", "ಉಪಾಹಾರಕ್ಕೆ ಏನಿದೆ?", "காலை உணவுக்கு என்ன இருக்கிறது?", "പ്രഭാതഭക്ഷണത്തിന് എന്താണുള്ളത്?", "সকালের খাবারে কী আছে?", "नाश्त्याला काय आहे?", "아침 식사로 뭐가 있어요?", "¿Qué hay de desayuno?", "Was gibt es zum Frühstück?", "Qu’y a-t-il au petit-déjeuner ?", "નાસ્તામાં શું છે?", "ৰাতিপুৱাৰ আহাৰত কি আছে?"], ["lunch", "food", "Let's have lunch.", "భోజనం చేద్దాం రండి.", "चलिए, दोपहर का खाना खाते हैं।", "ಊಟ ಮಾಡೋಣ ಬನ್ನಿ.", "மதிய உணவு சாப்பிடலாம்.", "നമുക്ക് ഉച്ചഭക്ഷണം കഴിക്കാം.", "চলুন, দুপুরের খাবার খাই।", "चला, दुपारचे जेवण करूया.", "점심 먹어요.", "Vamos a comer.", "Lass uns zu Mittag essen.", "Allons déjeuner.", "ચાલો, બપોરનું ભોજન કરીએ.", "আহক, দুপৰীয়াৰ আহাৰ খাওঁ।"], ["dinner-ready", "food", "Dinner is ready.", "రాత్రి భోజనం సిద్ధంగా ఉంది.", "रात का खाना तैयार है।", "ರಾತ್ರಿ ಊಟ ಸಿದ್ಧವಾಗಿದೆ.", "இரவு உணவு தயாராக இருக்கிறது.", "അത്താഴം തയ്യാറാണ്.", "রাতের খাবার তৈরি।", "रात्रीचे जेवण तयार आहे.", "저녁 식사가 준비됐어요.", "La cena está lista.", "Das Abendessen ist fertig.", "Le dîner est prêt.", "રાતનું ભોજન તૈયાર છે.", "ৰাতিৰ আহাৰ সাজু।"], ["more", "food", "A little more, please.", "దయచేసి కొంచెం ఇంకా వడ్డించండి.", "कृपया थोड़ा और दीजिए।", "ದಯವಿಟ್ಟು ಇನ್ನೂ ಸ್ವಲ್ಪ ಕೊಡಿ.", "தயவுசெய்து இன்னும் கொஞ்சம் தாருங்கள்.", "ദയവായി കുറച്ചു കൂടി തരൂ.", "দয়া করে আরেকটু দিন।", "कृपया थोडे आणखी द्या.", "조금 더 주세요.", "Un poco más, por favor.", "Etwas mehr, bitte.", "Encore un peu, s’il vous plaît.", "મહેરબાની કરીને થોડું વધારે આપો.", "অনুগ্ৰহ কৰি অলপ আৰু দিয়ক।"], ["enough", "food", "That is enough, thank you.", "చాలు, ధన్యవాదాలు.", "बस, धन्यवाद।", "ಸಾಕು, ಧನ್ಯವಾದಗಳು.", "போதும், நன்றி.", "മതി, നന്ദി.", "যথেষ্ট, ধন্যবাদ।", "पुरे, धन्यवाद.", "충분해요, 감사합니다.", "Es suficiente, gracias.", "Das reicht, danke.", "Ça suffit, merci.", "બસ, આભાર.", "যথেষ্ট, ধন্যবাদ।"], ["train-q", "travel", "When does the train leave?", "రైలు ఎప్పుడు బయలుదేరుతుంది?", "ट्रेन कब छूटती है?", "ರೈಲು ಯಾವಾಗ ಹೊರಡುತ್ತದೆ?", "ரயில் எப்போது புறப்படும்?", "ട്രെയിൻ എപ്പോഴാണ് പുറപ്പെടുന്നത്?", "ট্রেন কখন ছাড়ে?", "रेल्वे कधी सुटते?", "기차는 언제 출발해요?", "¿Cuándo sale el tren?", "Wann fährt der Zug ab?", "Quand part le train ?", "ટ્રેન ક્યારે ઊપડે છે?", "ৰেল কেতিয়া ওলায়?"], ["platform-q", "travel", "Which platform?", "ఏ ప్లాట్‌ఫామ్?", "कौन-सा प्लेटफ़ॉर्म?", "ಯಾವ ಪ್ಲಾಟ್‌ಫಾರ್ಮ್?", "எந்த நடைமேடை?", "ഏത് പ്ലാറ്റ്ഫോം?", "কোন প্ল্যাটফর্ম?", "कोणता प्लॅटफॉर्म?", "몇 번 승강장이에요?", "¿Qué andén?", "Welcher Bahnsteig?", "Quel quai ?", "કયું પ્લેટફોર્મ?", "কোনটো প্লেটফৰ্ম?"], ["tickets-two", "travel", "Two tickets, please.", "దయచేసి రెండు టికెట్లు ఇవ్వండి.", "कृपया दो टिकट दीजिए।", "ದಯವಿಟ್ಟು ಎರಡು ಟಿಕೆಟ್ ಕೊಡಿ.", "தயவுசெய்து இரண்டு டிக்கெட் தாருங்கள்.", "ദയവായി രണ്ട് ടിക്കറ്റ് തരൂ.", "দয়া করে দুটো টিকিট দিন।", "कृपया दोन तिकिटे द्या.", "표 두 장 주세요.", "Dos billetes, por favor.", "Zwei Fahrkarten, bitte.", "Deux billets, s’il vous plaît.", "મહેરબાની કરીને બે ટિકિટ આપો.", "অনুগ্ৰহ কৰি দুখন টিকট দিয়ক।"], ["seat-free", "travel", "Is this seat free?", "ఈ సీటు ఖాళీగా ఉందా?", "क्या यह सीट खाली है?", "ಈ ಸೀಟು ಖಾಲಿ ಇದೆಯಾ?", "இந்த இருக்கை காலியாக இருக்கிறதா?", "ഈ സീറ്റ് ഒഴിവാണോ?", "এই সিটটা কি খালি?", "ही जागा रिकामी आहे का?", "이 자리 비어 있나요?", "¿Está libre este asiento?", "Ist dieser Platz frei?", "Cette place est-elle libre ?", "શું આ સીટ ખાલી છે?", "এই আসনটো খালী নেকি?"], ["late", "travel", "The bus is late.", "బస్సు ఆలస్యంగా వస్తోంది.", "बस देर से आ रही है।", "ಬಸ್ ತಡವಾಗಿದೆ.", "பேருந்து தாமதமாக வருகிறது.", "ബസ് വൈകിയാണ് വരുന്നത്.", "বাস দেরিতে আসছে।", "बस उशिरा येत आहे.", "버스가 늦어요.", "El autobús llega tarde.", "Der Bus hat Verspätung.", "Le bus est en retard.", "બસ મોડી છે.", "বাছ পলমকৈ আহিছে।"], ["how-long", "travel", "How long does it take?", "ఎంత సమయం పడుతుంది?", "कितना समय लगेगा?", "ಎಷ್ಟು ಸಮಯ ಬೇಕು?", "எவ்வளவு நேரம் ஆகும்?", "എത്ര സമയം എടുക്കും?", "কত সময় লাগবে?", "किती वेळ लागेल?", "얼마나 걸려요?", "¿Cuánto tarda?", "Wie lange dauert es?", "Combien de temps cela prend-il ?", "કેટલો સમય લાગશે?", "কিমান সময় লাগিব?"], ["map", "travel", "Can you show me on the map?", "మ్యాప్‌లో చూపించగలరా?", "क्या आप नक्शे पर दिखा सकते हैं?", "ನಕ್ಷೆಯಲ್ಲಿ ತೋರಿಸಬಹುದೇ?", "வரைபடத்தில் காட்ட முடியுமா?", "മാപ്പിൽ കാണിക്കാമോ?", "মানচিত্রে দেখিয়ে দেবেন?", "नकाशावर दाखवाल का?", "지도에서 보여 주시겠어요?", "¿Puede mostrármelo en el mapa?", "Können Sie es mir auf der Karte zeigen?", "Pouvez-vous me le montrer sur la carte ?", "શું તમે નકશા પર બતાવશો?", "আপুনি মানচিত্ৰত দেখুৱাব পাৰিবনে?"], ["passport", "travel", "Here is my passport.", "ఇదిగో నా పాస్‌పోర్ట్.", "यह मेरा पासपोर्ट है।", "ಇಗೋ ನನ್ನ ಪಾಸ್‌ಪೋರ್ಟ್.", "இதோ என் கடவுச்சீட்டு.", "ഇതാ എന്റെ പാസ്പോർട്ട്.", "এই যে আমার পাসপোর্ট।", "हा माझा पासपोर्ट आहे.", "여기 제 여권이에요.", "Aquí está mi pasaporte.", "Hier ist mein Reisepass.", "Voici mon passeport.", "આ મારો પાસપોર્ટ છે.", "এয়া মোৰ পাছপ’ৰ্ট।"], ["cheaper", "shop", "Do you have a cheaper one?", "ఇంకా చవకైనది ఉందా?", "क्या इससे सस्ता कोई है?", "ಇನ್ನೂ ಅಗ್ಗದ್ದು ಇದೆಯಾ?", "இன்னும் விலை குறைவானது இருக்கிறதா?", "വില കുറഞ്ഞത് ഉണ്ടോ?", "এর চেয়ে সস্তা কিছু আছে?", "यापेक्षा स्वस्त काही आहे का?", "더 싼 것 있나요?", "¿Tiene uno más barato?", "Haben Sie etwas Günstigeres?", "En avez-vous un moins cher ?", "શું આનાથી સસ્તું કંઈ છે?", "ইয়াতকৈ শস্তা কিবা আছেনে?"], ["bigger", "shop", "Do you have a bigger size?", "పెద్ద సైజ్ ఉందా?", "क्या इससे बड़ा साइज़ है?", "ದೊಡ್ಡ ಸೈಜ್ ಇದೆಯಾ?", "பெரிய அளவு இருக்கிறதா?", "വലിയ സൈസ് ഉണ്ടോ?", "আরও বড় সাইজ আছে?", "यापेक्षा मोठा आकार आहे का?", "더 큰 사이즈 있나요?", "¿Tiene una talla más grande?", "Haben Sie eine größere Größe?", "Avez-vous une taille au-dessus ?", "શું આનાથી મોટી સાઇઝ છે?", "ইয়াতকৈ ডাঙৰ আকাৰ আছেনে?"], ["try-on", "shop", "Can I try this on?", "ఇది వేసుకుని చూడవచ్చా?", "क्या मैं इसे पहनकर देख सकता हूँ?", "ಇದನ್ನು ಹಾಕಿ ನೋಡಬಹುದೇ?", "இதை அணிந்து பார்க்கலாமா?", "ഇത് ഇട്ടുനോക്കാമോ?", "এটা কি পরে দেখতে পারি?", "हे घालून पाहू शकतो का?", "입어 봐도 될까요?", "¿Puedo probármelo?", "Kann ich das anprobieren?", "Puis-je l’essayer ?", "શું હું આ પહેરી જોઈ શકું?", "মই এইটো পিন্ধি চাব পাৰোঁনে?"], ["receipt", "shop", "Please give me a receipt.", "దయచేసి రసీదు ఇవ్వండి.", "कृपया रसीद दीजिए।", "ದಯವಿಟ್ಟು ರಶೀದಿ ಕೊಡಿ.", "தயவுசெய்து ரசீது தாருங்கள்.", "ദയവായി രസീത് തരൂ.", "দয়া করে একটা রসিদ দিন।", "कृपया पावती द्या.", "영수증 주세요.", "Deme el recibo, por favor.", "Bitte geben Sie mir eine Quittung.", "Un reçu, s’il vous plaît.", "મહેરબાની કરીને રસીદ આપો.", "অনুগ্ৰহ কৰি এখন ৰচিদ দিয়ক।"], ["discount", "shop", "Is there a discount?", "డిస్కౌంట్ ఉందా?", "क्या कोई छूट है?", "ರಿಯಾಯಿತಿ ಇದೆಯಾ?", "தள்ளுபடி இருக்கிறதா?", "കിഴിവ് ഉണ്ടോ?", "কোনো ছাড় আছে?", "काही सूट आहे का?", "할인되나요?", "¿Hay descuento?", "Gibt es einen Rabatt?", "Y a-t-il une réduction ?", "કોઈ છૂટ છે?", "কোনো ৰেহাই আছেনে?"], ["open-today", "shop", "Are you open today?", "ఈ రోజు మీరు తెరిచి ఉన్నారా?", "क्या आप आज खुले हैं?", "ಇಂದು ನೀವು ತೆರೆದಿದ್ದೀರಾ?", "இன்று நீங்கள் திறந்திருக்கிறீர்களா?", "ഇന്ന് തുറന്നിട്ടുണ്ടോ?", "আপনারা কি আজ খোলা?", "तुम्ही आज उघडे आहात का?", "오늘 영업하세요?", "¿Está abierto hoy?", "Haben Sie heute geöffnet?", "Êtes-vous ouverts aujourd’hui ?", "શું તમે આજે ખુલ્લા છો?", "আপোনালোক আজি খোলা নেকি?"], ["fever", "health", "I have a fever.", "నాకు జ్వరంగా ఉంది.", "मुझे बुखार है।", "ನನಗೆ ಜ್ವರ ಇದೆ.", "எனக்குக் காய்ச்சல் இருக்கிறது.", "എനിക്ക് പനിയുണ്ട്.", "আমার জ্বর আছে।", "मला ताप आहे.", "열이 나요.", "Tengo fiebre.", "Ich habe Fieber.", "J’ai de la fièvre.", "મને તાવ છે.", "মোৰ জ্বৰ আছে।"], ["pharmacy", "health", "Where is the pharmacy?", "మందుల దుకాణం ఎక్కడ ఉంది?", "दवा की दुकान कहाँ है?", "ಔಷಧಿ ಅಂಗಡಿ ಎಲ್ಲಿದೆ?", "மருந்தகம் எங்கே இருக்கிறது?", "മെഡിക്കൽ ഷോപ്പ് എവിടെയാണ്?", "ওষুধের দোকান কোথায়?", "औषधांचे दुकान कुठे आहे?", "약국이 어디예요?", "¿Dónde está la farmacia?", "Wo ist die Apotheke?", "Où est la pharmacie ?", "દવાની દુકાન ક્યાં છે?", "ঔষধৰ দোকান ক’ত?"], ["rest", "health", "I need to rest.", "నేను విశ్రాంతి తీసుకోవాలి.", "मुझे आराम करना है।", "ನಾನು ವಿಶ್ರಾಂತಿ ತೆಗೆದುಕೊಳ್ಳಬೇಕು.", "நான் ஓய்வெடுக்க வேண்டும்.", "എനിക്ക് വിശ്രമിക്കണം.", "আমার বিশ্রাম দরকার।", "मला विश्रांती घ्यायची आहे.", "쉬어야 해요.", "Necesito descansar.", "Ich muss mich ausruhen.", "J’ai besoin de me reposer.", "મારે આરામ કરવો છે.", "মোক জিৰণি লাগে।"], ["better", "health", "I feel better now.", "ఇప్పుడు నాకు కొంచెం మెరుగ్గా ఉంది.", "अब मुझे बेहतर लग रहा है।", "ಈಗ ನನಗೆ ಉತ್ತಮ ಅನಿಸುತ್ತಿದೆ.", "இப்போது நலமாக உணர்கிறேன்.", "ഇപ്പോൾ എനിക്ക് സുഖം തോന്നുന്നു.", "এখন আমার ভালো লাগছে।", "आता मला बरे वाटत आहे.", "이제 좀 나아졌어요.", "Ahora me siento mejor.", "Jetzt geht es mir besser.", "Je me sens mieux maintenant.", "હવે મને સારું લાગે છે.", "এতিয়া মোৰ ভাল লাগিছে।"], ["how-old", "people", "How old are you?", "మీ వయసు ఎంత?", "आपकी उम्र कितनी है?", "ನಿಮ್ಮ ವಯಸ್ಸು ಎಷ್ಟು?", "உங்கள் வயது என்ன?", "നിങ്ങൾക്ക് എത്ര വയസ്സായി?", "আপনার বয়স কত?", "तुमचे वय किती आहे?", "나이가 어떻게 되세요?", "¿Cuántos años tiene?", "Wie alt sind Sie?", "Quel âge avez-vous ?", "તમારી ઉંમર કેટલી છે?", "আপোনাৰ বয়স কিমান?"], ["beautiful", "people", "It is beautiful here.", "ఇక్కడ చాలా అందంగా ఉంది.", "यहाँ बहुत सुंदर है।", "ಇಲ್ಲಿ ತುಂಬಾ ಸುಂದರವಾಗಿದೆ.", "இங்கே மிக அழகாக இருக்கிறது.", "ഇവിടെ വളരെ മനോഹരമാണ്.", "এখানটা খুব সুন্দর।", "इथे खूप सुंदर आहे.", "여기 정말 아름다워요.", "Qué bonito es esto.", "Es ist wunderschön hier.", "C’est magnifique ici.", "અહીં બહુ સુંદર છે.", "ইয়াত বহুত ধুনীয়া।"], ["miss-you", "people", "I miss you.", "నిన్ను మిస్ అవుతున్నాను.", "मुझे तुम्हारी याद आती है।", "ನನಗೆ ನಿನ್ನ ನೆನಪಾಗುತ್ತಿದೆ.", "எனக்கு உன் நினைவாகவே இருக்கிறது.", "എനിക്ക് നിന്നെ ഓർമ്മ വരുന്നു.", "আমি তোমাকে মিস করি।", "मला तुझी आठवण येते.", "보고 싶어요.", "Te echo de menos.", "Ich vermisse dich.", "Tu me manques.", "મને તમારી યાદ આવે છે.", "মই তোমাক মনত পেলাইছোঁ।"], ["take-care", "people", "Take care.", "జాగ్రత్తగా ఉండండి.", "अपना ध्यान रखिए।", "ಜಾಗ್ರತೆಯಾಗಿರಿ.", "கவனமாக இருங்கள்.", "സൂക്ഷിക്കണേ.", "নিজের যত্ন নেবেন।", "काळजी घ्या.", "몸조심하세요.", "Cuídese.", "Passen Sie auf sich auf.", "Prenez soin de vous.", "ધ્યાન રાખજો.", "নিজৰ যত্ন লব।"], ["afternoon", "greet", "Good afternoon", "శుభ మధ్యాహ్నం", "शुभ दोपहर", "ಶುಭ ಮಧ್ಯಾಹ್ನ", "இனிய மதிய வணக்கம்", "ശുഭ മധ്യാഹ്നം", "শুভ অপরাহ্ন", "शुभ दुपार", "좋은 오후예요", "Buenas tardes", "Guten Tag", "Bon après-midi", "શુભ બપોર", "শুভ অপৰাহ্ন"], ["see-tomorrow", "greet", "See you tomorrow", "రేపు కలుద్దాం", "कल मिलते हैं", "ನಾಳೆ ಸಿಗೋಣ", "நாளை சந்திப்போம்", "നാളെ കാണാം", "কাল দেখা হবে", "उद्या भेटू", "내일 봐요", "Hasta mañana", "Bis morgen", "À demain", "કાલે મળીશું", "কাইলৈ লগ পাম"], ["see-you", "greet", "See you later", "తర్వాత కలుద్దాం", "बाद में मिलते हैं", "ನಂತರ ಸಿಗೋಣ", "பிறகு சந்திப்போம்", "പിന്നെ കാണാം", "পরে দেখা হবে", "नंतर भेटू", "나중에 봐요", "Hasta luego", "Bis später", "À tout à l’heure", "પછી મળીશું", "পাছত লগ পাম"], ["live-here", "intro", "I live here", "నేను ఇక్కడే ఉంటాను", "मैं यहीं रहता हूँ", "ನಾನು ಇಲ್ಲೇ ವಾಸಿಸುತ್ತೇನೆ", "நான் இங்கேயே வசிக்கிறேன்", "ഞാൻ ഇവിടെയാണ് താമസിക്കുന്നത്", "আমি এখানেই থাকি", "मी इथेच राहतो", "저는 여기에 살아요", "Vivo aquí", "Ich wohne hier", "J’habite ici", "હું અહીં રહું છું", "মই ইয়াতে থাকোঁ"], ["learning-lang", "intro", "I am learning your language", "నేను మీ భాష నేర్చుకుంటున్నాను", "मैं आपकी भाषा सीख रहा हूँ", "ನಾನು ನಿಮ್ಮ ಭಾಷೆ ಕಲಿಯುತ್ತಿದ್ದೇನೆ", "நான் உங்கள் மொழியைக் கற்றுக்கொண்டிருக்கிறேன்", "ഞാൻ നിങ്ങളുടെ ഭാഷ പഠിക്കുകയാണ്", "আমি আপনার ভাষা শিখছি", "मी तुमची भाषा शिकत आहे", "저는 당신의 언어를 배우고 있어요", "Estoy aprendiendo su idioma", "Ich lerne Ihre Sprache", "J’apprends votre langue", "હું તમારી ભાષા શીખી રહ્યો છું", "মই আপোনাৰ ভাষা শিকি আছোঁ"], ["this-friend", "intro", "This is my friend", "ఇతను నా స్నేహితుడు", "ये मेरे दोस्त हैं", "ಇವರು ನನ್ನ ಸ್ನೇಹಿತ", "இவர் என் நண்பர்", "ഇത് എന്റെ സുഹൃത്താണ്", "ইনি আমার বন্ধু", "हे माझे मित्र आहेत", "이쪽은 제 친구예요", "Este es mi amigo", "Das ist mein Freund", "Voici mon ami", "આ મારા મિત્ર છે", "ইয়াক মোৰ বন্ধু"], ["louder", "talk", "Please speak louder", "దయచేసి కొంచెం గట్టిగా మాట్లాడండి", "कृपया ज़ोर से बोलिए", "ದಯವಿಟ್ಟು ಜೋರಾಗಿ ಮಾತನಾಡಿ", "தயவுசெய்து சத்தமாகப் பேசுங்கள்", "ദയവായി ഉറക്കെ സംസാരിക്കൂ", "দয়া করে জোরে বলুন", "कृपया मोठ्याने बोला", "좀 더 크게 말씀해 주세요", "Hable más alto, por favor", "Bitte sprechen Sie lauter", "Parlez plus fort, s’il vous plaît", "કૃપા કરીને મોટેથી બોલો", "অনুগ্ৰহ কৰি জোৰেৰে কওক"], ["agree", "talk", "I agree", "నేను ఒప్పుకుంటున్నాను", "मैं सहमत हूँ", "ನಾನು ಒಪ್ಪುತ್ತೇನೆ", "நான் ஒப்புக்கொள்கிறேன்", "ഞാൻ സമ്മതിക്കുന്നു", "আমি একমত", "मी सहमत आहे", "동의해요", "Estoy de acuerdo", "Ich stimme zu", "Je suis d’accord", "હું સહમત છું", "মই একমত"], ["disagree", "talk", "I don’t agree", "నేను ఒప్పుకోవడం లేదు", "मैं सहमत नहीं हूँ", "ನಾನು ಒಪ್ಪುವುದಿಲ್ಲ", "நான் ஒப்புக்கொள்ளவில்லை", "ഞാൻ സമ്മതിക്കുന്നില്ല", "আমি একমত নই", "मी सहमत नाही", "동의하지 않아요", "No estoy de acuerdo", "Ich stimme nicht zu", "Je ne suis pas d’accord", "હું સહમત નથી", "মই একমত নহয়"], ["moment", "talk", "Just a moment", "ఒక్క నిమిషం", "एक मिनट", "ಒಂದು ನಿಮಿಷ", "ஒரு நிமிடம்", "ഒരു നിമിഷം", "এক মুহূর্ত", "एक क्षण", "잠깐만요", "Un momento", "Einen Moment", "Un instant", "એક ક્ષણ", "এক মুহূৰ্ত"], ["whats-wrong", "talk", "What is the matter?", "ఏమైంది?", "क्या हुआ?", "ಏನಾಯಿತು?", "என்ன ஆச்சு?", "എന്താ പറ്റിയത്?", "কী হয়েছে?", "काय झालं?", "무슨 일이에요?", "¿Qué pasa?", "Was ist los?", "Que se passe-t-il ?", "શું થયું?", "কি হ’ল?"], ["going-home", "daily", "I am going home", "నేను ఇంటికి వెళ్తున్నాను", "मैं घर जा रहा हूँ", "ನಾನು ಮನೆಗೆ ಹೋಗುತ್ತಿದ್ದೇನೆ", "நான் வீட்டுக்குப் போகிறேன்", "ഞാൻ വീട്ടിലേക്ക് പോകുന്നു", "আমি বাড়ি যাচ্ছি", "मी घरी जात आहे", "저는 집에 가요", "Me voy a casa", "Ich gehe nach Hause", "Je rentre à la maison", "હું ઘરે જાઉં છું", "মই ঘৰলৈ গৈ আছোঁ"], ["lets-go", "daily", "Let’s go", "పదండి వెళ్దాం", "चलिए चलते हैं", "ಹೋಗೋಣ", "போகலாம்", "നമുക്ക് പോകാം", "চলুন যাই", "चला जाऊया", "가요", "Vamos", "Gehen wir", "Allons-y", "ચાલો જઈએ", "যাওঁ আহক"], ["ready", "daily", "I am ready", "నేను సిద్ధంగా ఉన్నాను", "मैं तैयार हूँ", "ನಾನು ಸಿದ್ಧ", "நான் தயார்", "ഞാൻ തയ്യാറാണ്", "আমি প্রস্তুত", "मी तयार आहे", "준비됐어요", "Estoy listo", "Ich bin bereit", "Je suis prêt", "હું તૈયાર છું", "মই সাজু"], ["coming", "daily", "I am coming", "నేను వస్తున్నాను", "मैं आ रहा हूँ", "ನಾನು ಬರುತ್ತಿದ್ದೇನೆ", "நான் வருகிறேன்", "ഞാൻ വരുന്നു", "আমি আসছি", "मी येत आहे", "곧 가요", "Ya voy", "Ich komme", "J’arrive", "હું આવું છું", "মই আহিছোঁ"], ["wake-up", "daily", "Wake up", "లేవండి", "उठो", "ಏಳಿ", "எழுந்திரு", "എഴുന്നേൽക്കൂ", "ওঠো", "ऊठ", "일어나요", "Despierta", "Wach auf", "Réveille-toi", "ઊઠો", "উঠা"], ["full", "food", "I am full", "నా కడుపు నిండింది", "मेरा पेट भर गया है", "ನನ್ನ ಹೊಟ್ಟೆ ತುಂಬಿದೆ", "என் வயிறு நிறைந்துவிட்டது", "എന്റെ വയർ നിറഞ്ഞു", "আমার পেট ভরে গেছে", "माझं पोट भरलं आहे", "배불러요", "Estoy lleno", "Ich bin satt", "Je n’ai plus faim", "મારું પેટ ભરાઈ ગયું છે", "মোৰ পেট ভৰি গ’ল"], ["salt", "food", "Salt, please", "ఉప్పు ఇవ్వండి", "नमक दीजिए", "ಉಪ್ಪು ಕೊಡಿ", "உப்பு கொடுங்கள்", "ഉപ്പ് തരൂ", "লবণ দিন", "मीठ द्या", "소금 좀 주세요", "Sal, por favor", "Salz, bitte", "Du sel, s’il vous plaît", "મીઠું આપો", "নিমখ দিয়ক"], ["no-sugar", "food", "Without sugar, please", "దయచేసి చక్కెర లేకుండా", "बिना चीनी के, कृपया", "ಸಕ್ಕರೆ ಇಲ್ಲದೆ", "சர்க்கரை இல்லாமல்", "പഞ്ചസാര ഇല്ലാതെ", "চিনি ছাড়া", "साखरेशिवाय", "설탕 없이 주세요", "Sin azúcar, por favor", "Ohne Zucker, bitte", "Sans sucre, s’il vous plaît", "ખાંડ વગર", "চেনী নোহোৱাকৈ"], ["fresh-q", "food", "Is this fresh?", "ఇది తాజాగా ఉందా?", "क्या यह ताज़ा है?", "ಇದು ತಾಜಾ ಇದೆಯೇ?", "இது புதியதா?", "ഇത് പുതിയതാണോ?", "এটা কি তাজা?", "हे ताजं आहे का?", "이거 신선해요?", "¿Está fresco?", "Ist das frisch?", "C’est frais ?", "શું આ તાજું છે?", "এইটো তাজা নেকি?"], ["spoon", "food", "Can I have a spoon?", "ఒక చెంచా ఇవ్వగలరా?", "क्या मुझे एक चम्मच मिल सकता है?", "ಒಂದು ಚಮಚ ಕೊಡಬಹುದೇ?", "ஒரு கரண்டி கிடைக்குமா?", "ഒരു സ്പൂൺ തരാമോ?", "একটা চামচ পাব?", "मला एक चमचा मिळेल का?", "숟가락 하나 주실 수 있어요?", "¿Me da una cuchara?", "Kann ich einen Löffel haben?", "Je peux avoir une cuillère ?", "મને એક ચમચી મળશે?", "এটা চামুচ পাব নে?"], ["atm", "travel", "Where is the nearest ATM?", "దగ్గరలో ఏటీఎం ఎక్కడ ఉంది?", "सबसे पास का एटीएम कहाँ है?", "ಹತ್ತಿರದ ಎಟಿಎಂ ಎಲ್ಲಿದೆ?", "அருகிலுள்ள ஏடிஎம் எங்கே?", "അടുത്തുള്ള എടിഎം എവിടെയാണ്?", "কাছের এটিএম কোথায়?", "जवळचे एटीएम कुठे आहे?", "가장 가까운 현금인출기가 어디예요?", "¿Dónde está el cajero automático más cercano?", "Wo ist der nächste Geldautomat?", "Où est le distributeur le plus proche ?", "નજીકનું એટીએમ ક્યાં છે?", "ওচৰৰ এটিএমটো ক’ত আছে?"], ["fare-q", "travel", "How much is the fare?", "ఛార్జీ ఎంత?", "किराया कितना है?", "ಪ್ರಯಾಣ ದರ ಎಷ್ಟು?", "கட்டணம் எவ்வளவு?", "നിരക്ക് എത്രയാണ്?", "ভাড়া কত?", "भाडे किती आहे?", "요금이 얼마예요?", "¿Cuánto cuesta el pasaje?", "Wie viel kostet die Fahrt?", "Combien coûte le trajet ?", "ભાડું કેટલું છે?", "ভাড়া কিমান?"], ["stop-here", "travel", "Please stop here", "ఇక్కడ ఆపండి", "यहाँ रोकिए", "ಇಲ್ಲಿ ನಿಲ್ಲಿಸಿ", "இங்கே நிறுத்துங்கள்", "ഇവിടെ നിർത്തൂ", "এখানে থামান", "इथे थांबवा", "여기서 세워 주세요", "Pare aquí, por favor", "Halten Sie bitte hier an", "Arrêtez-vous ici, s’il vous plaît", "અહીં ઊભા રાખો", "ইয়াতে ৰখাওক"], ["right-way-q", "travel", "Is this the right way?", "ఇదే సరైన దారా?", "क्या यही सही रास्ता है?", "ಇದೇ ಸರಿಯಾದ ದಾರಿಯೇ?", "இதுதான் சரியான வழியா?", "ഇതാണോ ശരിയായ വഴി?", "এটাই কি সঠিক রাস্তা?", "हाच योग्य रस्ता आहे का?", "이 길이 맞아요?", "¿Es este el camino correcto?", "Ist das der richtige Weg?", "C’est le bon chemin ?", "શું આ સાચો રસ્તો છે?", "এইটোৱেই নে শুদ্ধ বাট?"], ["take-address", "travel", "Please take me to this address", "నన్ను ఈ చిరునామాకు తీసుకెళ్లండి", "मुझे इस पते पर ले चलिए", "ನನ್ನನ್ನು ಈ ವಿಳಾಸಕ್ಕೆ ಕರೆದುಕೊಂಡು ಹೋಗಿ", "என்னை இந்த முகவரிக்குக் கூட்டிச் செல்லுங்கள்", "എന്നെ ഈ വിലാസത്തിലേക്ക് കൊണ്ടുപോകൂ", "আমাকে এই ঠিকানায় নিয়ে যান", "मला या पत्त्यावर घेऊन चला", "이 주소로 데려다 주세요", "Lléveme a esta dirección, por favor", "Bitte bringen Sie mich zu dieser Adresse", "Conduisez-moi à cette adresse, s’il vous plaît", "મને આ સરનામે લઈ જાઓ", "মোক এই ঠিকনালৈ লৈ যাওক"], ["other-colour", "shop", "Do you have another colour?", "ఇంకో రంగు ఉందా?", "क्या दूसरा रंग है?", "ಬೇರೆ ಬಣ್ಣ ಇದೆಯೇ?", "வேறு நிறம் இருக்கிறதா?", "മറ്റൊരു നിറം ഉണ്ടോ?", "অন্য রঙ আছে?", "दुसरा रंग आहे का?", "다른 색 있어요?", "¿Tiene otro color?", "Haben Sie eine andere Farbe?", "Avez-vous une autre couleur ?", "શું બીજો રંગ છે?", "আন ৰং আছে নে?"], ["just-looking", "shop", "I am just looking", "నేను చూస్తున్నాను అంతే", "मैं बस देख रहा हूँ", "ನಾನು ಸುಮ್ಮನೆ ನೋಡುತ್ತಿದ್ದೇನೆ", "நான் சும்மா பார்க்கிறேன்", "ഞാൻ വെറുതെ നോക്കുകയാണ്", "আমি শুধু দেখছি", "मी फक्त बघतोय", "그냥 구경하는 거예요", "Solo estoy mirando", "Ich schaue nur", "Je regarde seulement", "હું બસ જોઈ રહ્યો છું", "মই এনেই চাই আছোঁ"], ["pay-phone", "shop", "Can I pay with my phone?", "ఫోన్‌తో చెల్లించవచ్చా?", "क्या मैं फ़ोन से भुगतान कर सकता हूँ?", "ಫೋನ್‌ನಿಂದ ಪಾವತಿಸಬಹುದೇ?", "போனில் பணம் செலுத்தலாமா?", "ഫോൺ വഴി പണം നൽകാമോ?", "ফোনে টাকা দিতে পারি?", "मी फोनने पैसे देऊ शकतो का?", "휴대폰으로 결제해도 돼요?", "¿Puedo pagar con el móvil?", "Kann ich mit dem Handy bezahlen?", "Puis-je payer avec mon téléphone ?", "શું હું ફોનથી ચૂકવી શકું?", "মই ফোনেৰে পইচা দিব পাৰোনে?"], ["pack-it", "shop", "Please pack it", "దయచేసి ప్యాక్ చేయండి", "कृपया इसे पैक कर दीजिए", "ದಯವಿಟ್ಟು ಪ್ಯಾಕ್ ಮಾಡಿ", "தயவுசெய்து பேக் செய்யுங்கள்", "ദയവായി പാക്ക് ചെയ്യൂ", "দয়া করে প্যাক করে দিন", "कृपया पॅक करून द्या", "포장해 주세요", "Envuélvalo, por favor", "Bitte packen Sie es ein", "Emballez-le, s’il vous plaît", "કૃપા કરીને પેક કરી આપો", "অনুগ্ৰহ কৰি পেক কৰি দিয়ক"], ["have-cold", "health", "I have a cold", "నాకు జలుబు చేసింది", "मुझे सर्दी हो गई है", "ನನಗೆ ಶೀತವಾಗಿದೆ", "எனக்கு சளி பிடித்திருக்கிறது", "എനിക്ക് ജലദോഷമുണ്ട്", "আমার সর্দি হয়েছে", "मला सर्दी झाली आहे", "감기에 걸렸어요", "Tengo un resfriado", "Ich bin erkältet", "Je suis enrhumé", "મને શરદી થઈ છે", "মোৰ সৰ্দি হৈছে"], ["stomachache", "health", "I have a stomach ache", "నాకు కడుపు నొప్పిగా ఉంది", "मेरे पेट में दर्द है", "ನನಗೆ ಹೊಟ್ಟೆ ನೋವು ಇದೆ", "எனக்கு வயிற்று வலி", "എനിക്ക് വയറുവേദനയുണ്ട്", "আমার পেট ব্যথা করছে", "माझं पोट दुखत आहे", "배가 아파요", "Me duele el estómago", "Ich habe Bauchschmerzen", "J’ai mal au ventre", "મારા પેટમાં દુખે છે", "মোৰ পেট বিষাইছে"], ["allergic", "health", "I am allergic to this", "నాకు దీనితో అలర్జీ ఉంది", "मुझे इससे एलर्जी है", "ನನಗೆ ಇದರಿಂದ ಅಲರ್ಜಿ ಇದೆ", "எனக்கு இதனால் ஒவ்வாமை உள்ளது", "എനിക്ക് ഇതിനോട് അലർജിയുണ്ട്", "আমার এতে অ্যালার্জি আছে", "मला याची अॅलर्जी आहे", "저는 이것에 알레르기가 있어요", "Soy alérgico a esto", "Ich bin dagegen allergisch", "Je suis allergique à cela", "મને આનાથી એલર્જી છે", "মোৰ ইয়াত এলাৰ্জি আছে"], ["call-doctor", "health", "Please call a doctor", "దయచేసి డాక్టర్‌ని పిలవండి", "कृपया डॉक्टर को बुलाइए", "ದಯವಿಟ್ಟು ವೈದ್ಯರನ್ನು ಕರೆಯಿರಿ", "தயவுசெய்து மருத்துவரை அழையுங்கள்", "ദയവായി ഡോക്ടറെ വിളിക്കൂ", "দয়া করে ডাক্তার ডাকুন", "कृपया डॉक्टरांना बोलवा", "의사를 불러 주세요", "Llame a un médico, por favor", "Rufen Sie bitte einen Arzt", "Appelez un médecin, s’il vous plaît", "કૃપા કરીને ડૉક્ટરને બોલાવો", "অনুগ্ৰহ কৰি ডাক্তৰ মাতক"], ["mother", "people", "This is my mother", "ఈమె నా తల్లి", "ये मेरी माँ हैं", "ಇವರು ನನ್ನ ತಾಯಿ", "இவர் என் அம்மா", "ഇത് എന്റെ അമ്മയാണ്", "ইনি আমার মা", "ही माझी आई आहे", "이분은 제 어머니예요", "Esta es mi madre", "Das ist meine Mutter", "Voici ma mère", "આ મારી માતા છે", "ইয়াই মোৰ মা"], ["father", "people", "This is my father", "ఈయన నా తండ్రి", "ये मेरे पिता हैं", "ಇವರು ನನ್ನ ತಂದೆ", "இவர் என் அப்பா", "ഇത് എന്റെ അച്ഛനാണ്", "ইনি আমার বাবা", "हे माझे वडील आहेत", "이분은 제 아버지예요", "Este es mi padre", "Das ist mein Vater", "Voici mon père", "આ મારા પિતા છે", "ইয়াই মোৰ দেউতা"], ["brother", "people", "I have a brother", "నాకు ఒక సోదరుడు ఉన్నాడు", "मेरा एक भाई है", "ನನಗೆ ಒಬ್ಬ ಸಹೋದರನಿದ್ದಾನೆ", "எனக்கு ஒரு சகோதரர் இருக்கிறார்", "എനിക്ക് ഒരു സഹോദരനുണ്ട്", "আমার একটা ভাই আছে", "मला एक भाऊ आहे", "저는 형제가 한 명 있어요", "Tengo un hermano", "Ich habe einen Bruder", "J’ai un frère", "મારે એક ભાઈ છે", "মোৰ এজন ভাই আছে"], ["sister", "people", "I have a sister", "నాకు ఒక సోదరి ఉంది", "मेरी एक बहन है", "ನನಗೆ ಒಬ್ಬ ಸಹೋದರಿ ಇದ್ದಾಳೆ", "எனக்கு ஒரு சகோதரி இருக்கிறாள்", "എനിക്ക് ഒരു സഹോദരിയുണ്ട്", "আমার একটা বোন আছে", "मला एक बहीण आहे", "저는 자매가 한 명 있어요", "Tengo una hermana", "Ich habe eine Schwester", "J’ai une sœur", "મારે એક બહેન છે", "মোৰ এজনী ভনী আছে"], ["afraid", "feel", "I am afraid", "నాకు భయంగా ఉంది", "मुझे डर लग रहा है", "ನನಗೆ ಭಯವಾಗುತ್ತಿದೆ", "எனக்குப் பயமாக இருக்கிறது", "എനിക്ക് പേടിയാകുന്നു", "আমার ভয় করছে", "मला भीती वाटत आहे", "무서워요", "Tengo miedo", "Ich habe Angst", "J’ai peur", "મને ડર લાગે છે", "মোৰ ভয় লাগিছে"], ["proud", "feel", "I am proud of you", "నాకు నీ గురించి గర్వంగా ఉంది", "मुझे तुम पर गर्व है", "ನನಗೆ ನಿನ್ನ ಬಗ್ಗೆ ಹೆಮ್ಮೆ ಇದೆ", "உன்னைப் பற்றி எனக்குப் பெருமையாக இருக்கிறது", "എനിക്ക് നിന്നെക്കുറിച്ച് അഭിമാനമുണ്ട്", "আমি তোমার জন্য গর্বিত", "मला तुझा अभिमान वाटतो", "네가 자랑스러워", "Estoy orgulloso de ti", "Ich bin stolz auf dich", "Je suis fier de toi", "મને તારા પર ગર્વ છે", "মই তোমাৰ বাবে গৌৰৱান্বিত"], ["dont-worry", "feel", "Don’t worry", "చింతించకండి", "चिंता मत कीजिए", "ಚಿಂತಿಸಬೇಡಿ", "கவலைப்படாதீர்கள்", "വിഷമിക്കരുത്", "চিন্তা করবেন না", "काळजी करू नका", "걱정하지 마세요", "No se preocupe", "Keine Sorge", "Ne vous inquiétez pas", "ચિંતા કરશો નહીં", "চিন্তা নকৰিব"], ["office", "work", "I work in an office", "నేను ఆఫీసులో పని చేస్తాను", "मैं दफ़्तर में काम करता हूँ", "ನಾನು ಕಚೇರಿಯಲ್ಲಿ ಕೆಲಸ ಮಾಡುತ್ತೇನೆ", "நான் அலுவலகத்தில் வேலை செய்கிறேன்", "ഞാൻ ഓഫീസിൽ ജോലി ചെയ്യുന്നു", "আমি অফিসে কাজ করি", "मी कार्यालयात काम करतो", "저는 사무실에서 일해요", "Trabajo en una oficina", "Ich arbeite in einem Büro", "Je travaille dans un bureau", "હું ઓફિસમાં કામ કરું છું", "মই অফিচত কাম কৰোঁ"], ["email-me", "work", "Please email me", "దయచేసి నాకు ఈమెయిల్ చేయండి", "कृपया मुझे ईमेल कीजिए", "ದಯವಿಟ್ಟು ನನಗೆ ಇಮೇಲ್ ಮಾಡಿ", "தயவுசெய்து எனக்கு மின்னஞ்சல் அனுப்புங்கள்", "ദയവായി എനിക്ക് ഇമെയിൽ അയയ്ക്കൂ", "দয়া করে আমাকে ইমেল করুন", "कृपया मला ईमेल करा", "이메일을 보내 주세요", "Envíeme un correo, por favor", "Bitte schreiben Sie mir eine E-Mail", "Envoyez-moi un courriel, s’il vous plaît", "કૃપા કરીને મને ઇમેઇલ કરો", "অনুগ্ৰহ কৰি মোক ইমেইল কৰক"], ["lets-start", "work", "Let’s begin", "ప్రారంభిద్దాం", "शुरू करते हैं", "ಪ್ರಾರಂಭಿಸೋಣ", "தொடங்கலாம்", "തുടങ്ങാം", "শুরু করা যাক", "सुरू करूया", "시작합시다", "Empecemos", "Fangen wir an", "Commençons", "ચાલો શરૂ કરીએ", "আৰম্ভ কৰোঁ আহক"], ["light-off", "home", "Please switch off the light", "దయచేసి లైట్ ఆర్పండి", "कृपया बत्ती बंद कर दीजिए", "ದಯವಿಟ್ಟು ದೀಪ ಆರಿಸಿ", "தயவுசெய்து விளக்கை அணையுங்கள்", "ദയവായി ലൈറ്റ് ഓഫ് ചെയ്യൂ", "দয়া করে আলো নিভিয়ে দিন", "कृपया दिवा बंद करा", "불을 꺼 주세요", "Apague la luz, por favor", "Bitte machen Sie das Licht aus", "Éteignez la lumière, s’il vous plaît", "કૃપા કરીને લાઇટ બંધ કરો", "অনুগ্ৰহ কৰি পোহৰ নুমুৱাই দিয়ক"], ["window", "home", "Please close the window", "దయచేసి కిటికీ మూసివేయండి", "कृपया खिड़की बंद कर दीजिए", "ದಯವಿಟ್ಟು ಕಿಟಕಿ ಮುಚ್ಚಿ", "தயவுசெய்து ஜன்னலை மூடுங்கள்", "ദയവായി ജനൽ അടയ്ക്കൂ", "দয়া করে জানালা বন্ধ করুন", "कृपया खिडकी बंद करा", "창문을 닫아 주세요", "Cierre la ventana, por favor", "Bitte schließen Sie das Fenster", "Fermez la fenêtre, s’il vous plaît", "કૃપા કરીને બારી બંધ કરો", "অনুগ্ৰহ কৰি খিৰিকী বন্ধ কৰক"], ["five-min", "time", "Wait five minutes", "ఐదు నిమిషాలు ఆగండి", "पाँच मिनट रुकिए", "ಐದು ನಿಮಿಷ ಕಾಯಿರಿ", "ஐந்து நிமிடம் காத்திருங்கள்", "അഞ്ച് മിനിറ്റ് കാത്തിരിക്കൂ", "পাঁচ মিনিট অপেক্ষা করুন", "पाच मिनिटे थांबा", "오 분만 기다려 주세요", "Espere cinco minutos", "Warten Sie fünf Minuten", "Attendez cinq minutes", "પાંચ મિનિટ રાહ જુઓ", "পাঁচ মিনিট অপেক্ষা কৰক"], ["every-day", "time", "Every day", "ప్రతిరోజూ", "हर दिन", "ಪ್ರತಿದಿನ", "ஒவ்வொரு நாளும்", "എല്ലാ ദിവസവും", "প্রতিদিন", "दररोज", "매일", "Todos los días", "Jeden Tag", "Tous les jours", "દરરોજ", "প্ৰতিদিনে"], ["next-week", "time", "Next week", "వచ్చే వారం", "अगले हफ़्ते", "ಮುಂದಿನ ವಾರ", "அடுத்த வாரம்", "അടുത്ത ആഴ്ച", "পরের সপ্তাহে", "पुढच्या आठवड्यात", "다음 주", "La semana que viene", "Nächste Woche", "La semaine prochaine", "આવતા અઠવાડિયે", "অহা সপ্তাহত"], ["last-night", "time", "Last night", "నిన్న రాత్రి", "कल रात", "ನಿನ್ನೆ ರಾತ್ರಿ", "நேற்று இரவு", "ഇന്നലെ രാത്രി", "গতকাল রাতে", "काल रात्री", "어젯밤", "Anoche", "Gestern Abend", "Hier soir", "ગઈ કાલે રાત્રે", "কালি ৰাতি"]];
+  var NEW = [["little", "talk", "Only a little.", "కొంచెం మాత్రమే.", "थोड़ा-सा ही।", "ಸ್ವಲ್ಪ ಮಾತ್ರ.", "கொஞ்சம் தான்.", "കുറച്ച് മാത്രം.", "অল্প একটু।", "थोडंसंच.", "조금만요.", "Solo un poco.", "Nur ein bisschen.", "Seulement un peu.", "થોડું જ.", "অলপহে।"], ["nice-too", "talk", "Nice to meet you too.", "మిమ్మల్ని కలవడం నాకూ సంతోషం.", "मुझे भी आपसे मिलकर खुशी हुई।", "ನನಗೂ ನಿಮ್ಮನ್ನು ಭೇಟಿಯಾಗಿ ಸಂತೋಷವಾಯಿತು.", "உங்களைச் சந்தித்ததில் எனக்கும் மகிழ்ச்சி.", "നിങ്ങളെ കണ്ടതിൽ എനിക്കും സന്തോഷം.", "আমারও আপনার সঙ্গে দেখা হয়ে ভালো লাগল।", "मलाही तुम्हाला भेटून आनंद झाला.", "저도 만나서 반갑습니다.", "Encantado de conocerle también.", "Freut mich auch.", "Moi aussi, enchanté.", "મને પણ તમને મળીને આનંદ થયો.", "মোকো আপোনাক লগ পাই ভাল লাগিল।"], ["table-how-many", "food", "How many people?", "ఎంతమంది?", "कितने लोग हैं?", "ಎಷ್ಟು ಜನ?", "எத்தனை பேர்?", "എത്ര പേരുണ്ട്?", "কতজন?", "किती जण आहात?", "몇 분이세요?", "¿Cuántas personas?", "Für wie viele Personen?", "Combien de personnes ?", "કેટલા લોકો છો?", "কিমান জন?"], ["table-two", "food", "A table for two, please.", "దయచేసి ఇద్దరికి టేబుల్ ఇవ్వండి.", "कृपया दो लोगों के लिए मेज़ दीजिए।", "ದಯವಿಟ್ಟು ಇಬ್ಬರಿಗೆ ಟೇಬಲ್ ಕೊಡಿ.", "தயவுசெய்து இருவருக்கு ஒரு மேசை வேண்டும்.", "ദയവായി രണ്ടുപേർക്ക് ഒരു മേശ വേണം.", "দয়া করে দুজনের জন্য একটা টেবিল দিন।", "कृपया दोघांसाठी टेबल द्या.", "두 명 자리로 부탁합니다.", "Una mesa para dos, por favor.", "Einen Tisch für zwei, bitte.", "Une table pour deux, s’il vous plaît.", "મહેરબાની કરીને બે જણ માટે ટેબલ આપો.", "অনুগ্ৰহ কৰি দুজনৰ বাবে এখন টেবুল দিয়ক।"], ["drink-q", "food", "What would you like to drink?", "మీరు ఏం తాగుతారు?", "आप क्या पीना चाहेंगे?", "ನೀವು ಏನು ಕುಡಿಯುತ್ತೀರಿ?", "நீங்கள் என்ன குடிக்க விரும்புகிறீர்கள்?", "നിങ്ങൾ എന്താണ് കുടിക്കുക?", "আপনি কী পান করবেন?", "तुम्ही काय प्याल?", "음료는 무엇으로 하시겠어요?", "¿Qué desea beber?", "Was möchten Sie trinken?", "Que souhaitez-vous boire ?", "તમે શું પીશો?", "আপুনি কি পান কৰিব?"], ["eat-q", "food", "What would you like to eat?", "మీరు ఏం తింటారు?", "आप क्या खाना चाहेंगे?", "ನೀವು ಏನು ತಿನ್ನುತ್ತೀರಿ?", "நீங்கள் என்ன சாப்பிட விரும்புகிறீர்கள்?", "നിങ്ങൾ എന്താണ് കഴിക്കുക?", "আপনি কী খাবেন?", "तुम्ही काय खाणार?", "무엇을 드시겠어요?", "¿Qué desea comer?", "Was möchten Sie essen?", "Que souhaitez-vous manger ?", "તમે શું જમશો?", "আপুনি কি খাব?"], ["order-rice", "food", "I would like rice, please.", "నాకు అన్నం కావాలి.", "मुझे चावल चाहिए।", "ನನಗೆ ಅನ್ನ ಬೇಕು.", "எனக்கு சாதம் வேண்டும்.", "എനിക്ക് ചോറ് വേണം.", "আমি ভাত নেব।", "मला भात हवा आहे.", "밥을 주세요.", "Quisiera arroz, por favor.", "Ich hätte gern Reis.", "Je voudrais du riz, s’il vous plaît.", "મને ભાત જોઈએ છે.", "মোক ভাত লাগে।"], ["spicy-q", "food", "Would you like it spicy?", "కారంగా కావాలా?", "क्या आपको तीखा चाहिए?", "ಖಾರ ಬೇಕಾ?", "காரமாக வேண்டுமா?", "എരിവ് വേണോ?", "ঝাল চান?", "तिखट हवे का?", "맵게 해 드릴까요?", "¿Lo quiere picante?", "Möchten Sie es scharf?", "Vous le voulez épicé ?", "તીખું જોઈએ છે?", "জলফাই দিম নেকি?"], ["anything-else", "food", "Anything else?", "ఇంకేమైనా కావాలా?", "और कुछ चाहिए?", "ಇನ್ನೇನಾದರೂ ಬೇಕಾ?", "வேறு ஏதாவது வேண்டுமா?", "വേറെ എന്തെങ്കിലും വേണോ?", "আর কিছু লাগবে?", "आणखी काही हवे का?", "더 필요하신 것 있으세요?", "¿Algo más?", "Sonst noch etwas?", "Autre chose ?", "બીજું કંઈ જોઈએ છે?", "আৰু একো লাগিবনে?"], ["need-help-q", "talk", "Do you need help?", "మీకు సహాయం కావాలా?", "क्या आपको मदद चाहिए?", "ನಿಮಗೆ ಸಹಾಯ ಬೇಕಾ?", "உங்களுக்கு உதவி வேண்டுமா?", "നിങ്ങൾക്ക് സഹായം വേണോ?", "আপনার কি সাহায্য লাগবে?", "तुम्हाला मदत हवी आहे का?", "도움이 필요하세요?", "¿Necesita ayuda?", "Brauchen Sie Hilfe?", "Avez-vous besoin d’aide ?", "શું તમને મદદ જોઈએ છે?", "আপোনাক সহায় লাগিবনে?"], ["where-go", "travel", "Where do you want to go?", "మీరు ఎక్కడికి వెళ్ళాలి?", "आप कहाँ जाना चाहते हैं?", "ನೀವು ಎಲ್ಲಿಗೆ ಹೋಗಬೇಕು?", "நீங்கள் எங்கே போக வேண்டும்?", "നിങ്ങൾക്ക് എവിടെ പോകണം?", "আপনি কোথায় যেতে চান?", "तुम्हाला कुठे जायचे आहे?", "어디로 가고 싶으세요?", "¿A dónde quiere ir?", "Wohin möchten Sie gehen?", "Où voulez-vous aller ?", "તમારે ક્યાં જવું છે?", "আপুনি ক’লৈ যাব বিচাৰে?"], ["straight-then-left", "travel", "Go straight, then turn left.", "సూటిగా వెళ్ళి, తర్వాత ఎడమవైపు తిరగండి.", "सीधे जाइए, फिर बाएँ मुड़िए।", "ನೇರವಾಗಿ ಹೋಗಿ, ನಂತರ ಎಡಕ್ಕೆ ತಿರುಗಿ.", "நேராகப் போய், பிறகு இடதுபுறம் திரும்புங்கள்.", "നേരെ പോയി, പിന്നെ ഇടത്തോട്ട് തിരിയുക.", "সোজা যান, তারপর বাঁয়ে ঘুরুন।", "सरळ जा, मग डावीकडे वळा.", "직진한 다음 왼쪽으로 도세요.", "Siga recto y luego gire a la izquierda.", "Gehen Sie geradeaus und dann links.", "Allez tout droit, puis tournez à gauche.", "સીધા જાઓ, પછી ડાબી બાજુ વળો.", "পোনে যাওক, তাৰ পিছত বাওঁফালে ঘূৰক।"], ["five-min-walk", "travel", "It is five minutes on foot.", "నడిస్తే ఐదు నిమిషాలు పడుతుంది.", "पैदल पाँच मिनट लगते हैं।", "ನಡೆದರೆ ಐದು ನಿಮಿಷ.", "நடந்தால் ஐந்து நிமிடம்.", "നടന്നാൽ അഞ്ച് മിനിറ്റ്.", "হেঁটে পাঁচ মিনিট লাগে।", "चालत पाच मिनिटे लागतात.", "걸어서 5분 걸려요.", "Está a cinco minutos andando.", "Es sind fünf Minuten zu Fuß.", "C’est à cinq minutes à pied.", "ચાલીને પાંચ મિનિટ લાગે છે.", "খোজ কাঢ়ি গ’লে পাঁচ মিনিট লাগে।"], ["help-you-q", "shop", "Can I help you?", "నేను మీకు సహాయం చేయగలనా?", "क्या मैं आपकी मदद कर सकता हूँ?", "ನಾನು ನಿಮಗೆ ಸಹಾಯ ಮಾಡಲೇ?", "நான் உங்களுக்கு உதவலாமா?", "ഞാൻ സഹായിക്കണോ?", "আমি কি আপনাকে সাহায্য করতে পারি?", "मी तुम्हाला मदत करू का?", "도와드릴까요?", "¿En qué puedo ayudarle?", "Kann ich Ihnen helfen?", "Puis-je vous aider ?", "હું તમારી શું મદદ કરી શકું?", "মই আপোনাক সহায় কৰিব পাৰোঁনে?"], ["price-500", "shop", "It is five hundred rupees.", "ఐదు వందల రూపాయలు.", "पाँच सौ रुपये हैं।", "ಐನೂರು ರೂಪಾಯಿ.", "ஐந்நூறு ரூபாய்.", "അഞ്ഞൂറ് രൂപയാണ്.", "পাঁচশো টাকা।", "पाचशे रुपये आहेत.", "오백 루피예요.", "Son quinientas rupias.", "Es kostet fünfhundert Rupien.", "Ça fait cinq cents roupies.", "પાંચસો રૂપિયા છે.", "পাঁচশ টকা।"], ["price-400", "shop", "I can give it for four hundred.", "నాలుగు వందలకు ఇస్తాను.", "मैं इसे चार सौ में दे सकता हूँ।", "ನಾನು ನಾನೂರಕ್ಕೆ ಕೊಡುತ್ತೇನೆ.", "நாநூறுக்குத் தருகிறேன்.", "നാനൂറിന് തരാം.", "আমি চারশোতে দিতে পারি।", "मी हे चारशेला देऊ शकतो.", "사백에 드릴게요.", "Puedo dárselo por cuatrocientas.", "Ich gebe es Ihnen für vierhundert.", "Je peux vous le laisser à quatre cents.", "હું તે ચારસોમાં આપી શકું.", "মই এইটো চাৰিশ টকাত দিব পাৰোঁ।"], ["cash-or-card", "shop", "Cash or card?", "నగదా లేక కార్డా?", "नकद या कार्ड?", "ನಗದೋ ಕಾರ್ಡೋ?", "பணமா அல்லது கார்டா?", "പണമോ കാർഡോ?", "নগদ না কার্ড?", "रोख की कार्ड?", "현금이세요, 카드세요?", "¿Efectivo o tarjeta?", "Bar oder mit Karte?", "Espèces ou carte ?", "રોકડ કે કાર્ડ?", "নগদ নে কাৰ্ড?"], ["pay-card", "shop", "I will pay by card.", "నేను కార్డుతో చెల్లిస్తాను.", "मैं कार्ड से भुगतान करूँगा।", "ನಾನು ಕಾರ್ಡ್‌ನಿಂದ ಪಾವತಿಸುತ್ತೇನೆ.", "நான் கார்டில் பணம் செலுத்துகிறேன்.", "ഞാൻ കാർഡ് ഉപയോഗിച്ച് പണമടയ്ക്കാം.", "আমি কার্ডে টাকা দেব।", "मी कार्डने पैसे देईन.", "카드로 계산할게요.", "Pagaré con tarjeta.", "Ich zahle mit Karte.", "Je paierai par carte.", "હું કાર્ડથી ચૂકવીશ.", "মই কাৰ্ডেৰে দাম দিম।"], ["problem-q", "health", "What is the problem?", "సమస్య ఏమిటి?", "क्या समस्या है?", "ಸಮಸ್ಯೆ ಏನು?", "என்ன பிரச்சினை?", "എന്താണ് പ്രശ്നം?", "সমস্যা কী?", "काय त्रास आहे?", "어디가 불편하세요?", "¿Cuál es el problema?", "Was fehlt Ihnen?", "Quel est le problème ?", "શું તકલીફ છે?", "কি সমস্যা?"], ["where-hurt", "health", "Where does it hurt?", "ఎక్కడ నొప్పిగా ఉంది?", "कहाँ दर्द हो रहा है?", "ಎಲ್ಲಿ ನೋವಾಗುತ್ತಿದೆ?", "எங்கே வலிக்கிறது?", "എവിടെയാണ് വേദന?", "কোথায় ব্যথা করছে?", "कुठे दुखत आहे?", "어디가 아프세요?", "¿Dónde le duele?", "Wo tut es weh?", "Où avez-vous mal ?", "ક્યાં દુખે છે?", "ক’ত বিষাইছে?"], ["fever-q", "health", "Do you have a fever?", "మీకు జ్వరం ఉందా?", "क्या आपको बुखार है?", "ನಿಮಗೆ ಜ್ವರ ಇದೆಯಾ?", "உங்களுக்குக் காய்ச்சல் இருக்கிறதா?", "നിങ്ങൾക്ക് പനിയുണ്ടോ?", "আপনার কি জ্বর আছে?", "तुम्हाला ताप आहे का?", "열이 있으세요?", "¿Tiene fiebre?", "Haben Sie Fieber?", "Avez-vous de la fièvre ?", "શું તમને તાવ છે?", "আপোনাৰ জ্বৰ আছেনে?"], ["since-yesterday", "health", "Yes, since yesterday.", "అవును, నిన్నటి నుండి.", "हाँ, कल से।", "ಹೌದು, ನಿನ್ನೆಯಿಂದ.", "ஆம், நேற்றிலிருந்து.", "അതെ, ഇന്നലെ മുതൽ.", "হ্যাঁ, গতকাল থেকে।", "हो, कालपासून.", "네, 어제부터요.", "Sí, desde ayer.", "Ja, seit gestern.", "Oui, depuis hier.", "હા, ગઈકાલથી.", "হয়, কালিৰে পৰা।"], ["medicine-twice", "health", "Take this medicine twice a day.", "ఈ మందు రోజుకు రెండుసార్లు వేసుకోండి.", "यह दवा दिन में दो बार लीजिए।", "ಈ ಔಷಧಿಯನ್ನು ದಿನಕ್ಕೆ ಎರಡು ಬಾರಿ ತೆಗೆದುಕೊಳ್ಳಿ.", "இந்த மருந்தை தினமும் இரண்டு முறை சாப்பிடுங்கள்.", "ഈ മരുന്ന് ദിവസം രണ്ടു തവണ കഴിക്കുക.", "এই ওষুধ দিনে দুবার খান।", "हे औषध दिवसातून दोनदा घ्या.", "이 약을 하루에 두 번 드세요.", "Tome esta medicina dos veces al día.", "Nehmen Sie dieses Medikament zweimal täglich.", "Prenez ce médicament deux fois par jour.", "આ દવા દિવસમાં બે વાર લો.", "এই ঔষধ দিনত দুবাৰ খাওক।"], ["reservation-q", "travel", "Do you have a reservation?", "మీకు రిజర్వేషన్ ఉందా?", "क्या आपकी बुकिंग है?", "ನಿಮ್ಮ ಬುಕಿಂಗ್ ಇದೆಯಾ?", "உங்களிடம் முன்பதிவு இருக்கிறதா?", "നിങ്ങൾക്ക് ബുക്കിംഗ് ഉണ്ടോ?", "আপনার কি বুকিং আছে?", "तुमचे बुकिंग आहे का?", "예약하셨나요?", "¿Tiene una reserva?", "Haben Sie eine Reservierung?", "Avez-vous une réservation ?", "શું તમારું બુકિંગ છે?", "আপোনাৰ বুকিং আছেনে?"], ["have-reservation", "travel", "Yes, I have a reservation.", "అవును, నాకు రిజర్వేషన్ ఉంది.", "हाँ, मेरी बुकिंग है।", "ಹೌದು, ನನ್ನ ಬುಕಿಂಗ್ ಇದೆ.", "ஆம், என்னிடம் முன்பதிவு இருக்கிறது.", "അതെ, എനിക്ക് ബുക്കിംഗ് ഉണ്ട്.", "হ্যাঁ, আমার বুকিং আছে।", "हो, माझे बुकिंग आहे.", "네, 예약했어요.", "Sí, tengo una reserva.", "Ja, ich habe eine Reservierung.", "Oui, j’ai une réservation.", "હા, મારું બુકિંગ છે.", "হয়, মোৰ বুকিং আছে।"], ["nights-q", "travel", "How many nights?", "ఎన్ని రాత్రులు?", "कितनी रातें?", "ಎಷ್ಟು ರಾತ್ರಿ?", "எத்தனை இரவுகள்?", "എത്ര രാത്രി?", "কত রাত?", "किती रात्री?", "며칠 묵으세요?", "¿Cuántas noches?", "Wie viele Nächte?", "Pour combien de nuits ?", "કેટલી રાત?", "কিমান ৰাতি?"], ["two-nights", "travel", "Two nights.", "రెండు రాత్రులు.", "दो रातें।", "ಎರಡು ರಾತ್ರಿ.", "இரண்டு இரவுகள்.", "രണ്ട് രാത്രി.", "দুই রাত।", "दोन रात्री.", "이틀이요.", "Dos noches.", "Zwei Nächte.", "Deux nuits.", "બે રાત.", "দুটা ৰাতি।"], ["third-floor", "travel", "Your room is on the third floor.", "మీ గది మూడవ అంతస్తులో ఉంది.", "आपका कमरा तीसरी मंज़िल पर है।", "ನಿಮ್ಮ ಕೋಣೆ ಮೂರನೇ ಮಹಡಿಯಲ್ಲಿದೆ.", "உங்கள் அறை மூன்றாவது மாடியில் உள்ளது.", "നിങ്ങളുടെ മുറി മൂന്നാം നിലയിലാണ്.", "আপনার ঘর তিনতলায়।", "तुमची खोली तिसऱ्या मजल्यावर आहे.", "객실은 3층입니다.", "Su habitación está en el tercer piso.", "Ihr Zimmer ist im dritten Stock.", "Votre chambre est au troisième étage.", "તમારો રૂમ ત્રીજા માળે છે.", "আপোনাৰ কোঠাটো তৃতীয় মহলাত আছে।"], ["breakfast-incl", "travel", "Is breakfast included?", "అల్పాహారం కలిపి ఉందా?", "क्या नाश्ता शामिल है?", "ಉಪಾಹಾರ ಸೇರಿದೆಯಾ?", "காலை உணவு சேர்ந்ததா?", "പ്രഭാതഭക്ഷണം ഉൾപ്പെടുന്നുണ്ടോ?", "সকালের খাবার কি অন্তর্ভুক্ত?", "नाश्ता समाविष्ट आहे का?", "아침 식사가 포함되어 있나요?", "¿El desayuno está incluido?", "Ist das Frühstück inbegriffen?", "Le petit-déjeuner est-il compris ?", "શું નાસ્તો સામેલ છે?", "ৰাতিপুৱাৰ আহাৰ অন্তৰ্ভুক্ত নেকি?"], ["breakfast-8", "travel", "Yes, breakfast is at eight.", "అవును, అల్పాహారం ఎనిమిది గంటలకు.", "हाँ, नाश्ता आठ बजे है।", "ಹೌದು, ಉಪಾಹಾರ ಎಂಟು ಗಂಟೆಗೆ.", "ஆம், காலை உணவு எட்டு மணிக்கு.", "അതെ, പ്രഭാതഭക്ഷണം എട്ട് മണിക്കാണ്.", "হ্যাঁ, সকালের খাবার আটটায়।", "हो, नाश्ता आठ वाजता आहे.", "네, 아침 식사는 8시입니다.", "Sí, el desayuno es a las ocho.", "Ja, das Frühstück ist um acht Uhr.", "Oui, le petit-déjeuner est à huit heures.", "હા, નાસ્તો આઠ વાગ્યે છે.", "হয়, ৰাতিপুৱাৰ আহাৰ আঠ বজাত।"], ["repeat", "talk", "Could you repeat that?", "మళ్ళీ చెప్పగలరా?", "क्या आप दोहरा सकते हैं?", "ಮತ್ತೆ ಹೇಳಬಹುದೇ?", "மீண்டும் சொல்ல முடியுமா?", "ഒന്നുകൂടി പറയാമോ?", "আবার বলবেন?", "पुन्हा सांगाल का?", "다시 말씀해 주시겠어요?", "¿Puede repetirlo?", "Können Sie das wiederholen?", "Pouvez-vous répéter ?", "શું તમે ફરીથી કહેશો?", "আপুনি পুনৰ কব পাৰিবনে?"], ["what-mean", "talk", "What does this mean?", "దీని అర్థం ఏమిటి?", "इसका क्या मतलब है?", "ಇದರ ಅರ್ಥವೇನು?", "இதன் அர்த்தம் என்ன?", "ഇതിന്റെ അർത്ഥം എന്താണ്?", "এর মানে কী?", "याचा अर्थ काय आहे?", "이게 무슨 뜻이에요?", "¿Qué significa esto?", "Was bedeutet das?", "Que veut dire ceci ?", "આનો અર્થ શું છે?", "ইয়াৰ অৰ্থ কি?"], ["how-say", "talk", "How do you say this in English?", "దీన్ని ఇంగ్లీషులో ఎలా అంటారు?", "इसे अंग्रेज़ी में कैसे कहते हैं?", "ಇದನ್ನು ಇಂಗ್ಲಿಷ್‌ನಲ್ಲಿ ಹೇಗೆ ಹೇಳುತ್ತಾರೆ?", "இதை ஆங்கிலத்தில் எப்படிச் சொல்வது?", "ഇത് ഇംഗ്ലീഷിൽ എങ്ങനെ പറയും?", "এটা ইংরেজিতে কীভাবে বলে?", "हे इंग्रजीत कसे म्हणतात?", "이것을 영어로 어떻게 말해요?", "¿Cómo se dice esto en inglés?", "Wie sagt man das auf Englisch?", "Comment dit-on cela en anglais ?", "આને અંગ્રેજીમાં શું કહેવાય?", "ইয়াক ইংৰাজীত কেনেকৈ কয়?"], ["write-down", "talk", "Please write it down.", "దయచేసి రాసి ఇవ్వండి.", "कृपया इसे लिख दीजिए।", "ದಯವಿಟ್ಟು ಬರೆದುಕೊಡಿ.", "தயவுசெய்து எழுதிக் கொடுங்கள்.", "ദയവായി എഴുതിത്തരൂ.", "দয়া করে লিখে দিন।", "कृपया लिहून द्या.", "적어 주세요.", "Escríbalo, por favor.", "Bitte schreiben Sie es auf.", "Écrivez-le, s’il vous plaît.", "મહેરબાની કરીને લખી આપો.", "অনুগ্ৰহ কৰি লিখি দিয়ক।"], ["wait", "talk", "Please wait a moment.", "దయచేసి ఒక్క క్షణం ఆగండి.", "कृपया एक पल रुकिए।", "ದಯವಿಟ್ಟು ಒಂದು ಕ್ಷಣ ನಿಲ್ಲಿ.", "தயவுசெய்து ஒரு நிமிடம் காத்திருங்கள்.", "ദയവായി ഒരു നിമിഷം കാത്തിരിക്കൂ.", "দয়া করে এক মুহূর্ত অপেক্ষা করুন।", "कृपया थोडा वेळ थांबा.", "잠시만 기다려 주세요.", "Espere un momento, por favor.", "Bitte warten Sie einen Moment.", "Veuillez patienter un instant.", "મહેરબાની કરીને થોડી વાર રાહ જુઓ.", "অনুগ্ৰহ কৰি এক মুহূৰ্ত অপেক্ষা কৰক।"], ["dont-know", "talk", "I don't know.", "నాకు తెలియదు.", "मुझे नहीं पता।", "ನನಗೆ ಗೊತ್ತಿಲ್ಲ.", "எனக்குத் தெரியாது.", "എനിക്കറിയില്ല.", "আমি জানি না।", "मला माहीत नाही.", "모르겠어요.", "No lo sé.", "Ich weiß es nicht.", "Je ne sais pas.", "મને ખબર નથી.", "মই নাজানো।"], ["understand", "talk", "I understand.", "నాకు అర్థమైంది.", "मैं समझ गया।", "ನನಗೆ ಅರ್ಥವಾಯಿತು.", "எனக்குப் புரிகிறது.", "എനിക്ക് മനസ്സിലായി.", "আমি বুঝেছি।", "मला समजले.", "이해했어요.", "Entiendo.", "Ich verstehe.", "Je comprends.", "હું સમજી ગયો.", "মই বুজি পাইছোঁ।"], ["maybe", "talk", "Maybe.", "బహుశా.", "शायद।", "ಬಹುಶಃ.", "ஒருவேளை.", "ഒരുപക്ഷേ.", "হয়তো।", "कदाचित.", "아마도요.", "Quizás.", "Vielleicht.", "Peut-être.", "કદાચ.", "হয়তো।"], ["of-course", "talk", "Of course.", "తప్పకుండా.", "बिल्कुल।", "ಖಂಡಿತ.", "நிச்சயமாக.", "തീർച്ചയായും.", "অবশ্যই।", "नक्कीच.", "물론이죠.", "Por supuesto.", "Natürlich.", "Bien sûr.", "ચોક્કસ.", "অৱশ্যে।"], ["excuse", "talk", "Excuse me.", "ఏమండీ.", "सुनिए।", "ದಯವಿಟ್ಟು ಕೇಳಿ.", "கொஞ்சம் கேளுங்கள்.", "ഒന്നു കേൾക്കൂ.", "শুনুন তো।", "ऐका ना.", "실례합니다.", "Perdone.", "Verzeihung.", "Excusez-moi.", "સાંભળો ને.", "শুনিছেনে?"], ["correct", "talk", "That is correct.", "అది సరైనది.", "यह सही है।", "ಅದು ಸರಿ.", "அது சரி.", "അത് ശരിയാണ്.", "এটা ঠিক।", "ते बरोबर आहे.", "맞아요.", "Eso es correcto.", "Das stimmt.", "C’est exact.", "એ સાચું છે.", "সেয়া শুদ্ধ।"], ["really", "talk", "Really?", "నిజమా?", "सच में?", "ನಿಜವಾಗಿಯೂ?", "உண்மையாகவா?", "ശരിക്കും?", "সত্যি?", "खरंच?", "정말요?", "¿De verdad?", "Wirklich?", "Vraiment ?", "ખરેખર?", "সঁচাকৈ?"], ["can-help", "talk", "Can you help me?", "మీరు నాకు సహాయం చేయగలరా?", "क्या आप मेरी मदद कर सकते हैं?", "ನೀವು ನನಗೆ ಸಹಾಯ ಮಾಡಬಹುದೇ?", "நீங்கள் எனக்கு உதவ முடியுமா?", "നിങ്ങൾക്ക് എന്നെ സഹായിക്കാമോ?", "আপনি কি আমাকে সাহায্য করতে পারেন?", "तुम्ही माझी मदत करू शकता का?", "도와주실 수 있나요?", "¿Puede ayudarme?", "Können Sie mir helfen?", "Pouvez-vous m’aider ?", "શું તમે મારી મદદ કરી શકો?", "আপুনি মোক সহায় কৰিব পাৰিবনে?"], ["good-idea", "talk", "That is a good idea.", "అది మంచి ఆలోచన.", "यह अच्छा विचार है।", "ಅದು ಒಳ್ಳೆಯ ಯೋಚನೆ.", "அது நல்ல யோசனை.", "അത് നല്ല ആശയമാണ്.", "এটা ভালো ধারণা।", "ही चांगली कल्पना आहे.", "좋은 생각이에요.", "Es una buena idea.", "Das ist eine gute Idee.", "C’est une bonne idée.", "એ સારો વિચાર છે.", "সেয়া ভাল ধাৰণা।"], ["sad", "feel", "I am sad.", "నాకు బాధగా ఉంది.", "मैं उदास हूँ।", "ನನಗೆ ದುಃಖವಾಗಿದೆ.", "எனக்குச் சோகமாக இருக்கிறது.", "എനിക്ക് സങ്കടമുണ്ട്.", "আমার মন খারাপ।", "मी दुःखी आहे.", "슬퍼요.", "Estoy triste.", "Ich bin traurig.", "Je suis triste.", "હું દુઃખી છું.", "মোৰ দুখ লাগিছে।"], ["worried", "feel", "I am worried.", "నాకు ఆందోళనగా ఉంది.", "मुझे चिंता हो रही है।", "ನನಗೆ ಚಿಂತೆಯಾಗಿದೆ.", "எனக்குக் கவலையாக இருக்கிறது.", "എനിക്ക് ആശങ്കയുണ്ട്.", "আমি চিন্তিত।", "मला काळजी वाटते.", "걱정돼요.", "Estoy preocupado.", "Ich mache mir Sorgen.", "Je suis inquiet.", "મને ચિંતા થાય છે.", "মোৰ চিন্তা হৈছে।"], ["excited", "feel", "I am excited.", "నాకు ఉత్సాహంగా ఉంది.", "मैं उत्साहित हूँ।", "ನನಗೆ ಉತ್ಸಾಹವಾಗಿದೆ.", "எனக்கு உற்சாகமாக இருக்கிறது.", "എനിക്ക് ആവേശമുണ്ട്.", "আমি উত্তেজিত।", "मी उत्साहित आहे.", "신나요.", "Estoy emocionado.", "Ich freue mich sehr.", "Je suis enthousiaste.", "હું ઉત્સાહિત છું.", "মই উৎসাহিত।"], ["cold", "feel", "I am cold.", "నాకు చలిగా ఉంది.", "मुझे ठंड लग रही है।", "ನನಗೆ ಚಳಿಯಾಗುತ್ತಿದೆ.", "எனக்குக் குளிர்கிறது.", "എനിക്ക് തണുക്കുന്നു.", "আমার ঠান্ডা লাগছে।", "मला थंडी वाजत आहे.", "추워요.", "Tengo frío.", "Mir ist kalt.", "J’ai froid.", "મને ઠંડી લાગે છે.", "মোৰ ঠাণ্ডা লাগিছে।"], ["hot", "feel", "I am hot.", "నాకు వేడిగా ఉంది.", "मुझे गर्मी लग रही है।", "ನನಗೆ ಸೆಕೆಯಾಗುತ್ತಿದೆ.", "எனக்கு வெப்பமாக இருக்கிறது.", "എനിക്ക് ചൂടെടുക്കുന്നു.", "আমার গরম লাগছে।", "मला गरम होत आहे.", "더워요.", "Tengo calor.", "Mir ist heiß.", "J’ai chaud.", "મને ગરમી લાગે છે.", "মোৰ গৰম লাগিছে।"], ["sleepy", "feel", "I am sleepy.", "నాకు నిద్ర వస్తోంది.", "मुझे नींद आ रही है।", "ನನಗೆ ನಿದ್ರೆ ಬರುತ್ತಿದೆ.", "எனக்குத் தூக்கம் வருகிறது.", "എനിക്ക് ഉറക്കം വരുന്നു.", "আমার ঘুম পাচ্ছে।", "मला झोप येत आहे.", "졸려요.", "Tengo sueño.", "Ich bin schläfrig.", "J’ai sommeil.", "મને ઊંઘ આવે છે.", "মোৰ টোপনি আহিছে।"], ["thirsty", "feel", "I am thirsty.", "నాకు దాహంగా ఉంది.", "मुझे प्यास लगी है।", "ನನಗೆ ಬಾಯಾರಿಕೆಯಾಗಿದೆ.", "எனக்குத் தாகமாக இருக்கிறது.", "എനിക്ക് ദാഹിക്കുന്നു.", "আমার তেষ্টা পেয়েছে।", "मला तहान लागली आहे.", "목말라요.", "Tengo sed.", "Ich habe Durst.", "J’ai soif.", "મને તરસ લાગી છે.", "মোৰ পিয়াহ লাগিছে।"], ["bored", "feel", "I am bored.", "నాకు విసుగ్గా ఉంది.", "मैं ऊब गया हूँ।", "ನನಗೆ ಬೇಸರವಾಗಿದೆ.", "எனக்குச் சலிப்பாக இருக்கிறது.", "എനിക്ക് ബോറടിക്കുന്നു.", "আমার একঘেয়ে লাগছে।", "मला कंटाळा आला आहे.", "심심해요.", "Estoy aburrido.", "Mir ist langweilig.", "Je m’ennuie.", "મને કંટાળો આવે છે.", "মোৰ বিৰক্তি লাগিছে।"], ["job-q", "work", "What do you do?", "మీరు ఏం పని చేస్తారు?", "आप क्या काम करते हैं?", "ನೀವು ಏನು ಕೆಲಸ ಮಾಡುತ್ತೀರಿ?", "நீங்கள் என்ன வேலை செய்கிறீர்கள்?", "നിങ്ങൾ എന്ത് ജോലി ചെയ്യുന്നു?", "আপনি কী কাজ করেন?", "तुम्ही काय काम करता?", "무슨 일을 하세요?", "¿A qué se dedica?", "Was machen Sie beruflich?", "Que faites-vous dans la vie ?", "તમે શું કામ કરો છો?", "আপুনি কি কাম কৰে?"], ["engineer", "work", "I am an engineer.", "నేను ఇంజనీర్‌ని.", "मैं इंजीनियर हूँ।", "ನಾನು ಎಂಜಿನಿಯರ್.", "நான் ஒரு பொறியாளர்.", "ഞാൻ ഒരു എഞ്ചിനീയറാണ്.", "আমি একজন ইঞ্জিনিয়ার।", "मी अभियंता आहे.", "저는 엔지니어예요.", "Soy ingeniero.", "Ich bin Ingenieur.", "Je suis ingénieur.", "હું એન્જિનિયર છું.", "মই এজন ইঞ্জিনিয়াৰ।"], ["student", "work", "I am a student.", "నేను విద్యార్థిని.", "मैं विद्यार्थी हूँ।", "ನಾನು ವಿದ್ಯಾರ್ಥಿ.", "நான் ஒரு மாணவர்.", "ഞാൻ ഒരു വിദ്യാർത്ഥിയാണ്.", "আমি একজন ছাত্র।", "मी विद्यार्थी आहे.", "저는 학생이에요.", "Soy estudiante.", "Ich bin Student.", "Je suis étudiant.", "હું વિદ્યાર્થી છું.", "মই এজন ছাত্ৰ।"], ["busy", "work", "I am busy.", "నేను బిజీగా ఉన్నాను.", "मैं व्यस्त हूँ।", "ನಾನು ಬ್ಯುಸಿಯಾಗಿದ್ದೇನೆ.", "நான் வேலையாக இருக்கிறேன்.", "ഞാൻ തിരക്കിലാണ്.", "আমি ব্যস্ত।", "मी व्यस्त आहे.", "바빠요.", "Estoy ocupado.", "Ich bin beschäftigt.", "Je suis occupé.", "હું વ્યસ્ત છું.", "মই ব্যস্ত।"], ["free-today", "work", "I am free today.", "ఈ రోజు నేను ఖాళీగా ఉన్నాను.", "आज मैं खाली हूँ।", "ಇಂದು ನಾನು ಖಾಲಿಯಾಗಿದ್ದೇನೆ.", "இன்று நான் ஓய்வாக இருக்கிறேன்.", "ഇന്ന് ഞാൻ ഫ്രീയാണ്.", "আজ আমি ফাঁকা আছি।", "आज मी मोकळा आहे.", "오늘은 시간이 있어요.", "Hoy estoy libre.", "Heute habe ich Zeit.", "Je suis libre aujourd’hui.", "આજે હું ફ્રી છું.", "আজি মই মুকলি আছোঁ।"], ["meeting", "work", "I have a meeting today.", "ఈ రోజు నాకు మీటింగ్ ఉంది.", "आज मेरी एक बैठक है।", "ಇಂದು ನನಗೆ ಮೀಟಿಂಗ್ ಇದೆ.", "இன்று எனக்கு ஒரு கூட்டம் இருக்கிறது.", "ഇന്ന് എനിക്ക് ഒരു മീറ്റിംഗ് ഉണ്ട്.", "আজ আমার একটা মিটিং আছে।", "आज माझी एक बैठक आहे.", "오늘 회의가 있어요.", "Hoy tengo una reunión.", "Ich habe heute ein Meeting.", "J’ai une réunion aujourd’hui.", "આજે મારી એક મીટિંગ છે.", "আজি মোৰ এখন সভা আছে।"], ["call-me", "work", "Please call me.", "దయచేసి నాకు ఫోన్ చేయండి.", "कृपया मुझे फ़ोन कीजिए।", "ದಯವಿಟ್ಟು ನನಗೆ ಕರೆ ಮಾಡಿ.", "தயவுசெய்து என்னை அழையுங்கள்.", "ദയവായി എന്നെ വിളിക്കൂ.", "দয়া করে আমাকে ফোন করুন।", "कृपया मला फोन करा.", "저에게 전화해 주세요.", "Llámeme, por favor.", "Bitte rufen Sie mich an.", "Appelez-moi, s’il vous plaît.", "મહેરબાની કરીને મને ફોન કરો.", "অনুগ্ৰহ কৰি মোক ফোন কৰক।"], ["phone-q", "work", "What is your phone number?", "మీ ఫోన్ నంబర్ ఏమిటి?", "आपका फ़ोन नंबर क्या है?", "ನಿಮ್ಮ ಫೋನ್ ನಂಬರ್ ಏನು?", "உங்கள் தொலைபேசி எண் என்ன?", "നിങ്ങളുടെ ഫോൺ നമ്പർ എന്താണ്?", "আপনার ফোন নম্বর কত?", "तुमचा फोन नंबर काय आहे?", "전화번호가 어떻게 되세요?", "¿Cuál es su número de teléfono?", "Wie ist Ihre Telefonnummer?", "Quel est votre numéro de téléphone ?", "તમારો ફોન નંબર શું છે?", "আপোনাৰ ফোন নম্বৰ কি?"], ["wifi-q", "work", "Is there Wi-Fi here?", "ఇక్కడ వై-ఫై ఉందా?", "क्या यहाँ वाई-फ़ाई है?", "ಇಲ್ಲಿ ವೈ-ಫೈ ಇದೆಯಾ?", "இங்கே வைஃபை இருக்கிறதா?", "ഇവിടെ വൈ-ഫൈ ഉണ്ടോ?", "এখানে কি ওয়াই-ফাই আছে?", "इथे वाय-फाय आहे का?", "여기 와이파이 있나요?", "¿Hay Wi-Fi aquí?", "Gibt es hier WLAN?", "Y a-t-il du Wi-Fi ici ?", "અહીં વાઇ-ફાઇ છે?", "ইয়াত ৱাই-ফাই আছেনে?"], ["wifi-pass", "work", "What is the Wi-Fi password?", "వై-ఫై పాస్‌వర్డ్ ఏమిటి?", "वाई-फ़ाई का पासवर्ड क्या है?", "ವೈ-ಫೈ ಪಾಸ್‌ವರ್ಡ್ ಏನು?", "வைஃபை கடவுச்சொல் என்ன?", "വൈ-ഫൈ പാസ്‌വേഡ് എന്താണ്?", "ওয়াই-ফাইয়ের পাসওয়ার্ড কী?", "वाय-फायचा पासवर्ड काय आहे?", "와이파이 비밀번호가 뭐예요?", "¿Cuál es la contraseña del Wi-Fi?", "Wie lautet das WLAN-Passwort?", "Quel est le mot de passe du Wi-Fi ?", "વાઇ-ફાઇનો પાસવર્ડ શું છે?", "ৱাই-ফাইৰ পাছৱৰ্ড কি?"], ["weather-q", "home", "How is the weather today?", "ఈ రోజు వాతావరణం ఎలా ఉంది?", "आज मौसम कैसा है?", "ಇಂದು ಹವಾಮಾನ ಹೇಗಿದೆ?", "இன்று வானிலை எப்படி இருக்கிறது?", "ഇന്ന് കാലാവസ്ഥ എങ്ങനെയാണ്?", "আজ আবহাওয়া কেমন?", "आज हवामान कसे आहे?", "오늘 날씨가 어때요?", "¿Qué tiempo hace hoy?", "Wie ist das Wetter heute?", "Quel temps fait-il aujourd’hui ?", "આજે હવામાન કેવું છે?", "আজি বতৰ কেনে?"], ["hot-today", "home", "It is very hot today.", "ఈ రోజు చాలా వేడిగా ఉంది.", "आज बहुत गर्मी है।", "ಇಂದು ತುಂಬಾ ಬಿಸಿಲು.", "இன்று மிகவும் வெயிலாக இருக்கிறது.", "ഇന്ന് നല്ല ചൂടാണ്.", "আজ খুব গরম।", "आज खूप उकाडा आहे.", "오늘은 아주 더워요.", "Hoy hace mucho calor.", "Heute ist es sehr heiß.", "Il fait très chaud aujourd’hui.", "આજે બહુ ગરમી છે.", "আজি বহুত গৰম।"], ["raining", "home", "It is raining.", "వర్షం పడుతోంది.", "बारिश हो रही है।", "ಮಳೆ ಬರುತ್ತಿದೆ.", "மழை பெய்கிறது.", "മഴ പെയ്യുന്നു.", "বৃষ্টি হচ্ছে।", "पाऊस पडत आहे.", "비가 와요.", "Está lloviendo.", "Es regnet.", "Il pleut.", "વરસાદ પડે છે.", "বৰষুণ দিছে।"], ["date-q", "home", "What is the date today?", "ఈ రోజు తేదీ ఏమిటి?", "आज की तारीख़ क्या है?", "ಇಂದಿನ ದಿನಾಂಕ ಏನು?", "இன்றைய தேதி என்ன?", "ഇന്നത്തെ തീയതി എന്താണ്?", "আজ কত তারিখ?", "आज तारीख काय आहे?", "오늘 며칠이에요?", "¿Qué fecha es hoy?", "Welches Datum ist heute?", "Quelle est la date aujourd’hui ?", "આજે તારીખ શું છે?", "আজি কেইতাৰিখ?"], ["open-q", "home", "What time does it open?", "ఇది ఎన్ని గంటలకు తెరుస్తారు?", "यह कितने बजे खुलता है?", "ಇದು ಎಷ್ಟು ಗಂಟೆಗೆ ತೆರೆಯುತ್ತದೆ?", "இது எத்தனை மணிக்குத் திறக்கும்?", "ഇത് എപ്പോൾ തുറക്കും?", "এটা কখন খোলে?", "हे किती वाजता उघडते?", "몇 시에 열어요?", "¿A qué hora abre?", "Wann öffnet es?", "À quelle heure ça ouvre ?", "આ કેટલા વાગ્યે ખુલે છે?", "এইটো কেতিয়া খোলে?"], ["close-q", "home", "What time does it close?", "ఇది ఎన్ని గంటలకు మూసేస్తారు?", "यह कितने बजे बंद होता है?", "ಇದು ಎಷ್ಟು ಗಂಟೆಗೆ ಮುಚ್ಚುತ್ತದೆ?", "இது எத்தனை மணிக்கு மூடுவார்கள்?", "ഇത് എപ്പോൾ അടയ്ക്കും?", "এটা কখন বন্ধ হয়?", "हे किती वाजता बंद होते?", "몇 시에 닫아요?", "¿A qué hora cierra?", "Wann schließt es?", "À quelle heure ça ferme ?", "આ કેટલા વાગ્યે બંધ થાય છે?", "এইটো কেতিয়া বন্ধ হয়?"], ["right-now", "home", "Right now.", "ఇప్పుడే.", "अभी।", "ಈಗಲೇ.", "இப்போதே.", "ഇപ്പോൾ തന്നെ.", "এখনই।", "आत्ताच.", "지금요.", "Ahora mismo.", "Jetzt gleich.", "Tout de suite.", "હમણાં જ.", "এতিয়াই।"], ["come-in", "home", "Please come in.", "దయచేసి లోపలికి రండి.", "कृपया अंदर आइए।", "ದಯವಿಟ್ಟು ಒಳಗೆ ಬನ್ನಿ.", "தயவுசெய்து உள்ளே வாருங்கள்.", "ദയവായി അകത്തേക്ക് വരൂ.", "দয়া করে ভেতরে আসুন।", "कृपया आत या.", "들어오세요.", "Pase, por favor.", "Bitte kommen Sie herein.", "Entrez, s’il vous plaît.", "મહેરબાની કરીને અંદર આવો.", "অনুগ্ৰহ কৰি ভিতৰলৈ আহক।"], ["sit", "home", "Please sit down.", "దయచేసి కూర్చోండి.", "कृपया बैठिए।", "ದಯವಿಟ್ಟು ಕುಳಿತುಕೊಳ್ಳಿ.", "தயவுசெய்து உட்காருங்கள்.", "ദയവായി ഇരിക്കൂ.", "দয়া করে বসুন।", "कृपया बसा.", "앉으세요.", "Siéntese, por favor.", "Bitte setzen Sie sich.", "Asseyez-vous, s’il vous plaît.", "મહેરબાની કરીને બેસો.", "অনুগ্ৰহ কৰি বহক।"], ["open-door", "home", "Please open the door.", "దయచేసి తలుపు తెరవండి.", "कृपया दरवाज़ा खोलिए।", "ದಯವಿಟ್ಟು ಬಾಗಿಲು ತೆರೆಯಿರಿ.", "தயவுசெய்து கதவைத் திறங்கள்.", "ദയവായി വാതിൽ തുറക്കൂ.", "দয়া করে দরজা খুলুন।", "कृपया दार उघडा.", "문을 열어 주세요.", "Abra la puerta, por favor.", "Bitte öffnen Sie die Tür.", "Ouvrez la porte, s’il vous plaît.", "મહેરબાની કરીને દરવાજો ખોલો.", "অনুগ্ৰহ কৰি দুৱাৰ খোলক।"], ["glass-water", "food", "A glass of water, please.", "దయచేసి ఒక గ్లాసు నీళ్ళు ఇవ్వండి.", "कृपया एक गिलास पानी दीजिए।", "ದಯವಿಟ್ಟು ಒಂದು ಲೋಟ ನೀರು ಕೊಡಿ.", "தயவுசெய்து ஒரு டம்ளர் தண்ணீர் தாருங்கள்.", "ദയവായി ഒരു ഗ്ലാസ് വെള്ളം തരൂ.", "দয়া করে এক গ্লাস জল দিন।", "कृपया एक ग्लास पाणी द्या.", "물 한 잔 주세요.", "Un vaso de agua, por favor.", "Ein Glas Wasser, bitte.", "Un verre d’eau, s’il vous plaît.", "મહેરબાની કરીને એક ગ્લાસ પાણી આપો.", "অনুগ্ৰহ কৰি এগিলাছ পানী দিয়ক।"], ["breakfast-q", "food", "What is for breakfast?", "అల్పాహారానికి ఏముంది?", "नाश्ते में क्या है?", "ಉಪಾಹಾರಕ್ಕೆ ಏನಿದೆ?", "காலை உணவுக்கு என்ன இருக்கிறது?", "പ്രഭാതഭക്ഷണത്തിന് എന്താണുള്ളത്?", "সকালের খাবারে কী আছে?", "नाश्त्याला काय आहे?", "아침 식사로 뭐가 있어요?", "¿Qué hay de desayuno?", "Was gibt es zum Frühstück?", "Qu’y a-t-il au petit-déjeuner ?", "નાસ્તામાં શું છે?", "ৰাতিপুৱাৰ আহাৰত কি আছে?"], ["lunch", "food", "Let's have lunch.", "భోజనం చేద్దాం రండి.", "चलिए, दोपहर का खाना खाते हैं।", "ಊಟ ಮಾಡೋಣ ಬನ್ನಿ.", "மதிய உணவு சாப்பிடலாம்.", "നമുക്ക് ഉച്ചഭക്ഷണം കഴിക്കാം.", "চলুন, দুপুরের খাবার খাই।", "चला, दुपारचे जेवण करूया.", "점심 먹어요.", "Vamos a comer.", "Lass uns zu Mittag essen.", "Allons déjeuner.", "ચાલો, બપોરનું ભોજન કરીએ.", "আহক, দুপৰীয়াৰ আহাৰ খাওঁ।"], ["dinner-ready", "food", "Dinner is ready.", "రాత్రి భోజనం సిద్ధంగా ఉంది.", "रात का खाना तैयार है।", "ರಾತ್ರಿ ಊಟ ಸಿದ್ಧವಾಗಿದೆ.", "இரவு உணவு தயாராக இருக்கிறது.", "അത്താഴം തയ്യാറാണ്.", "রাতের খাবার তৈরি।", "रात्रीचे जेवण तयार आहे.", "저녁 식사가 준비됐어요.", "La cena está lista.", "Das Abendessen ist fertig.", "Le dîner est prêt.", "રાતનું ભોજન તૈયાર છે.", "ৰাতিৰ আহাৰ সাজু।"], ["more", "food", "A little more, please.", "దయచేసి కొంచెం ఇంకా వడ్డించండి.", "कृपया थोड़ा और दीजिए।", "ದಯವಿಟ್ಟು ಇನ್ನೂ ಸ್ವಲ್ಪ ಕೊಡಿ.", "தயவுசெய்து இன்னும் கொஞ்சம் தாருங்கள்.", "ദയവായി കുറച്ചു കൂടി തരൂ.", "দয়া করে আরেকটু দিন।", "कृपया थोडे आणखी द्या.", "조금 더 주세요.", "Un poco más, por favor.", "Etwas mehr, bitte.", "Encore un peu, s’il vous plaît.", "મહેરબાની કરીને થોડું વધારે આપો.", "অনুগ্ৰহ কৰি অলপ আৰু দিয়ক।"], ["enough", "food", "That is enough, thank you.", "చాలు, ధన్యవాదాలు.", "बस, धन्यवाद।", "ಸಾಕು, ಧನ್ಯವಾದಗಳು.", "போதும், நன்றி.", "മതി, നന്ദി.", "যথেষ্ট, ধন্যবাদ।", "पुरे, धन्यवाद.", "충분해요, 감사합니다.", "Es suficiente, gracias.", "Das reicht, danke.", "Ça suffit, merci.", "બસ, આભાર.", "যথেষ্ট, ধন্যবাদ।"], ["train-q", "travel", "When does the train leave?", "రైలు ఎప్పుడు బయలుదేరుతుంది?", "ट्रेन कब छूटती है?", "ರೈಲು ಯಾವಾಗ ಹೊರಡುತ್ತದೆ?", "ரயில் எப்போது புறப்படும்?", "ട്രെയിൻ എപ്പോഴാണ് പുറപ്പെടുന്നത്?", "ট্রেন কখন ছাড়ে?", "रेल्वे कधी सुटते?", "기차는 언제 출발해요?", "¿Cuándo sale el tren?", "Wann fährt der Zug ab?", "Quand part le train ?", "ટ્રેન ક્યારે ઊપડે છે?", "ৰেল কেতিয়া ওলায়?"], ["platform-q", "travel", "Which platform?", "ఏ ప్లాట్‌ఫామ్?", "कौन-सा प्लेटफ़ॉर्म?", "ಯಾವ ಪ್ಲಾಟ್‌ಫಾರ್ಮ್?", "எந்த நடைமேடை?", "ഏത് പ്ലാറ്റ്ഫോം?", "কোন প্ল্যাটফর্ম?", "कोणता प्लॅटफॉर्म?", "몇 번 승강장이에요?", "¿Qué andén?", "Welcher Bahnsteig?", "Quel quai ?", "કયું પ્લેટફોર્મ?", "কোনটো প্লেটফৰ্ম?"], ["tickets-two", "travel", "Two tickets, please.", "దయచేసి రెండు టికెట్లు ఇవ్వండి.", "कृपया दो टिकट दीजिए।", "ದಯವಿಟ್ಟು ಎರಡು ಟಿಕೆಟ್ ಕೊಡಿ.", "தயவுசெய்து இரண்டு டிக்கெட் தாருங்கள்.", "ദയവായി രണ്ട് ടിക്കറ്റ് തരൂ.", "দয়া করে দুটো টিকিট দিন।", "कृपया दोन तिकिटे द्या.", "표 두 장 주세요.", "Dos billetes, por favor.", "Zwei Fahrkarten, bitte.", "Deux billets, s’il vous plaît.", "મહેરબાની કરીને બે ટિકિટ આપો.", "অনুগ্ৰহ কৰি দুখন টিকট দিয়ক।"], ["seat-free", "travel", "Is this seat free?", "ఈ సీటు ఖాళీగా ఉందా?", "क्या यह सीट खाली है?", "ಈ ಸೀಟು ಖಾಲಿ ಇದೆಯಾ?", "இந்த இருக்கை காலியாக இருக்கிறதா?", "ഈ സീറ്റ് ഒഴിവാണോ?", "এই সিটটা কি খালি?", "ही जागा रिकामी आहे का?", "이 자리 비어 있나요?", "¿Está libre este asiento?", "Ist dieser Platz frei?", "Cette place est-elle libre ?", "શું આ સીટ ખાલી છે?", "এই আসনটো খালী নেকি?"], ["late", "travel", "The bus is late.", "బస్సు ఆలస్యంగా వస్తోంది.", "बस देर से आ रही है।", "ಬಸ್ ತಡವಾಗಿದೆ.", "பேருந்து தாமதமாக வருகிறது.", "ബസ് വൈകിയാണ് വരുന്നത്.", "বাস দেরিতে আসছে।", "बस उशिरा येत आहे.", "버스가 늦어요.", "El autobús llega tarde.", "Der Bus hat Verspätung.", "Le bus est en retard.", "બસ મોડી છે.", "বাছ পলমকৈ আহিছে।"], ["how-long", "travel", "How long does it take?", "ఎంత సమయం పడుతుంది?", "कितना समय लगेगा?", "ಎಷ್ಟು ಸಮಯ ಬೇಕು?", "எவ்வளவு நேரம் ஆகும்?", "എത്ര സമയം എടുക്കും?", "কত সময় লাগবে?", "किती वेळ लागेल?", "얼마나 걸려요?", "¿Cuánto tarda?", "Wie lange dauert es?", "Combien de temps cela prend-il ?", "કેટલો સમય લાગશે?", "কিমান সময় লাগিব?"], ["map", "travel", "Can you show me on the map?", "మ్యాప్‌లో చూపించగలరా?", "क्या आप नक्शे पर दिखा सकते हैं?", "ನಕ್ಷೆಯಲ್ಲಿ ತೋರಿಸಬಹುದೇ?", "வரைபடத்தில் காட்ட முடியுமா?", "മാപ്പിൽ കാണിക്കാമോ?", "মানচিত্রে দেখিয়ে দেবেন?", "नकाशावर दाखवाल का?", "지도에서 보여 주시겠어요?", "¿Puede mostrármelo en el mapa?", "Können Sie es mir auf der Karte zeigen?", "Pouvez-vous me le montrer sur la carte ?", "શું તમે નકશા પર બતાવશો?", "আপুনি মানচিত্ৰত দেখুৱাব পাৰিবনে?"], ["passport", "travel", "Here is my passport.", "ఇదిగో నా పాస్‌పోర్ట్.", "यह मेरा पासपोर्ट है।", "ಇಗೋ ನನ್ನ ಪಾಸ್‌ಪೋರ್ಟ್.", "இதோ என் கடவுச்சீட்டு.", "ഇതാ എന്റെ പാസ്പോർട്ട്.", "এই যে আমার পাসপোর্ট।", "हा माझा पासपोर्ट आहे.", "여기 제 여권이에요.", "Aquí está mi pasaporte.", "Hier ist mein Reisepass.", "Voici mon passeport.", "આ મારો પાસપોર્ટ છે.", "এয়া মোৰ পাছপ’ৰ্ট।"], ["cheaper", "shop", "Do you have a cheaper one?", "ఇంకా చవకైనది ఉందా?", "क्या इससे सस्ता कोई है?", "ಇನ್ನೂ ಅಗ್ಗದ್ದು ಇದೆಯಾ?", "இன்னும் விலை குறைவானது இருக்கிறதா?", "വില കുറഞ്ഞത് ഉണ്ടോ?", "এর চেয়ে সস্তা কিছু আছে?", "यापेक्षा स्वस्त काही आहे का?", "더 싼 것 있나요?", "¿Tiene uno más barato?", "Haben Sie etwas Günstigeres?", "En avez-vous un moins cher ?", "શું આનાથી સસ્તું કંઈ છે?", "ইয়াতকৈ শস্তা কিবা আছেনে?"], ["bigger", "shop", "Do you have a bigger size?", "పెద్ద సైజ్ ఉందా?", "क्या इससे बड़ा साइज़ है?", "ದೊಡ್ಡ ಸೈಜ್ ಇದೆಯಾ?", "பெரிய அளவு இருக்கிறதா?", "വലിയ സൈസ് ഉണ്ടോ?", "আরও বড় সাইজ আছে?", "यापेक्षा मोठा आकार आहे का?", "더 큰 사이즈 있나요?", "¿Tiene una talla más grande?", "Haben Sie eine größere Größe?", "Avez-vous une taille au-dessus ?", "શું આનાથી મોટી સાઇઝ છે?", "ইয়াতকৈ ডাঙৰ আকাৰ আছেনে?"], ["try-on", "shop", "Can I try this on?", "ఇది వేసుకుని చూడవచ్చా?", "क्या मैं इसे पहनकर देख सकता हूँ?", "ಇದನ್ನು ಹಾಕಿ ನೋಡಬಹುದೇ?", "இதை அணிந்து பார்க்கலாமா?", "ഇത് ഇട്ടുനോക്കാമോ?", "এটা কি পরে দেখতে পারি?", "हे घालून पाहू शकतो का?", "입어 봐도 될까요?", "¿Puedo probármelo?", "Kann ich das anprobieren?", "Puis-je l’essayer ?", "શું હું આ પહેરી જોઈ શકું?", "মই এইটো পিন্ধি চাব পাৰোঁনে?"], ["receipt", "shop", "Please give me a receipt.", "దయచేసి రసీదు ఇవ్వండి.", "कृपया रसीद दीजिए।", "ದಯವಿಟ್ಟು ರಶೀದಿ ಕೊಡಿ.", "தயவுசெய்து ரசீது தாருங்கள்.", "ദയവായി രസീത് തരൂ.", "দয়া করে একটা রসিদ দিন।", "कृपया पावती द्या.", "영수증 주세요.", "Deme el recibo, por favor.", "Bitte geben Sie mir eine Quittung.", "Un reçu, s’il vous plaît.", "મહેરબાની કરીને રસીદ આપો.", "অনুগ্ৰহ কৰি এখন ৰচিদ দিয়ক।"], ["discount", "shop", "Is there a discount?", "డిస్కౌంట్ ఉందా?", "क्या कोई छूट है?", "ರಿಯಾಯಿತಿ ಇದೆಯಾ?", "தள்ளுபடி இருக்கிறதா?", "കിഴിവ് ഉണ്ടോ?", "কোনো ছাড় আছে?", "काही सूट आहे का?", "할인되나요?", "¿Hay descuento?", "Gibt es einen Rabatt?", "Y a-t-il une réduction ?", "કોઈ છૂટ છે?", "কোনো ৰেহাই আছেনে?"], ["open-today", "shop", "Are you open today?", "ఈ రోజు మీరు తెరిచి ఉన్నారా?", "क्या आप आज खुले हैं?", "ಇಂದು ನೀವು ತೆರೆದಿದ್ದೀರಾ?", "இன்று நீங்கள் திறந்திருக்கிறீர்களா?", "ഇന്ന് തുറന്നിട്ടുണ്ടോ?", "আপনারা কি আজ খোলা?", "तुम्ही आज उघडे आहात का?", "오늘 영업하세요?", "¿Está abierto hoy?", "Haben Sie heute geöffnet?", "Êtes-vous ouverts aujourd’hui ?", "શું તમે આજે ખુલ્લા છો?", "আপোনালোক আজি খোলা নেকি?"], ["fever", "health", "I have a fever.", "నాకు జ్వరంగా ఉంది.", "मुझे बुखार है।", "ನನಗೆ ಜ್ವರ ಇದೆ.", "எனக்குக் காய்ச்சல் இருக்கிறது.", "എനിക്ക് പനിയുണ്ട്.", "আমার জ্বর আছে।", "मला ताप आहे.", "열이 나요.", "Tengo fiebre.", "Ich habe Fieber.", "J’ai de la fièvre.", "મને તાવ છે.", "মোৰ জ্বৰ আছে।"], ["pharmacy", "health", "Where is the pharmacy?", "మందుల దుకాణం ఎక్కడ ఉంది?", "दवा की दुकान कहाँ है?", "ಔಷಧಿ ಅಂಗಡಿ ಎಲ್ಲಿದೆ?", "மருந்தகம் எங்கே இருக்கிறது?", "മെഡിക്കൽ ഷോപ്പ് എവിടെയാണ്?", "ওষুধের দোকান কোথায়?", "औषधांचे दुकान कुठे आहे?", "약국이 어디예요?", "¿Dónde está la farmacia?", "Wo ist die Apotheke?", "Où est la pharmacie ?", "દવાની દુકાન ક્યાં છે?", "ঔষধৰ দোকান ক’ত?"], ["rest", "health", "I need to rest.", "నేను విశ్రాంతి తీసుకోవాలి.", "मुझे आराम करना है।", "ನಾನು ವಿಶ್ರಾಂತಿ ತೆಗೆದುಕೊಳ್ಳಬೇಕು.", "நான் ஓய்வெடுக்க வேண்டும்.", "എനിക്ക് വിശ്രമിക്കണം.", "আমার বিশ্রাম দরকার।", "मला विश्रांती घ्यायची आहे.", "쉬어야 해요.", "Necesito descansar.", "Ich muss mich ausruhen.", "J’ai besoin de me reposer.", "મારે આરામ કરવો છે.", "মোক জিৰণি লাগে।"], ["better", "health", "I feel better now.", "ఇప్పుడు నాకు కొంచెం మెరుగ్గా ఉంది.", "अब मुझे बेहतर लग रहा है।", "ಈಗ ನನಗೆ ಉತ್ತಮ ಅನಿಸುತ್ತಿದೆ.", "இப்போது நலமாக உணர்கிறேன்.", "ഇപ്പോൾ എനിക്ക് സുഖം തോന്നുന്നു.", "এখন আমার ভালো লাগছে।", "आता मला बरे वाटत आहे.", "이제 좀 나아졌어요.", "Ahora me siento mejor.", "Jetzt geht es mir besser.", "Je me sens mieux maintenant.", "હવે મને સારું લાગે છે.", "এতিয়া মোৰ ভাল লাগিছে।"], ["how-old", "people", "How old are you?", "మీ వయసు ఎంత?", "आपकी उम्र कितनी है?", "ನಿಮ್ಮ ವಯಸ್ಸು ಎಷ್ಟು?", "உங்கள் வயது என்ன?", "നിങ്ങൾക്ക് എത്ര വയസ്സായി?", "আপনার বয়স কত?", "तुमचे वय किती आहे?", "나이가 어떻게 되세요?", "¿Cuántos años tiene?", "Wie alt sind Sie?", "Quel âge avez-vous ?", "તમારી ઉંમર કેટલી છે?", "আপোনাৰ বয়স কিমান?"], ["beautiful", "people", "It is beautiful here.", "ఇక్కడ చాలా అందంగా ఉంది.", "यहाँ बहुत सुंदर है।", "ಇಲ್ಲಿ ತುಂಬಾ ಸುಂದರವಾಗಿದೆ.", "இங்கே மிக அழகாக இருக்கிறது.", "ഇവിടെ വളരെ മനോഹരമാണ്.", "এখানটা খুব সুন্দর।", "इथे खूप सुंदर आहे.", "여기 정말 아름다워요.", "Qué bonito es esto.", "Es ist wunderschön hier.", "C’est magnifique ici.", "અહીં બહુ સુંદર છે.", "ইয়াত বহুত ধুনীয়া।"], ["miss-you", "people", "I miss you.", "నిన్ను మిస్ అవుతున్నాను.", "मुझे तुम्हारी याद आती है।", "ನನಗೆ ನಿನ್ನ ನೆನಪಾಗುತ್ತಿದೆ.", "எனக்கு உன் நினைவாகவே இருக்கிறது.", "എനിക്ക് നിന്നെ ഓർമ്മ വരുന്നു.", "আমি তোমাকে মিস করি।", "मला तुझी आठवण येते.", "보고 싶어요.", "Te echo de menos.", "Ich vermisse dich.", "Tu me manques.", "મને તમારી યાદ આવે છે.", "মই তোমাক মনত পেলাইছোঁ।"], ["take-care", "people", "Take care.", "జాగ్రత్తగా ఉండండి.", "अपना ध्यान रखिए।", "ಜಾಗ್ರತೆಯಾಗಿರಿ.", "கவனமாக இருங்கள்.", "സൂക്ഷിക്കണേ.", "নিজের যত্ন নেবেন।", "काळजी घ्या.", "몸조심하세요.", "Cuídese.", "Passen Sie auf sich auf.", "Prenez soin de vous.", "ધ્યાન રાખજો.", "নিজৰ যত্ন লব।"], ["afternoon", "greet", "Good afternoon", "శుభ మధ్యాహ్నం", "शुभ दोपहर", "ಶುಭ ಮಧ್ಯಾಹ್ನ", "இனிய மதிய வணக்கம்", "ശുഭ മധ്യാഹ്നം", "শুভ অপরাহ্ন", "शुभ दुपार", "좋은 오후예요", "Buenas tardes", "Guten Tag", "Bon après-midi", "શુભ બપોર", "শুভ অপৰাহ্ন"], ["see-tomorrow", "greet", "See you tomorrow", "రేపు కలుద్దాం", "कल मिलते हैं", "ನಾಳೆ ಸಿಗೋಣ", "நாளை சந்திப்போம்", "നാളെ കാണാം", "কাল দেখা হবে", "उद्या भेटू", "내일 봐요", "Hasta mañana", "Bis morgen", "À demain", "કાલે મળીશું", "কাইলৈ লগ পাম"], ["see-you", "greet", "See you later", "తర్వాత కలుద్దాం", "बाद में मिलते हैं", "ನಂತರ ಸಿಗೋಣ", "பிறகு சந்திப்போம்", "പിന്നെ കാണാം", "পরে দেখা হবে", "नंतर भेटू", "나중에 봐요", "Hasta luego", "Bis später", "À tout à l’heure", "પછી મળીશું", "পাছত লগ পাম"], ["live-here", "intro", "I live here", "నేను ఇక్కడే ఉంటాను", "मैं यहीं रहता हूँ", "ನಾನು ಇಲ್ಲೇ ವಾಸಿಸುತ್ತೇನೆ", "நான் இங்கேயே வசிக்கிறேன்", "ഞാൻ ഇവിടെയാണ് താമസിക്കുന്നത്", "আমি এখানেই থাকি", "मी इथेच राहतो", "저는 여기에 살아요", "Vivo aquí", "Ich wohne hier", "J’habite ici", "હું અહીં રહું છું", "মই ইয়াতে থাকোঁ"], ["learning-lang", "intro", "I am learning your language", "నేను మీ భాష నేర్చుకుంటున్నాను", "मैं आपकी भाषा सीख रहा हूँ", "ನಾನು ನಿಮ್ಮ ಭಾಷೆ ಕಲಿಯುತ್ತಿದ್ದೇನೆ", "நான் உங்கள் மொழியைக் கற்றுக்கொண்டிருக்கிறேன்", "ഞാൻ നിങ്ങളുടെ ഭാഷ പഠിക്കുകയാണ്", "আমি আপনার ভাষা শিখছি", "मी तुमची भाषा शिकत आहे", "저는 당신의 언어를 배우고 있어요", "Estoy aprendiendo su idioma", "Ich lerne Ihre Sprache", "J’apprends votre langue", "હું તમારી ભાષા શીખી રહ્યો છું", "মই আপোনাৰ ভাষা শিকি আছোঁ"], ["this-friend", "intro", "This is my friend", "ఇతను నా స్నేహితుడు", "ये मेरे दोस्त हैं", "ಇವರು ನನ್ನ ಸ್ನೇಹಿತ", "இவர் என் நண்பர்", "ഇത് എന്റെ സുഹൃത്താണ്", "ইনি আমার বন্ধু", "हे माझे मित्र आहेत", "이쪽은 제 친구예요", "Este es mi amigo", "Das ist mein Freund", "Voici mon ami", "આ મારા મિત્ર છે", "ইয়াক মোৰ বন্ধু"], ["louder", "talk", "Please speak louder", "దయచేసి కొంచెం గట్టిగా మాట్లాడండి", "कृपया ज़ोर से बोलिए", "ದಯವಿಟ್ಟು ಜೋರಾಗಿ ಮಾತನಾಡಿ", "தயவுசெய்து சத்தமாகப் பேசுங்கள்", "ദയവായി ഉറക്കെ സംസാരിക്കൂ", "দয়া করে জোরে বলুন", "कृपया मोठ्याने बोला", "좀 더 크게 말씀해 주세요", "Hable más alto, por favor", "Bitte sprechen Sie lauter", "Parlez plus fort, s’il vous plaît", "કૃપા કરીને મોટેથી બોલો", "অনুগ্ৰহ কৰি জোৰেৰে কওক"], ["agree", "talk", "I agree", "నేను ఒప్పుకుంటున్నాను", "मैं सहमत हूँ", "ನಾನು ಒಪ್ಪುತ್ತೇನೆ", "நான் ஒப்புக்கொள்கிறேன்", "ഞാൻ സമ്മതിക്കുന്നു", "আমি একমত", "मी सहमत आहे", "동의해요", "Estoy de acuerdo", "Ich stimme zu", "Je suis d’accord", "હું સહમત છું", "মই একমত"], ["disagree", "talk", "I don’t agree", "నేను ఒప్పుకోవడం లేదు", "मैं सहमत नहीं हूँ", "ನಾನು ಒಪ್ಪುವುದಿಲ್ಲ", "நான் ஒப்புக்கொள்ளவில்லை", "ഞാൻ സമ്മതിക്കുന്നില്ല", "আমি একমত নই", "मी सहमत नाही", "동의하지 않아요", "No estoy de acuerdo", "Ich stimme nicht zu", "Je ne suis pas d’accord", "હું સહમત નથી", "মই একমত নহয়"], ["moment", "talk", "Just a moment", "ఒక్క నిమిషం", "एक मिनट", "ಒಂದು ನಿಮಿಷ", "ஒரு நிமிடம்", "ഒരു നിമിഷം", "এক মুহূর্ত", "एक क्षण", "잠깐만요", "Un momento", "Einen Moment", "Un instant", "એક ક્ષણ", "এক মুহূৰ্ত"], ["whats-wrong", "talk", "What is the matter?", "ఏమైంది?", "क्या हुआ?", "ಏನಾಯಿತು?", "என்ன ஆச்சு?", "എന്താ പറ്റിയത്?", "কী হয়েছে?", "काय झालं?", "무슨 일이에요?", "¿Qué pasa?", "Was ist los?", "Que se passe-t-il ?", "શું થયું?", "কি হ’ল?"], ["going-home", "daily", "I am going home", "నేను ఇంటికి వెళ్తున్నాను", "मैं घर जा रहा हूँ", "ನಾನು ಮನೆಗೆ ಹೋಗುತ್ತಿದ್ದೇನೆ", "நான் வீட்டுக்குப் போகிறேன்", "ഞാൻ വീട്ടിലേക്ക് പോകുന്നു", "আমি বাড়ি যাচ্ছি", "मी घरी जात आहे", "저는 집에 가요", "Me voy a casa", "Ich gehe nach Hause", "Je rentre à la maison", "હું ઘરે જાઉં છું", "মই ঘৰলৈ গৈ আছোঁ"], ["lets-go", "daily", "Let’s go", "పదండి వెళ్దాం", "चलिए चलते हैं", "ಹೋಗೋಣ", "போகலாம்", "നമുക്ക് പോകാം", "চলুন যাই", "चला जाऊया", "가요", "Vamos", "Gehen wir", "Allons-y", "ચાલો જઈએ", "যাওঁ আহক"], ["ready", "daily", "I am ready", "నేను సిద్ధంగా ఉన్నాను", "मैं तैयार हूँ", "ನಾನು ಸಿದ್ಧ", "நான் தயார்", "ഞാൻ തയ്യാറാണ്", "আমি প্রস্তুত", "मी तयार आहे", "준비됐어요", "Estoy listo", "Ich bin bereit", "Je suis prêt", "હું તૈયાર છું", "মই সাজু"], ["coming", "daily", "I am coming", "నేను వస్తున్నాను", "मैं आ रहा हूँ", "ನಾನು ಬರುತ್ತಿದ್ದೇನೆ", "நான் வருகிறேன்", "ഞാൻ വരുന്നു", "আমি আসছি", "मी येत आहे", "곧 가요", "Ya voy", "Ich komme", "J’arrive", "હું આવું છું", "মই আহিছোঁ"], ["wake-up", "daily", "Wake up", "లేవండి", "उठो", "ಏಳಿ", "எழுந்திரு", "എഴുന്നേൽക്കൂ", "ওঠো", "ऊठ", "일어나요", "Despierta", "Wach auf", "Réveille-toi", "ઊઠો", "উঠা"], ["full", "food", "I am full", "నా కడుపు నిండింది", "मेरा पेट भर गया है", "ನನ್ನ ಹೊಟ್ಟೆ ತುಂಬಿದೆ", "என் வயிறு நிறைந்துவிட்டது", "എന്റെ വയർ നിറഞ്ഞു", "আমার পেট ভরে গেছে", "माझं पोट भरलं आहे", "배불러요", "Estoy lleno", "Ich bin satt", "Je n’ai plus faim", "મારું પેટ ભરાઈ ગયું છે", "মোৰ পেট ভৰি গ’ল"], ["salt", "food", "Salt, please", "ఉప్పు ఇవ్వండి", "नमक दीजिए", "ಉಪ್ಪು ಕೊಡಿ", "உப்பு கொடுங்கள்", "ഉപ്പ് തരൂ", "লবণ দিন", "मीठ द्या", "소금 좀 주세요", "Sal, por favor", "Salz, bitte", "Du sel, s’il vous plaît", "મીઠું આપો", "নিমখ দিয়ক"], ["no-sugar", "food", "Without sugar, please", "దయచేసి చక్కెర లేకుండా", "बिना चीनी के, कृपया", "ಸಕ್ಕರೆ ಇಲ್ಲದೆ", "சர்க்கரை இல்லாமல்", "പഞ്ചസാര ഇല്ലാതെ", "চিনি ছাড়া", "साखरेशिवाय", "설탕 없이 주세요", "Sin azúcar, por favor", "Ohne Zucker, bitte", "Sans sucre, s’il vous plaît", "ખાંડ વગર", "চেনী নোহোৱাকৈ"], ["fresh-q", "food", "Is this fresh?", "ఇది తాజాగా ఉందా?", "क्या यह ताज़ा है?", "ಇದು ತಾಜಾ ಇದೆಯೇ?", "இது புதியதா?", "ഇത് പുതിയതാണോ?", "এটা কি তাজা?", "हे ताजं आहे का?", "이거 신선해요?", "¿Está fresco?", "Ist das frisch?", "C’est frais ?", "શું આ તાજું છે?", "এইটো তাজা নেকি?"], ["spoon", "food", "Can I have a spoon?", "ఒక చెంచా ఇవ్వగలరా?", "क्या मुझे एक चम्मच मिल सकता है?", "ಒಂದು ಚಮಚ ಕೊಡಬಹುದೇ?", "ஒரு கரண்டி கிடைக்குமா?", "ഒരു സ്പൂൺ തരാമോ?", "একটা চামচ পাব?", "मला एक चमचा मिळेल का?", "숟가락 하나 주실 수 있어요?", "¿Me da una cuchara?", "Kann ich einen Löffel haben?", "Je peux avoir une cuillère ?", "મને એક ચમચી મળશે?", "এটা চামুচ পাব নে?"], ["atm", "travel", "Where is the nearest ATM?", "దగ్గరలో ఏటీఎం ఎక్కడ ఉంది?", "सबसे पास का एटीएम कहाँ है?", "ಹತ್ತಿರದ ಎಟಿಎಂ ಎಲ್ಲಿದೆ?", "அருகிலுள்ள ஏடிஎம் எங்கே?", "അടുത്തുള്ള എടിഎം എവിടെയാണ്?", "কাছের এটিএম কোথায়?", "जवळचे एटीएम कुठे आहे?", "가장 가까운 현금인출기가 어디예요?", "¿Dónde está el cajero automático más cercano?", "Wo ist der nächste Geldautomat?", "Où est le distributeur le plus proche ?", "નજીકનું એટીએમ ક્યાં છે?", "ওচৰৰ এটিএমটো ক’ত আছে?"], ["fare-q", "travel", "How much is the fare?", "ఛార్జీ ఎంత?", "किराया कितना है?", "ಪ್ರಯಾಣ ದರ ಎಷ್ಟು?", "கட்டணம் எவ்வளவு?", "നിരക്ക് എത്രയാണ്?", "ভাড়া কত?", "भाडे किती आहे?", "요금이 얼마예요?", "¿Cuánto cuesta el pasaje?", "Wie viel kostet die Fahrt?", "Combien coûte le trajet ?", "ભાડું કેટલું છે?", "ভাড়া কিমান?"], ["stop-here", "travel", "Please stop here", "ఇక్కడ ఆపండి", "यहाँ रोकिए", "ಇಲ್ಲಿ ನಿಲ್ಲಿಸಿ", "இங்கே நிறுத்துங்கள்", "ഇവിടെ നിർത്തൂ", "এখানে থামান", "इथे थांबवा", "여기서 세워 주세요", "Pare aquí, por favor", "Halten Sie bitte hier an", "Arrêtez-vous ici, s’il vous plaît", "અહીં ઊભા રાખો", "ইয়াতে ৰখাওক"], ["right-way-q", "travel", "Is this the right way?", "ఇదే సరైన దారా?", "क्या यही सही रास्ता है?", "ಇದೇ ಸರಿಯಾದ ದಾರಿಯೇ?", "இதுதான் சரியான வழியா?", "ഇതാണോ ശരിയായ വഴി?", "এটাই কি সঠিক রাস্তা?", "हाच योग्य रस्ता आहे का?", "이 길이 맞아요?", "¿Es este el camino correcto?", "Ist das der richtige Weg?", "C’est le bon chemin ?", "શું આ સાચો રસ્તો છે?", "এইটোৱেই নে শুদ্ধ বাট?"], ["take-address", "travel", "Please take me to this address", "నన్ను ఈ చిరునామాకు తీసుకెళ్లండి", "मुझे इस पते पर ले चलिए", "ನನ್ನನ್ನು ಈ ವಿಳಾಸಕ್ಕೆ ಕರೆದುಕೊಂಡು ಹೋಗಿ", "என்னை இந்த முகவரிக்குக் கூட்டிச் செல்லுங்கள்", "എന്നെ ഈ വിലാസത്തിലേക്ക് കൊണ്ടുപോകൂ", "আমাকে এই ঠিকানায় নিয়ে যান", "मला या पत्त्यावर घेऊन चला", "이 주소로 데려다 주세요", "Lléveme a esta dirección, por favor", "Bitte bringen Sie mich zu dieser Adresse", "Conduisez-moi à cette adresse, s’il vous plaît", "મને આ સરનામે લઈ જાઓ", "মোক এই ঠিকনালৈ লৈ যাওক"], ["other-colour", "shop", "Do you have another colour?", "ఇంకో రంగు ఉందా?", "क्या दूसरा रंग है?", "ಬೇರೆ ಬಣ್ಣ ಇದೆಯೇ?", "வேறு நிறம் இருக்கிறதா?", "മറ്റൊരു നിറം ഉണ്ടോ?", "অন্য রঙ আছে?", "दुसरा रंग आहे का?", "다른 색 있어요?", "¿Tiene otro color?", "Haben Sie eine andere Farbe?", "Avez-vous une autre couleur ?", "શું બીજો રંગ છે?", "আন ৰং আছে নে?"], ["just-looking", "shop", "I am just looking", "నేను చూస్తున్నాను అంతే", "मैं बस देख रहा हूँ", "ನಾನು ಸುಮ್ಮನೆ ನೋಡುತ್ತಿದ್ದೇನೆ", "நான் சும்மா பார்க்கிறேன்", "ഞാൻ വെറുതെ നോക്കുകയാണ്", "আমি শুধু দেখছি", "मी फक्त बघतोय", "그냥 구경하는 거예요", "Solo estoy mirando", "Ich schaue nur", "Je regarde seulement", "હું બસ જોઈ રહ્યો છું", "মই এনেই চাই আছোঁ"], ["pay-phone", "shop", "Can I pay with my phone?", "ఫోన్‌తో చెల్లించవచ్చా?", "क्या मैं फ़ोन से भुगतान कर सकता हूँ?", "ಫೋನ್‌ನಿಂದ ಪಾವತಿಸಬಹುದೇ?", "போனில் பணம் செலுத்தலாமா?", "ഫോൺ വഴി പണം നൽകാമോ?", "ফোনে টাকা দিতে পারি?", "मी फोनने पैसे देऊ शकतो का?", "휴대폰으로 결제해도 돼요?", "¿Puedo pagar con el móvil?", "Kann ich mit dem Handy bezahlen?", "Puis-je payer avec mon téléphone ?", "શું હું ફોનથી ચૂકવી શકું?", "মই ফোনেৰে পইচা দিব পাৰোনে?"], ["pack-it", "shop", "Please pack it", "దయచేసి ప్యాక్ చేయండి", "कृपया इसे पैक कर दीजिए", "ದಯವಿಟ್ಟು ಪ್ಯಾಕ್ ಮಾಡಿ", "தயவுசெய்து பேக் செய்யுங்கள்", "ദയവായി പാക്ക് ചെയ്യൂ", "দয়া করে প্যাক করে দিন", "कृपया पॅक करून द्या", "포장해 주세요", "Envuélvalo, por favor", "Bitte packen Sie es ein", "Emballez-le, s’il vous plaît", "કૃપા કરીને પેક કરી આપો", "অনুগ্ৰহ কৰি পেক কৰি দিয়ক"], ["have-cold", "health", "I have a cold", "నాకు జలుబు చేసింది", "मुझे सर्दी हो गई है", "ನನಗೆ ಶೀತವಾಗಿದೆ", "எனக்கு சளி பிடித்திருக்கிறது", "എനിക്ക് ജലദോഷമുണ്ട്", "আমার সর্দি হয়েছে", "मला सर्दी झाली आहे", "감기에 걸렸어요", "Tengo un resfriado", "Ich bin erkältet", "Je suis enrhumé", "મને શરદી થઈ છે", "মোৰ সৰ্দি হৈছে"], ["stomachache", "health", "I have a stomach ache", "నాకు కడుపు నొప్పిగా ఉంది", "मेरे पेट में दर्द है", "ನನಗೆ ಹೊಟ್ಟೆ ನೋವು ಇದೆ", "எனக்கு வயிற்று வலி", "എനിക്ക് വയറുവേദനയുണ്ട്", "আমার পেট ব্যথা করছে", "माझं पोट दुखत आहे", "배가 아파요", "Me duele el estómago", "Ich habe Bauchschmerzen", "J’ai mal au ventre", "મારા પેટમાં દુખે છે", "মোৰ পেট বিষাইছে"], ["allergic", "health", "I am allergic to this", "నాకు దీనితో అలర్జీ ఉంది", "मुझे इससे एलर्जी है", "ನನಗೆ ಇದರಿಂದ ಅಲರ್ಜಿ ಇದೆ", "எனக்கு இதனால் ஒவ்வாமை உள்ளது", "എനിക്ക് ഇതിനോട് അലർജിയുണ്ട്", "আমার এতে অ্যালার্জি আছে", "मला याची अॅलर्जी आहे", "저는 이것에 알레르기가 있어요", "Soy alérgico a esto", "Ich bin dagegen allergisch", "Je suis allergique à cela", "મને આનાથી એલર્જી છે", "মোৰ ইয়াত এলাৰ্জি আছে"], ["call-doctor", "health", "Please call a doctor", "దయచేసి డాక్టర్‌ని పిలవండి", "कृपया डॉक्टर को बुलाइए", "ದಯವಿಟ್ಟು ವೈದ್ಯರನ್ನು ಕರೆಯಿರಿ", "தயவுசெய்து மருத்துவரை அழையுங்கள்", "ദയവായി ഡോക്ടറെ വിളിക്കൂ", "দয়া করে ডাক্তার ডাকুন", "कृपया डॉक्टरांना बोलवा", "의사를 불러 주세요", "Llame a un médico, por favor", "Rufen Sie bitte einen Arzt", "Appelez un médecin, s’il vous plaît", "કૃપા કરીને ડૉક્ટરને બોલાવો", "অনুগ্ৰহ কৰি ডাক্তৰ মাতক"], ["mother", "people", "This is my mother", "ఈమె నా తల్లి", "ये मेरी माँ हैं", "ಇವರು ನನ್ನ ತಾಯಿ", "இவர் என் அம்மா", "ഇത് എന്റെ അമ്മയാണ്", "ইনি আমার মা", "ही माझी आई आहे", "이분은 제 어머니예요", "Esta es mi madre", "Das ist meine Mutter", "Voici ma mère", "આ મારી માતા છે", "ইয়াই মোৰ মা"], ["father", "people", "This is my father", "ఈయన నా తండ్రి", "ये मेरे पिता हैं", "ಇವರು ನನ್ನ ತಂದೆ", "இவர் என் அப்பா", "ഇത് എന്റെ അച്ഛനാണ്", "ইনি আমার বাবা", "हे माझे वडील आहेत", "이분은 제 아버지예요", "Este es mi padre", "Das ist mein Vater", "Voici mon père", "આ મારા પિતા છે", "ইয়াই মোৰ দেউতা"], ["brother", "people", "I have a brother", "నాకు ఒక సోదరుడు ఉన్నాడు", "मेरा एक भाई है", "ನನಗೆ ಒಬ್ಬ ಸಹೋದರನಿದ್ದಾನೆ", "எனக்கு ஒரு சகோதரர் இருக்கிறார்", "എനിക്ക് ഒരു സഹോദരനുണ്ട്", "আমার একটা ভাই আছে", "मला एक भाऊ आहे", "저는 형제가 한 명 있어요", "Tengo un hermano", "Ich habe einen Bruder", "J’ai un frère", "મારે એક ભાઈ છે", "মোৰ এজন ভাই আছে"], ["sister", "people", "I have a sister", "నాకు ఒక సోదరి ఉంది", "मेरी एक बहन है", "ನನಗೆ ಒಬ್ಬ ಸಹೋದರಿ ಇದ್ದಾಳೆ", "எனக்கு ஒரு சகோதரி இருக்கிறாள்", "എനിക്ക് ഒരു സഹോദരിയുണ്ട്", "আমার একটা বোন আছে", "मला एक बहीण आहे", "저는 자매가 한 명 있어요", "Tengo una hermana", "Ich habe eine Schwester", "J’ai une sœur", "મારે એક બહેન છે", "মোৰ এজনী ভনী আছে"], ["afraid", "feel", "I am afraid", "నాకు భయంగా ఉంది", "मुझे डर लग रहा है", "ನನಗೆ ಭಯವಾಗುತ್ತಿದೆ", "எனக்குப் பயமாக இருக்கிறது", "എനിക്ക് പേടിയാകുന്നു", "আমার ভয় করছে", "मला भीती वाटत आहे", "무서워요", "Tengo miedo", "Ich habe Angst", "J’ai peur", "મને ડર લાગે છે", "মোৰ ভয় লাগিছে"], ["proud", "feel", "I am proud of you", "నాకు నీ గురించి గర్వంగా ఉంది", "मुझे तुम पर गर्व है", "ನನಗೆ ನಿನ್ನ ಬಗ್ಗೆ ಹೆಮ್ಮೆ ಇದೆ", "உன்னைப் பற்றி எனக்குப் பெருமையாக இருக்கிறது", "എനിക്ക് നിന്നെക്കുറിച്ച് അഭിമാനമുണ്ട്", "আমি তোমার জন্য গর্বিত", "मला तुझा अभिमान वाटतो", "네가 자랑스러워", "Estoy orgulloso de ti", "Ich bin stolz auf dich", "Je suis fier de toi", "મને તારા પર ગર્વ છે", "মই তোমাৰ বাবে গৌৰৱান্বিত"], ["dont-worry", "feel", "Don’t worry", "చింతించకండి", "चिंता मत कीजिए", "ಚಿಂತಿಸಬೇಡಿ", "கவலைப்படாதீர்கள்", "വിഷമിക്കരുത്", "চিন্তা করবেন না", "काळजी करू नका", "걱정하지 마세요", "No se preocupe", "Keine Sorge", "Ne vous inquiétez pas", "ચિંતા કરશો નહીં", "চিন্তা নকৰিব"], ["office", "work", "I work in an office", "నేను ఆఫీసులో పని చేస్తాను", "मैं दफ़्तर में काम करता हूँ", "ನಾನು ಕಚೇರಿಯಲ್ಲಿ ಕೆಲಸ ಮಾಡುತ್ತೇನೆ", "நான் அலுவலகத்தில் வேலை செய்கிறேன்", "ഞാൻ ഓഫീസിൽ ജോലി ചെയ്യുന്നു", "আমি অফিসে কাজ করি", "मी कार्यालयात काम करतो", "저는 사무실에서 일해요", "Trabajo en una oficina", "Ich arbeite in einem Büro", "Je travaille dans un bureau", "હું ઓફિસમાં કામ કરું છું", "মই অফিচত কাম কৰোঁ"], ["email-me", "work", "Please email me", "దయచేసి నాకు ఈమెయిల్ చేయండి", "कृपया मुझे ईमेल कीजिए", "ದಯವಿಟ್ಟು ನನಗೆ ಇಮೇಲ್ ಮಾಡಿ", "தயவுசெய்து எனக்கு மின்னஞ்சல் அனுப்புங்கள்", "ദയവായി എനിക്ക് ഇമെയിൽ അയയ്ക്കൂ", "দয়া করে আমাকে ইমেল করুন", "कृपया मला ईमेल करा", "이메일을 보내 주세요", "Envíeme un correo, por favor", "Bitte schreiben Sie mir eine E-Mail", "Envoyez-moi un courriel, s’il vous plaît", "કૃપા કરીને મને ઇમેઇલ કરો", "অনুগ্ৰহ কৰি মোক ইমেইল কৰক"], ["lets-start", "work", "Let’s begin", "ప్రారంభిద్దాం", "शुरू करते हैं", "ಪ್ರಾರಂಭಿಸೋಣ", "தொடங்கலாம்", "തുടങ്ങാം", "শুরু করা যাক", "सुरू करूया", "시작합시다", "Empecemos", "Fangen wir an", "Commençons", "ચાલો શરૂ કરીએ", "আৰম্ভ কৰোঁ আহক"], ["light-off", "home", "Please switch off the light", "దయచేసి లైట్ ఆర్పండి", "कृपया बत्ती बंद कर दीजिए", "ದಯವಿಟ್ಟು ದೀಪ ಆರಿಸಿ", "தயவுசெய்து விளக்கை அணையுங்கள்", "ദയവായി ലൈറ്റ് ഓഫ് ചെയ്യൂ", "দয়া করে আলো নিভিয়ে দিন", "कृपया दिवा बंद करा", "불을 꺼 주세요", "Apague la luz, por favor", "Bitte machen Sie das Licht aus", "Éteignez la lumière, s’il vous plaît", "કૃપા કરીને લાઇટ બંધ કરો", "অনুগ্ৰহ কৰি পোহৰ নুমুৱাই দিয়ক"], ["window", "home", "Please close the window", "దయచేసి కిటికీ మూసివేయండి", "कृपया खिड़की बंद कर दीजिए", "ದಯವಿಟ್ಟು ಕಿಟಕಿ ಮುಚ್ಚಿ", "தயவுசெய்து ஜன்னலை மூடுங்கள்", "ദയവായി ജനൽ അടയ്ക്കൂ", "দয়া করে জানালা বন্ধ করুন", "कृपया खिडकी बंद करा", "창문을 닫아 주세요", "Cierre la ventana, por favor", "Bitte schließen Sie das Fenster", "Fermez la fenêtre, s’il vous plaît", "કૃપા કરીને બારી બંધ કરો", "অনুগ্ৰহ কৰি খিৰিকী বন্ধ কৰক"], ["five-min", "time", "Wait five minutes", "ఐదు నిమిషాలు ఆగండి", "पाँच मिनट रुकिए", "ಐದು ನಿಮಿಷ ಕಾಯಿರಿ", "ஐந்து நிமிடம் காத்திருங்கள்", "അഞ്ച് മിനിറ്റ് കാത്തിരിക്കൂ", "পাঁচ মিনিট অপেক্ষা করুন", "पाच मिनिटे थांबा", "오 분만 기다려 주세요", "Espere cinco minutos", "Warten Sie fünf Minuten", "Attendez cinq minutes", "પાંચ મિનિટ રાહ જુઓ", "পাঁচ মিনিট অপেক্ষা কৰক"], ["every-day", "time", "Every day", "ప్రతిరోజూ", "हर दिन", "ಪ್ರತಿದಿನ", "ஒவ்வொரு நாளும்", "എല്ലാ ദിവസവും", "প্রতিদিন", "दररोज", "매일", "Todos los días", "Jeden Tag", "Tous les jours", "દરરોજ", "প্ৰতিদিনে"], ["next-week", "time", "Next week", "వచ్చే వారం", "अगले हफ़्ते", "ಮುಂದಿನ ವಾರ", "அடுத்த வாரம்", "അടുത്ത ആഴ്ച", "পরের সপ্তাহে", "पुढच्या आठवड्यात", "다음 주", "La semana que viene", "Nächste Woche", "La semaine prochaine", "આવતા અઠવાડિયે", "অহা সপ্তাহত"], ["last-night", "time", "Last night", "నిన్న రాత్రి", "कल रात", "ನಿನ್ನೆ ರಾತ್ರಿ", "நேற்று இரவு", "ഇന്നലെ രാത്രി", "গতকাল রাতে", "काल रात्री", "어젯밤", "Anoche", "Gestern Abend", "Hier soir", "ગઈ કાલે રાત્રે", "কালি ৰাতি"], ["who-q", "talk", "Who is this?", "ఇది ఎవరు?", "यह कौन है?", "ಇದು ಯಾರು?", "இது யார்?", "ഇത് ആരാണ്?", "এটা কে?", "हे कोण आहे?", "이분은 누구예요?", "¿Quién es?", "Wer ist das?", "Qui est-ce ?", "આ કોણ છે?", "এইজন কোন?"], ["live-q", "talk", "Do you live here?", "మీరు ఇక్కడ ఉంటారా?", "क्या आप यहाँ रहते हैं?", "ನೀವು ಇಲ್ಲಿ ವಾಸಿಸುತ್ತೀರಾ?", "நீங்கள் இங்கே வசிக்கிறீர்களா?", "നിങ്ങൾ ഇവിടെയാണോ താമസിക്കുന്നത്?", "আপনি কি এখানে থাকেন?", "तुम्ही इथे राहता का?", "여기에 사세요?", "¿Vive usted aquí?", "Wohnen Sie hier?", "Habitez-vous ici ?", "શું તમે અહીં રહો છો?", "আপুনি ইয়াতে থাকেনে?"], ["who-speaking", "work", "Hello, who is speaking?", "హలో, ఎవరు మాట్లాడుతున్నారు?", "हैलो, कौन बोल रहा है?", "ಹಲೋ, ಯಾರು ಮಾತನಾಡುತ್ತಿದ್ದಾರೆ?", "ஹலோ, யார் பேசுகிறீர்கள்?", "ഹലോ, ആരാണ് സംസാരിക്കുന്നത്?", "হ্যালো, কে বলছেন?", "हॅलो, कोण बोलत आहे?", "여보세요, 누구세요?", "Hola, ¿quién habla?", "Hallo, wer spricht da?", "Allô, qui est à l’appareil ?", "હેલો, કોણ બોલે છે?", "হেল’ল’, কোনে কৈছে?"], ["good-time", "work", "Is this a good time to talk?", "మాట్లాడటానికి ఇది మంచి సమయమా?", "क्या अभी बात करने का अच्छा समय है?", "ಮಾತನಾಡಲು ಇದು ಒಳ್ಳೆಯ ಸಮಯವೇ?", "பேசுவதற்கு இது நல்ல நேரமா?", "സംസാരിക്കാൻ ഇത് നല്ല സമയമാണോ?", "এখন কি কথা বলার ভালো সময়?", "बोलायला ही चांगली वेळ आहे का?", "지금 통화해도 될까요?", "¿Es buen momento para hablar?", "Passt es gerade zum Reden?", "Est-ce le bon moment pour parler ?", "શું વાત કરવાનો આ સારો સમય છે?", "কথা পতাৰ বাবে এইটো ভাল সময় নেকি?"], ["call-later", "work", "I will call you later.", "నేను మీకు తర్వాత ఫోన్ చేస్తాను", "मैं आपको बाद में फ़ोन करूँगा", "ನಾನು ನಿಮಗೆ ನಂತರ ಫೋನ್ ಮಾಡುತ್ತೇನೆ", "நான் உங்களுக்குப் பிறகு போன் செய்கிறேன்", "ഞാൻ നിങ്ങളെ പിന്നീട് വിളിക്കാം", "আমি আপনাকে পরে ফোন করব", "मी तुम्हाला नंतर फोन करतो", "나중에 전화할게요", "Le llamo más tarde", "Ich rufe Sie später an", "Je vous rappelle plus tard", "હું તમને પછી ફોન કરીશ", "মই আপোনাক পাছত ফোন কৰিম"], ["bday-today", "people", "Today is my birthday.", "ఈ రోజు నా పుట్టినరోజు", "आज मेरा जन्मदिन है", "ಇಂದು ನನ್ನ ಹುಟ್ಟುಹಬ್ಬ", "இன்று என் பிறந்தநாள்", "ഇന്ന് എന്റെ ജന്മദിനമാണ്", "আজ আমার জন্মদিন", "आज माझा वाढदिवस आहे", "오늘은 제 생일이에요", "Hoy es mi cumpleaños", "Heute ist mein Geburtstag", "Aujourd’hui, c’est mon anniversaire", "આજે મારો જન્મદિવસ છે", "আজি মোৰ জন্মদিন"], ["come-dinner", "people", "Please come for dinner.", "దయచేసి భోజనానికి రండి", "कृपया खाने पर आइए", "ದಯವಿಟ್ಟು ಊಟಕ್ಕೆ ಬನ್ನಿ", "தயவுசெய்து இரவு உணவுக்கு வாருங்கள்", "ദയവായി അത്താഴത്തിന് വരൂ", "দয়া করে রাতের খাবারে আসুন", "कृपया जेवायला या", "저녁 식사하러 오세요", "Venga a cenar, por favor", "Kommen Sie bitte zum Abendessen", "Venez dîner, s’il vous plaît", "કૃપા કરીને જમવા આવો", "অনুগ্ৰহ কৰি ডিনাৰলৈ আহক"], ["tomorrow-evening", "people", "Can you come tomorrow evening?", "రేపు సాయంత్రం రాగలరా?", "क्या आप कल शाम आ सकते हैं?", "ನಾಳೆ ಸಂಜೆ ಬರಬಹುದೇ?", "நாளை மாலை வர முடியுமா?", "നാളെ വൈകുന്നേരം വരാമോ?", "আপনি কি কাল সন্ধ্যায় আসতে পারবেন?", "तुम्ही उद्या संध्याकाळी येऊ शकाल का?", "내일 저녁에 오실 수 있어요?", "¿Puede venir mañana por la tarde?", "Können Sie morgen Abend kommen?", "Pouvez-vous venir demain soir ?", "શું તમે કાલે સાંજે આવી શકશો?", "আপুনি কাইলৈ গধূলি আহিব পাৰিবনে?"], ["water-q", "food", "Would you like some water?", "మీకు నీళ్లు కావాలా?", "क्या आप थोड़ा पानी लेंगे?", "ನಿಮಗೆ ನೀರು ಬೇಕೇ?", "உங்களுக்குத் தண்ணீர் வேண்டுமா?", "നിങ്ങൾക്ക് വെള്ളം വേണോ?", "আপনি কি একটু জল নেবেন?", "तुम्हाला थोडं पाणी हवं आहे का?", "물 드릴까요?", "¿Quiere un poco de agua?", "Möchten Sie etwas Wasser?", "Voulez-vous un peu d’eau ?", "શું તમે થોડું પાણી લેશો?", "আপুনি অলপ পানী ল’বনে?"], ["rain-tomorrow", "home", "It will rain tomorrow.", "రేపు వర్షం పడుతుంది", "कल बारिश होगी", "ನಾಳೆ ಮಳೆ ಬರುತ್ತದೆ", "நாளை மழை பெய்யும்", "നാളെ മഴ പെയ്യും", "কাল বৃষ্টি হবে", "उद्या पाऊस पडेल", "내일 비가 올 거예요", "Mañana lloverá", "Morgen wird es regnen", "Il pleuvra demain", "કાલે વરસાદ પડશે", "কাইলৈ বৰষুণ হ’ব"], ["siblings-q", "people", "Do you have brothers or sisters?", "మీకు అన్నదమ్ములు లేదా అక్కచెల్లెళ్లు ఉన్నారా?", "क्या आपके भाई या बहन हैं?", "ನಿಮಗೆ ಸಹೋದರ ಅಥವಾ ಸಹೋದರಿಯರಿದ್ದಾರೆಯೇ?", "உங்களுக்குச் சகோதர சகோதரிகள் இருக்கிறார்களா?", "നിങ്ങൾക്ക് സഹോദരങ്ങളുണ്ടോ?", "আপনার কি ভাই বা বোন আছে?", "तुम्हाला भाऊ किंवा बहीण आहे का?", "형제나 자매가 있어요?", "¿Tiene hermanos o hermanas?", "Haben Sie Geschwister?", "Avez-vous des frères ou des sœurs ?", "શું તમારે ભાઈ કે બહેન છે?", "আপোনাৰ ভাই বা ভনী আছেনে?"], ["mother-q", "people", "How is your mother?", "మీ అమ్మగారు ఎలా ఉన్నారు?", "आपकी माँ कैसी हैं?", "ನಿಮ್ಮ ತಾಯಿ ಹೇಗಿದ್ದಾರೆ?", "உங்கள் அம்மா எப்படி இருக்கிறார்?", "നിങ്ങളുടെ അമ്മ എങ്ങനെയുണ്ട്?", "আপনার মা কেমন আছেন?", "तुमची आई कशी आहे?", "어머니는 잘 지내세요?", "¿Cómo está su madre?", "Wie geht es Ihrer Mutter?", "Comment va votre mère ?", "તમારા માતા કેમ છે?", "আপোনাৰ মা কেনে আছে?"], ["she-well", "people", "She is well.", "ఆమె బాగున్నారు", "वे ठीक हैं", "ಅವರು ಚೆನ್ನಾಗಿದ್ದಾರೆ", "அவர் நலமாக இருக்கிறார்", "അവർ സുഖമായിരിക്കുന്നു", "উনি ভালো আছেন", "त्या ठीक आहेत", "잘 지내세요", "Está bien", "Es geht ihr gut", "Elle va bien", "તેઓ ઠીક છે", "তেওঁ ভালে আছে"], ["say-hello", "people", "Please say hello to her.", "దయచేసి ఆమెకు నమస్కారం చెప్పండి", "कृपया उन्हें नमस्ते कहिए", "ದಯವಿಟ್ಟು ಅವರಿಗೆ ನಮಸ್ಕಾರ ಹೇಳಿ", "தயவுசெய்து அவருக்கு வணக்கம் சொல்லுங்கள்", "ദയവായി അവരോട് നമസ്കാരം പറയൂ", "দয়া করে ওনাকে নমস্কার জানাবেন", "कृपया त्यांना नमस्कार सांगा", "어머니께 안부 전해 주세요", "Salúdela de mi parte, por favor", "Grüßen Sie sie bitte von mir", "Dites-lui bonjour de ma part, s’il vous plaît", "કૃપા કરીને તેમને નમસ્તે કહેજો", "অনুগ্ৰহ কৰি তেওঁক নমস্কাৰ জনাব"], ["new-q", "talk", "Are you new here?", "మీరు ఇక్కడ కొత్తవారా?", "क्या आप यहाँ नए हैं?", "ನೀವು ಇಲ್ಲಿ ಹೊಸಬರೇ?", "நீங்கள் இங்கே புதியவரா?", "നിങ്ങൾ ഇവിടെ പുതിയതാണോ?", "আপনি কি এখানে নতুন?", "तुम्ही इथे नवीन आहात का?", "여기 처음이세요?", "¿Es nuevo aquí?", "Sind Sie neu hier?", "Êtes-vous nouveau ici ?", "શું તમે અહીં નવા છો?", "আপুনি ইয়াত নতুন নেকি?"], ["came-yesterday", "talk", "Yes, I came yesterday.", "అవును, నేను నిన్న వచ్చాను", "हाँ, मैं कल आया था", "ಹೌದು, ನಾನು ನಿನ್ನೆ ಬಂದೆ", "ஆம், நான் நேற்று வந்தேன்", "അതെ, ഞാൻ ഇന്നലെ വന്നു", "হ্যাঁ, আমি কাল এসেছি", "होय, मी काल आलो", "네, 어제 왔어요", "Sí, llegué ayer", "Ja, ich bin gestern angekommen", "Oui, je suis arrivé hier", "હા, હું ગઈ કાલે આવ્યો", "হয়, মই কালি আহিছোঁ"], ["like-here", "talk", "Do you like it here?", "మీకు ఇక్కడ నచ్చిందా?", "क्या आपको यहाँ अच्छा लग रहा है?", "ನಿಮಗೆ ಇಲ್ಲಿ ಇಷ್ಟವಾಯಿತೇ?", "உங்களுக்கு இங்கே பிடித்திருக்கிறதா?", "നിങ്ങൾക്ക് ഇവിടം ഇഷ്ടമായോ?", "আপনার কি এখানে ভালো লাগছে?", "तुम्हाला इथे आवडतं का?", "여기 마음에 드세요?", "¿Le gusta estar aquí?", "Gefällt es Ihnen hier?", "Vous plaisez-vous ici ?", "શું તમને અહીં ગમે છે?", "আপোনাৰ ইয়াত ভাল লাগিছেনে?"], ["show-around", "talk", "Let me show you around.", "నేను మీకు చుట్టూ చూపిస్తాను", "मैं आपको घुमाता हूँ", "ನಾನು ನಿಮಗೆ ಸುತ್ತಲೂ ತೋರಿಸುತ್ತೇನೆ", "நான் உங்களுக்குச் சுற்றிக் காட்டுகிறேன்", "ഞാൻ നിങ്ങൾക്ക് ചുറ്റും കാണിച്ചുതരാം", "আমি আপনাকে ঘুরিয়ে দেখাব", "मी तुम्हाला फिरून दाखवतो", "제가 구경시켜 드릴게요", "Le enseño los alrededores", "Ich zeige Ihnen die Umgebung", "Je vais vous faire visiter", "હું તમને ફરવા લઈ જાઉં", "মই আপোনাক ঘূৰাই দেখুৱাম"], ["free-tomorrow-q", "time", "Are you free tomorrow?", "మీరు రేపు ఖాళీగా ఉన్నారా?", "क्या आप कल खाली हैं?", "ನೀವು ನಾಳೆ ಬಿಡುವಾಗಿದ್ದೀರಾ?", "நீங்கள் நாளை ஓய்வாக இருக்கிறீர்களா?", "നിങ്ങൾ നാളെ ഫ്രീയാണോ?", "আপনি কি কাল ফ্রি?", "तुम्ही उद्या मोकळे आहात का?", "내일 시간 있어요?", "¿Está libre mañana?", "Haben Sie morgen Zeit?", "Êtes-vous libre demain ?", "શું તમે કાલે ફ્રી છો?", "আপুনি কাইলৈ মুক্ত নেকি?"], ["free-tomorrow", "time", "Yes, I am free tomorrow.", "అవును, నేను రేపు ఖాళీగా ఉన్నాను", "हाँ, मैं कल खाली हूँ", "ಹೌದು, ನಾನು ನಾಳೆ ಬಿಡುವಾಗಿದ್ದೇನೆ", "ஆம், நான் நாளை ஓய்வாக இருக்கிறேன்", "അതെ, ഞാൻ നാളെ ഫ്രീയാണ്", "হ্যাঁ, আমি কাল ফ্রি", "होय, मी उद्या मोकळा आहे", "네, 내일 시간 있어요", "Sí, mañana estoy libre", "Ja, morgen habe ich Zeit", "Oui, je suis libre demain", "હા, હું કાલે ફ્રી છું", "হয়, মই কাইলৈ মুক্ত"], ["meet-five", "time", "Let us meet at five.", "ఐదు గంటలకు కలుద్దాం", "पाँच बजे मिलते हैं", "ಐದು ಗಂಟೆಗೆ ಭೇಟಿಯಾಗೋಣ", "ஐந்து மணிக்குச் சந்திப்போம்", "അഞ്ച് മണിക്ക് കാണാം", "পাঁচটায় দেখা করি", "पाच वाजता भेटू", "다섯 시에 만나요", "Nos vemos a las cinco", "Treffen wir uns um fünf", "Retrouvons-nous à cinq heures", "પાંચ વાગ્યે મળીએ", "পাঁচ বজাত লগ হওঁ"], ["meet-where", "time", "Where shall we meet?", "ఎక్కడ కలుద్దాం?", "कहाँ मिलें?", "ಎಲ್ಲಿ ಭೇಟಿಯಾಗೋಣ?", "எங்கே சந்திப்போம்?", "എവിടെ കാണാം?", "কোথায় দেখা করব?", "कुठे भेटूया?", "어디서 만날까요?", "¿Dónde nos vemos?", "Wo treffen wir uns?", "Où se retrouve-t-on ?", "ક્યાં મળીએ?", "ক’ত লগ হওঁ?"], ["at-station", "travel", "At the station.", "స్టేషన్ దగ్గర", "स्टेशन पर", "ನಿಲ್ದಾಣದಲ್ಲಿ", "நிலையத்தில்", "സ്റ്റേഷനിൽ", "স্টেশনে", "स्टेशनवर", "역에서요", "En la estación", "Am Bahnhof", "À la gare", "સ્ટેશન પર", "ষ্টেচনত"], ["you-late", "talk", "You are late.", "మీరు ఆలస్యంగా వచ్చారు", "आप देर से आए हैं", "ನೀವು ತಡವಾಗಿ ಬಂದಿದ್ದೀರಿ", "நீங்கள் தாமதமாக வந்தீர்கள்", "നിങ്ങൾ വൈകിയാണ് വന്നത്", "আপনি দেরি করেছেন", "तुम्ही उशिरा आलात", "늦으셨네요", "Llega tarde", "Sie sind spät dran", "Vous êtes en retard", "તમે મોડા આવ્યા", "আপুনি পলম কৰিছে"], ["its-fine", "talk", "It is fine.", "పర్వాలేదు", "कोई बात नहीं", "ಅದು ಪರವಾಗಿಲ್ಲ", "அது பரவாயில்லை", "കുഴപ്പമില്ല", "ঠিক আছে", "हरकत नाही", "괜찮아요", "No pasa nada", "Das ist in Ordnung", "Ce n’est pas grave", "વાંધો નથી", "একো নাই"], ["not-again", "talk", "Please do not be late again.", "దయచేసి మళ్లీ ఆలస్యం చేయకండి", "कृपया दोबारा देर मत कीजिए", "ದಯವಿಟ್ಟು ಮತ್ತೆ ತಡ ಮಾಡಬೇಡಿ", "தயவுசெய்து மீண்டும் தாமதிக்காதீர்கள்", "ദയവായി ഇനിയും വൈകരുത്", "দয়া করে আর দেরি করবেন না", "कृपया पुन्हा उशीर करू नका", "다음에는 늦지 마세요", "Por favor, no llegue tarde otra vez", "Kommen Sie bitte nicht noch einmal zu spät", "Ne soyez plus en retard, s’il vous plaît", "કૃપા કરીને ફરી મોડું ન કરશો", "অনুগ্ৰহ কৰি আকৌ পলম নকৰিব"], ["on-time", "talk", "I will be on time.", "నేను సమయానికి వస్తాను", "मैं समय पर आऊँगा", "ನಾನು ಸಮಯಕ್ಕೆ ಸರಿಯಾಗಿ ಬರುತ್ತೇನೆ", "நான் சரியான நேரத்துக்கு வருவேன்", "ഞാൻ കൃത്യസമയത്ത് വരാം", "আমি সময়মতো আসব", "मी वेळेवर येईन", "제시간에 올게요", "Llegaré a tiempo", "Ich werde pünktlich sein", "Je serai à l’heure", "હું સમયસર આવીશ", "মই সময়মতে আহিম"], ["pron-good", "talk", "Your pronunciation is good.", "మీ ఉచ్చారణ బాగుంది", "आपका उच्चारण अच्छा है", "ನಿಮ್ಮ ಉಚ್ಚಾರಣೆ ಚೆನ್ನಾಗಿದೆ", "உங்கள் உச்சரிப்பு நன்றாக இருக்கிறது", "നിങ്ങളുടെ ഉച്ചാരണം നല്ലതാണ്", "আপনার উচ্চারণ ভালো", "तुमचा उच्चार चांगला आहे", "발음이 좋으세요", "Su pronunciación es buena", "Ihre Aussprache ist gut", "Votre prononciation est bonne", "તમારો ઉચ્ચાર સારો છે", "আপোনাৰ উচ্চাৰণ ভাল"], ["practise-q", "talk", "Shall we practise together?", "మనం కలిసి సాధన చేద్దామా?", "क्या हम साथ अभ्यास करें?", "ನಾವು ಒಟ್ಟಿಗೆ ಅಭ್ಯಾಸ ಮಾಡೋಣವೇ?", "நாம் சேர்ந்து பயிற்சி செய்யலாமா?", "നമുക്ക് ഒരുമിച്ച് പരിശീലിക്കാമോ?", "আমরা কি একসঙ্গে অনুশীলন করব?", "आपण एकत्र सराव करूया का?", "같이 연습할까요?", "¿Practicamos juntos?", "Sollen wir zusammen üben?", "On s’entraîne ensemble ?", "શું આપણે સાથે મહાવરો કરીએ?", "আমি একেলগে অনুশীলন কৰোঁ নেকি?"], ["nice-talking", "talk", "It was nice talking to you.", "మీతో మాట్లాడటం సంతోషంగా ఉంది", "आपसे बात करके अच्छा लगा", "ನಿಮ್ಮೊಂದಿಗೆ ಮಾತನಾಡಿ ಸಂತೋಷವಾಯಿತು", "உங்களுடன் பேசியது மகிழ்ச்சி", "നിങ്ങളോട് സംസാരിച്ചതിൽ സന്തോഷം", "আপনার সঙ্গে কথা বলে ভালো লাগল", "तुमच्याशी बोलून छान वाटलं", "이야기 나눠서 즐거웠어요", "Fue un placer hablar con usted", "Es war schön, mit Ihnen zu sprechen", "C’était un plaisir de discuter avec vous", "તમારી સાથે વાત કરીને સારું લાગ્યું", "আপোনাৰ লগত কথা পাতি ভাল লাগিল"], ["talking-too", "talk", "It was nice talking to you too.", "నాకు కూడా మీతో మాట్లాడటం సంతోషంగా ఉంది", "मुझे भी आपसे बात करके अच्छा लगा", "ನನಗೂ ನಿಮ್ಮೊಂದಿಗೆ ಮಾತನಾಡಿ ಸಂತೋಷವಾಯಿತು", "எனக்கும் உங்களுடன் பேசியது மகிழ்ச்சி", "എനിക്കും നിങ്ങളോട് സംസാരിച്ചതിൽ സന്തോഷം", "আমারও আপনার সঙ্গে কথা বলে ভালো লাগল", "मलाही तुमच्याशी बोलून छान वाटलं", "저도 이야기 나눠서 즐거웠어요", "Para mí también fue un placer", "Mir hat es auch gefallen", "Pour moi aussi, c’était un plaisir", "મને પણ તમારી સાથે વાત કરીને સારું લાગ્યું", "মোৰো আপোনাৰ লগত কথা পাতি ভাল লাগিল"], ["visit-again", "talk", "Please visit again.", "దయచేసి మళ్లీ రండి", "कृपया फिर आइएगा", "ದಯವಿಟ್ಟು ಮತ್ತೆ ಬನ್ನಿ", "தயவுசெய்து மீண்டும் வாருங்கள்", "ദയവായി വീണ്ടും വരൂ", "দয়া করে আবার আসবেন", "कृपया पुन्हा या", "또 오세요", "Visítenos otra vez, por favor", "Besuchen Sie uns bitte wieder", "Revenez nous voir, s’il vous plaît", "કૃપા કરીને ફરી આવજો", "অনুগ্ৰহ কৰি আকৌ আহিব"], ["tea-or-coffee", "food", "Tea or coffee?", "టీ లేదా కాఫీ?", "चाय या कॉफ़ी?", "ಟೀ ಅಥವಾ ಕಾಫಿ?", "தேநீரா காபியா?", "ചായയോ കാപ്പിയോ?", "চা না কফি?", "चहा की कॉफी?", "차로 하시겠어요, 커피로 하시겠어요?", "¿Té o café?", "Tee oder Kaffee?", "Thé ou café ?", "ચા કે કૉફી?", "চাহ নে কফি?"], ["sugar-q", "food", "With sugar?", "చక్కెరతో?", "चीनी के साथ?", "ಸಕ್ಕರೆಯೊಂದಿಗೆ?", "சர்க்கரையுடன்?", "പഞ്ചസാര ചേർത്തോ?", "চিনি দিয়ে?", "साखरेसह?", "설탕 넣을까요?", "¿Con azúcar?", "Mit Zucker?", "Avec du sucre ?", "ખાંડ સાથે?", "চেনীৰে সৈতে?"], ["one-plate", "food", "One plate, please.", "ఒక ప్లేట్ ఇవ్వండి", "एक प्लेट दीजिए", "ಒಂದು ಪ್ಲೇಟ್ ಕೊಡಿ", "ஒரு தட்டு கொடுங்கள்", "ഒരു പ്ലേറ്റ് തരൂ", "এক প্লেট দিন", "एक प्लेट द्या", "한 접시 주세요", "Un plato, por favor", "Einen Teller, bitte", "Une assiette, s’il vous plaît", "એક પ્લેટ આપો", "এখন প্লেট দিয়ক"], ["be-careful-hot", "food", "Be careful, it is hot.", "జాగ్రత్త, వేడిగా ఉంది", "सावधान, यह गरम है", "ಜಾಗರೂಕರಾಗಿರಿ, ಬಿಸಿಯಾಗಿದೆ", "கவனம், சூடாக இருக்கிறது", "സൂക്ഷിക്കൂ, ചൂടാണ്", "সাবধান, গরম আছে", "सांभाळा, गरम आहे", "조심하세요, 뜨거워요", "Cuidado, está caliente", "Vorsicht, es ist heiß", "Attention, c’est chaud", "સાચવજો, ગરમ છે", "সাৱধান, গৰম আছে"], ["eat-here-q", "food", "Eat here or take away?", "ఇక్కడే తింటారా, పార్సిల్ కావాలా?", "यहाँ खाएँगे या पैक करवाएँगे?", "ಇಲ್ಲೇ ತಿನ್ನುತ್ತೀರಾ ಅಥವಾ ಪಾರ್ಸೆಲ್ ಬೇಕೇ?", "இங்கேயே சாப்பிடுவீர்களா, பார்சலா?", "ഇവിടെ കഴിക്കുമോ, പാഴ്സലോ?", "এখানে খাবেন, না প্যাক করে দেব?", "इथे खाणार की पार्सल?", "여기서 드시겠어요, 포장하시겠어요?", "¿Para comer aquí o para llevar?", "Hier essen oder zum Mitnehmen?", "Sur place ou à emporter ?", "અહીં ખાશો કે પાર્સલ?", "ইয়াতে খাব নে পাৰ্ছেল?"], ["take-away", "food", "Take away, please.", "పార్సిల్ ఇవ్వండి", "पैक कर दीजिए", "ಪಾರ್ಸೆಲ್ ಕೊಡಿ", "பார்சல் கொடுங்கள்", "പാഴ്സൽ തരൂ", "প্যাক করে দিন", "पार्सल द्या", "가져갈게요", "Para llevar, por favor", "Zum Mitnehmen, bitte", "À emporter, s’il vous plaît", "પાર્સલ આપો", "পাৰ্ছেল দিয়ক"], ["milk-q", "food", "With milk?", "పాలతో?", "दूध के साथ?", "ಹಾಲಿನೊಂದಿಗೆ?", "பாலுடன்?", "പാലൊഴിച്ചോ?", "দুধ দিয়ে?", "दुधासह?", "우유 넣을까요?", "¿Con leche?", "Mit Milch?", "Avec du lait ?", "દૂધ સાથે?", "গাখীৰেৰে সৈতে?"], ["with-milk", "food", "Yes, with milk.", "అవును, పాలతో", "हाँ, दूध के साथ", "ಹೌದು, ಹಾಲಿನೊಂದಿಗೆ", "ஆம், பாலுடன்", "അതെ, പാലൊഴിച്ച്", "হ্যাঁ, দুধ দিয়ে", "होय, दुधासह", "네, 우유 넣어 주세요", "Sí, con leche", "Ja, mit Milch", "Oui, avec du lait", "હા, દૂધ સાથે", "হয়, গাখীৰেৰে সৈতে"], ["cups-q", "food", "How many cups?", "ఎన్ని కప్పులు?", "कितने कप?", "ಎಷ್ಟು ಕಪ್?", "எத்தனை கோப்பைகள்?", "എത്ര കപ്പ്?", "কয় কাপ?", "किती कप?", "몇 잔이요?", "¿Cuántas tazas?", "Wie viele Tassen?", "Combien de tasses ?", "કેટલા કપ?", "কিমান কাপ?"], ["two-cups", "food", "Two cups, please.", "రెండు కప్పులు ఇవ్వండి", "दो कप दीजिए", "ಎರಡು ಕಪ್ ಕೊಡಿ", "இரண்டு கோப்பைகள் கொடுங்கள்", "രണ്ട് കപ്പ് തരൂ", "দুই কাপ দিন", "दोन कप द्या", "두 잔 주세요", "Dos tazas, por favor", "Zwei Tassen, bitte", "Deux tasses, s’il vous plaît", "બે કપ આપો", "দুকাপ দিয়ক"], ["meat-q", "food", "Do you eat meat?", "మీరు మాంసం తింటారా?", "क्या आप मांस खाते हैं?", "ನೀವು ಮಾಂಸ ತಿನ್ನುತ್ತೀರಾ?", "நீங்கள் இறைச்சி சாப்பிடுவீர்களா?", "നിങ്ങൾ മാംസം കഴിക്കുമോ?", "আপনি কি মাংস খান?", "तुम्ही मांस खाता का?", "고기 드세요?", "¿Come usted carne?", "Essen Sie Fleisch?", "Mangez-vous de la viande ?", "શું તમે માંસ ખાઓ છો?", "আপুনি মাংস খায়নে?"], ["rice-or-bread", "food", "Rice or bread?", "అన్నమా లేక రొట్టెనా?", "चावल या रोटी?", "ಅನ್ನವೋ ರೊಟ್ಟಿಯೋ?", "சாதமா, ரொட்டியா?", "ചോറോ റൊട്ടിയോ?", "ভাত না রুটি?", "भात की भाकरी?", "밥으로 하시겠어요, 빵으로 하시겠어요?", "¿Arroz o pan?", "Reis oder Brot?", "Du riz ou du pain ?", "ભાત કે રોટલી?", "ভাত নে ৰুটী?"], ["allergies-q", "food", "Do you have any allergies?", "మీకు ఏవైనా అలర్జీలు ఉన్నాయా?", "क्या आपको किसी चीज़ से एलर्जी है?", "ನಿಮಗೆ ಯಾವುದಾದರೂ ಅಲರ್ಜಿ ಇದೆಯೇ?", "உங்களுக்கு ஏதேனும் ஒவ்வாமை உள்ளதா?", "നിങ്ങൾക്ക് എന്തെങ്കിലും അലർജിയുണ്ടോ?", "আপনার কি কোনো অ্যালার্জি আছে?", "तुम्हाला कशाची अॅलर्जी आहे का?", "알레르기가 있으세요?", "¿Tiene alguna alergia?", "Haben Sie Allergien?", "Avez-vous des allergies ?", "શું તમને કોઈ એલર્જી છે?", "আপোনাৰ কিবা এলাৰ্জি আছেনে?"], ["allergic-nuts", "food", "I am allergic to nuts.", "నాకు గింజలతో అలర్జీ ఉంది", "मुझे मेवों से एलर्जी है", "ನನಗೆ ಬೀಜಗಳಿಂದ ಅಲರ್ಜಿ ಇದೆ", "எனக்குக் கொட்டைகளால் ஒவ்வாமை உள்ளது", "എനിക്ക് നട്സിനോട് അലർജിയുണ്ട്", "আমার বাদামে অ্যালার্জি আছে", "मला सुकामेव्याची अॅलर्जी आहे", "저는 견과류 알레르기가 있어요", "Soy alérgico a los frutos secos", "Ich bin gegen Nüsse allergisch", "Je suis allergique aux noix", "મને સૂકા મેવાથી એલર્જી છે", "মোৰ বাদামত এলাৰ্জি আছে"], ["no-nuts", "food", "There are no nuts in this.", "ఇందులో గింజలు లేవు", "इसमें मेवे नहीं हैं", "ಇದರಲ್ಲಿ ಬೀಜಗಳಿಲ್ಲ", "இதில் கொட்டைகள் இல்லை", "ഇതിൽ നട്സ് ഇല്ല", "এতে বাদাম নেই", "यात सुकामेवा नाही", "여기에는 견과류가 없어요", "No tiene frutos secos", "Da sind keine Nüsse drin", "Il n’y a pas de noix dedans", "આમાં સૂકો મેવો નથી", "ইয়াত বাদাম নাই"], ["try-q", "food", "Would you like to try it?", "మీరు రుచి చూస్తారా?", "क्या आप चखना चाहेंगे?", "ನೀವು ರುಚಿ ನೋಡುತ್ತೀರಾ?", "நீங்கள் சுவைத்துப் பார்க்கிறீர்களா?", "നിങ്ങൾ രുചിച്ചുനോക്കുന്നോ?", "আপনি কি চেখে দেখবেন?", "तुम्ही चव घेऊन पाहाल का?", "드셔 보시겠어요?", "¿Quiere probarlo?", "Möchten Sie es probieren?", "Voulez-vous goûter ?", "શું તમે ચાખશો?", "আপুনি সোৱাদ লৈ চাবনে?"], ["here-bill", "food", "Here is your bill.", "ఇదిగో మీ బిల్లు", "यह रहा आपका बिल", "ಇದು ನಿಮ್ಮ ಬಿಲ್", "இதோ உங்கள் பில்", "ഇതാ നിങ്ങളുടെ ബിൽ", "এই নিন আপনার বিল", "हे घ्या तुमचं बिल", "계산서 여기 있습니다", "Aquí tiene la cuenta", "Hier ist Ihre Rechnung", "Voici votre addition", "આ રહ્યું તમારું બિલ", "এইয়া আপোনাৰ বিল"], ["receipt-q", "shop", "Do you need a receipt?", "మీకు రసీదు కావాలా?", "क्या आपको रसीद चाहिए?", "ನಿಮಗೆ ರಸೀದಿ ಬೇಕೇ?", "உங்களுக்கு ரசீது வேண்டுமா?", "നിങ്ങൾക്ക് രസീത് വേണോ?", "আপনার কি রসিদ লাগবে?", "तुम्हाला पावती हवी आहे का?", "영수증 필요하세요?", "¿Necesita el recibo?", "Brauchen Sie eine Quittung?", "Voulez-vous un reçu ?", "શું તમને રસીદ જોઈએ છે?", "আপোনাৰ ৰচিদ লাগিবনে?"], ["come-again", "food", "Thank you, please come again.", "ధన్యవాదాలు, మళ్లీ రండి", "धन्यवाद, फिर आइएगा", "ಧನ್ಯವಾದ, ಮತ್ತೆ ಬನ್ನಿ", "நன்றி, மீண்டும் வாருங்கள்", "നന്ദി, വീണ്ടും വരൂ", "ধন্যবাদ, আবার আসবেন", "धन्यवाद, पुन्हा या", "감사합니다, 또 오세요", "Gracias, vuelva pronto", "Danke, kommen Sie gern wieder", "Merci, revenez bientôt", "આભાર, ફરી આવજો", "ধন্যবাদ, আকৌ আহিব"], ["more-q", "food", "Would you like some more?", "మీకు ఇంకొంచెం కావాలా?", "क्या आप थोड़ा और लेंगे?", "ನಿಮಗೆ ಇನ್ನಷ್ಟು ಬೇಕೇ?", "உங்களுக்கு இன்னும் கொஞ்சம் வேண்டுமா?", "നിങ്ങൾക്ക് കുറച്ചുകൂടി വേണോ?", "আপনি কি আরও একটু নেবেন?", "तुम्हाला थोडं आणखी हवं आहे का?", "더 드릴까요?", "¿Quiere un poco más?", "Möchten Sie noch etwas?", "En voulez-vous encore un peu ?", "શું તમે થોડું વધુ લેશો?", "আপুনি অলপ বেছি ল’বনে?"], ["full-q", "food", "Are you full?", "మీ కడుపు నిండిందా?", "क्या आपका पेट भर गया?", "ನಿಮ್ಮ ಹೊಟ್ಟೆ ತುಂಬಿತೇ?", "உங்கள் வயிறு நிறைந்ததா?", "നിങ്ങളുടെ വയർ നിറഞ്ഞോ?", "আপনার কি পেট ভরেছে?", "तुमचं पोट भरलं का?", "배부르세요?", "¿Está lleno?", "Sind Sie satt?", "Avez-vous assez mangé ?", "શું તમારું પેટ ભરાયું?", "আপোনাৰ পেট ভৰিলনে?"], ["how-many-q", "shop", "How many do you want?", "మీకు ఎన్ని కావాలి?", "आपको कितने चाहिए?", "ನಿಮಗೆ ಎಷ್ಟು ಬೇಕು?", "உங்களுக்கு எத்தனை வேண்டும்?", "നിങ്ങൾക്ക് എത്ര വേണം?", "আপনার কয়টা লাগবে?", "तुम्हाला किती हवे आहेत?", "몇 개 드릴까요?", "¿Cuántos quiere?", "Wie viele möchten Sie?", "Combien en voulez-vous ?", "તમને કેટલા જોઈએ છે?", "আপোনাৰ কিমান লাগিব?"], ["half-kilo", "shop", "Half a kilo, please.", "అర కిలో ఇవ్వండి", "आधा किलो दीजिए", "ಅರ್ಧ ಕಿಲೋ ಕೊಡಿ", "அரை கிலோ கொடுங்கள்", "അര കിലോ തരൂ", "আধা কেজি দিন", "अर्धा किलो द्या", "반 킬로 주세요", "Medio kilo, por favor", "Ein halbes Kilo, bitte", "Un demi-kilo, s’il vous plaît", "અડધો કિલો આપો", "আধা কিলো দিয়ক"], ["fresh-today", "shop", "Everything is fresh today.", "ఈ రోజు అన్నీ తాజాగా ఉన్నాయి", "आज सब कुछ ताज़ा है", "ಇಂದು ಎಲ್ಲವೂ ತಾಜಾ ಇದೆ", "இன்று எல்லாமே புதியவை", "ഇന്ന് എല്ലാം പുതിയതാണ്", "আজ সবকিছু তাজা", "आज सगळं ताजं आहे", "오늘은 다 신선해요", "Hoy todo está fresco", "Heute ist alles frisch", "Tout est frais aujourd’hui", "આજે બધું તાજું છે", "আজি সকলো তাজা"], ["going-q", "travel", "Where are you going?", "మీరు ఎక్కడికి వెళ్తున్నారు?", "आप कहाँ जा रहे हैं?", "ನೀವು ಎಲ್ಲಿಗೆ ಹೋಗುತ್ತಿದ್ದೀರಿ?", "நீங்கள் எங்கே போகிறீர்கள்?", "നിങ്ങൾ എവിടേക്കാണ് പോകുന്നത്?", "আপনি কোথায় যাচ্ছেন?", "तुम्ही कुठे जात आहात?", "어디 가세요?", "¿Adónde va?", "Wohin fahren Sie?", "Où allez-vous ?", "તમે ક્યાં જાઓ છો?", "আপুনি ক’লৈ গৈ আছে?"], ["to-centre", "travel", "To the city centre.", "నగర కేంద్రానికి", "शहर के केंद्र तक", "ನಗರ ಕೇಂದ್ರಕ್ಕೆ", "நகர மையத்துக்கு", "നഗരമധ്യത്തിലേക്ക്", "শহরের কেন্দ্রে", "शहराच्या मध्यभागी", "시내 중심가로요", "Al centro de la ciudad", "In die Innenstadt", "Au centre-ville", "શહેરના કેન્દ્રમાં", "নগৰৰ কেন্দ্ৰলৈ"], ["oneway-q", "travel", "One way or return?", "ఒకవైపు టికెట్టా, రానూపోనూ టికెట్టా?", "एक तरफ़ का या आने-जाने का?", "ಒಂದು ಕಡೆಯದೋ ಹೋಗಿಬರುವುದೋ?", "ஒரு வழியா, போக வர இரண்டு வழியா?", "ഒരു വശത്തേക്കോ പോയി വരാനോ?", "এক দিকের, না যাওয়া-আসার?", "एकेरी की परतीचं?", "편도예요, 왕복이에요?", "¿Solo ida o ida y vuelta?", "Einfach oder hin und zurück?", "Aller simple ou aller-retour ?", "એક તરફનું કે આવવા-જવાનું?", "এফালৰ নে যোৱা-অহা?"], ["one-way", "travel", "One way, please.", "ఒకవైపు టికెట్ ఇవ్వండి", "एक तरफ़ का दीजिए", "ಒಂದು ಕಡೆಯದು ಕೊಡಿ", "ஒரு வழி கொடுங்கள்", "ഒരു വശത്തേക്ക് തരൂ", "এক দিকের দিন", "एकेरी द्या", "편도로 주세요", "Solo ida, por favor", "Einfach, bitte", "Un aller simple, s’il vous plaît", "એક તરફનું આપો", "এফালৰ দিয়ক"], ["fifty-rupees", "travel", "It is fifty rupees.", "ఇది యాభై రూపాయలు", "यह पचास रुपये है", "ಇದು ಐವತ್ತು ರೂಪಾಯಿ", "இது ஐம்பது ரூபாய்", "ഇത് അൻപത് രൂപയാണ്", "এটা পঞ্চাশ টাকা", "हे पन्नास रुपये आहेत", "오십 루피예요", "Son cincuenta rupias", "Das kostet fünfzig Rupien", "Cela fait cinquante roupies", "આ પચાસ રૂપિયા છે", "এইটো পঞ্চাশ টকা"], ["here-you-are", "shop", "Here you are.", "ఇదిగోండి", "ये लीजिए", "ಇಲ್ಲಿದೆ", "இந்தாருங்கள்", "ഇതാ", "এই নিন", "हे घ्या", "여기 있어요", "Aquí tiene", "Bitte schön", "Tenez", "આ લો", "এইয়া লওক"], ["leaves-six", "travel", "The train leaves at six.", "రైలు ఆరు గంటలకు బయలుదేరుతుంది", "ट्रेन छह बजे छूटती है", "ರೈಲು ಆರು ಗಂಟೆಗೆ ಹೊರಡುತ್ತದೆ", "ரயில் ஆறு மணிக்குப் புறப்படும்", "ട്രെയിൻ ആറ് മണിക്ക് പുറപ്പെടും", "ট্রেন ছয়টায় ছাড়ে", "गाडी सहा वाजता सुटते", "기차는 여섯 시에 출발해요", "El tren sale a las seis", "Der Zug fährt um sechs ab", "Le train part à six heures", "ટ્રેન છ વાગ્યે ઊપડે છે", "ৰেল ছয় বজাত এৰে"], ["platform-two", "travel", "Platform number two.", "రెండో నంబర్ ప్లాట్‌ఫారం", "दो नंबर प्लेटफ़ॉर्म", "ಎರಡನೇ ಸಂಖ್ಯೆಯ ಪ್ಲಾಟ್‌ಫಾರ್ಮ್", "இரண்டாம் எண் நடைமேடை", "രണ്ടാം നമ്പർ പ്ലാറ്റ്‌ഫോം", "দুই নম্বর প্ল্যাটফর্ম", "दोन नंबरचा फलाट", "승강장 이 번이에요", "Andén número dos", "Gleis zwei", "Quai numéro deux", "બે નંબરનું પ્લેટફૉર્મ", "দুই নম্বৰ প্লেটফৰ্ম"], ["train-late", "travel", "The train is late today.", "ఈ రోజు రైలు ఆలస్యంగా ఉంది", "आज ट्रेन देर से है", "ಇಂದು ರೈಲು ತಡವಾಗಿದೆ", "இன்று ரயில் தாமதமாக உள்ளது", "ഇന്ന് ട്രെയിൻ വൈകിയാണ്", "আজ ট্রেন দেরিতে চলছে", "आज गाडी उशिरा आहे", "오늘 기차가 늦어요", "El tren llega tarde hoy", "Der Zug hat heute Verspätung", "Le train est en retard aujourd’hui", "આજે ટ્રેન મોડી છે", "আজি ৰেল পলমকৈ আছে"], ["where-to", "travel", "Where to?", "ఎక్కడికి వెళ్ళాలి?", "कहाँ जाना है?", "ಎಲ್ಲಿಗೆ ಹೋಗಬೇಕು?", "எங்கே போக வேண்டும்?", "എവിടേക്കാണ്?", "কোথায় যাবেন?", "कुठे जायचं आहे?", "어디로 가세요?", "¿Adónde?", "Wohin?", "Où ça ?", "ક્યાં જવું છે?", "ক’লৈ যাব লাগে?"], ["two-hundred", "travel", "It is two hundred rupees.", "ఇది రెండు వందల రూపాయలు", "यह दो सौ रुपये है", "ಇದು ಇನ್ನೂರು ರೂಪಾಯಿ", "இது இருநூறு ரூபாய்", "ഇത് ഇരുനൂറ് രൂപയാണ്", "এটা দুইশো টাকা", "हे दोनशे रुपये आहेत", "이백 루피예요", "Son doscientas rupias", "Das kostet zweihundert Rupien", "Cela fait deux cents roupies", "આ બસો રૂપિયા છે", "এইটো দুশ টকা"], ["wait-q", "travel", "Shall I wait for you?", "నేను మీ కోసం ఆగాలా?", "क्या मैं आपका इंतज़ार करूँ?", "ನಾನು ನಿಮಗಾಗಿ ಕಾಯಬೇಕೇ?", "நான் உங்களுக்காகக் காத்திருக்கவா?", "ഞാൻ നിങ്ങൾക്കായി കാത്തിരിക്കണോ?", "আমি কি আপনার জন্য অপেক্ষা করব?", "मी तुमची वाट पाहू का?", "기다릴까요?", "¿Le espero?", "Soll ich auf Sie warten?", "Dois-je vous attendre ?", "શું હું તમારી રાહ જોઉં?", "মই আপোনাৰ বাবে ৰব লাগিবনে?"], ["which-bus", "travel", "Which bus do you need?", "మీకు ఏ బస్సు కావాలి?", "आपको कौन-सी बस चाहिए?", "ನಿಮಗೆ ಯಾವ ಬಸ್ ಬೇಕು?", "உங்களுக்கு எந்த பேருந்து வேண்டும்?", "നിങ്ങൾക്ക് ഏത് ബസാണ് വേണ്ടത്?", "আপনার কোন বাস লাগবে?", "तुम्हाला कोणती बस हवी आहे?", "어느 버스를 타세요?", "¿Qué autobús necesita?", "Welchen Bus brauchen Sie?", "Quel bus vous faut-il ?", "તમારે કઈ બસ જોઈએ છે?", "আপোনাৰ কোনখন বাছ লাগে?"], ["bus-market", "travel", "The bus to the market.", "మార్కెట్‌కి వెళ్ళే బస్సు", "बाज़ार जाने वाली बस", "ಮಾರುಕಟ್ಟೆಗೆ ಹೋಗುವ ಬಸ್", "சந்தைக்குப் போகும் பேருந்து", "മാർക്കറ്റിലേക്കുള്ള ബസ്", "বাজারে যাওয়ার বাস", "बाजाराकडे जाणारी बस", "시장 가는 버스요", "El autobús al mercado", "Den Bus zum Markt", "Le bus pour le marché", "બજાર જતી બસ", "বজাৰলৈ যোৱা বাছখন"], ["bus-twelve", "travel", "Take bus number twelve.", "పన్నెండో నంబర్ బస్సు ఎక్కండి", "बारह नंबर की बस लीजिए", "ಹನ್ನೆರಡನೇ ಸಂಖ್ಯೆಯ ಬಸ್ ಹತ್ತಿ", "பன்னிரண்டாம் எண் பேருந்தில் ஏறுங்கள்", "പന്ത്രണ്ടാം നമ്പർ ബസ് കയറൂ", "বারো নম্বর বাস ধরুন", "बारा नंबरची बस घ्या", "십이 번 버스를 타세요", "Tome el autobús número doce", "Nehmen Sie den Bus Nummer zwölf", "Prenez le bus numéro douze", "બાર નંબરની બસ લો", "বাৰ নম্বৰ বাছখন লওক"], ["every-ten", "travel", "It comes every ten minutes.", "ఇది ప్రతి పది నిమిషాలకు వస్తుంది", "यह हर दस मिनट में आती है", "ಇದು ಪ್ರತಿ ಹತ್ತು ನಿಮಿಷಕ್ಕೆ ಬರುತ್ತದೆ", "இது பத்து நிமிடத்துக்கு ஒருமுறை வரும்", "ഇത് പത്ത് മിനിറ്റിൽ ഒരിക്കൽ വരും", "এটা প্রতি দশ মিনিটে আসে", "ती दर दहा मिनिटांनी येते", "십 분마다 와요", "Pasa cada diez minutos", "Er kommt alle zehn Minuten", "Il passe toutes les dix minutes", "તે દર દસ મિનિટે આવે છે", "এইখন প্ৰতি দহ মিনিটতে আহে"], ["you-lost-q", "travel", "Are you lost?", "మీరు దారి తప్పారా?", "क्या आप रास्ता भूल गए हैं?", "ನೀವು ದಾರಿ ತಪ್ಪಿದ್ದೀರಾ?", "நீங்கள் வழி தவறிவிட்டீர்களா?", "നിങ്ങൾക്ക് വഴി തെറ്റിയോ?", "আপনি কি পথ হারিয়েছেন?", "तुम्ही रस्ता चुकलात का?", "길을 잃으셨어요?", "¿Se ha perdido?", "Haben Sie sich verlaufen?", "Vous êtes perdu ?", "શું તમે રસ્તો ભૂલ્યા છો?", "আপুনি বাট হেৰুৱাইছেনে?"], ["to-station", "travel", "To the railway station.", "రైల్వే స్టేషన్‌కి", "रेलवे स्टेशन तक", "ರೈಲ್ವೆ ನಿಲ್ದಾಣಕ್ಕೆ", "ரயில் நிலையத்துக்கு", "റെയിൽവേ സ്റ്റേഷനിലേക്ക്", "রেলওয়ে স্টেশনে", "रेल्वे स्टेशनला", "기차역으로요", "A la estación de tren", "Zum Bahnhof", "À la gare ferroviaire", "રેલવે સ્ટેશન સુધી", "ৰেলৱে ষ্টেচনলৈ"], ["that-way", "travel", "It is that way, two minutes from here.", "అది ఆ వైపు, ఇక్కడి నుంచి రెండు నిమిషాలు", "वह उस तरफ़ है, यहाँ से दो मिनट", "ಅದು ಆ ಕಡೆ ಇದೆ, ಇಲ್ಲಿಂದ ಎರಡು ನಿಮಿಷ", "அது அந்தப் பக்கம், இங்கிருந்து இரண்டு நிமிடம்", "അത് ആ വശത്താണ്, ഇവിടെ നിന്ന് രണ്ട് മിനിറ്റ്", "ওটা ওইদিকে, এখান থেকে দুই মিনিট", "ते तिकडे आहे, इथून दोन मिनिटं", "저쪽이에요, 여기서 이 분 거리예요", "Está por ahí, a dos minutos de aquí", "Es ist in dieser Richtung, zwei Minuten von hier", "C’est par là, à deux minutes d’ici", "તે એ બાજુ છે, અહીંથી બે મિનિટ", "সেইটো সেইফালে, ইয়াৰ পৰা দুই মিনিট"], ["passport-pls", "travel", "Your passport, please.", "మీ పాస్‌పోర్ట్ ఇవ్వండి", "कृपया अपना पासपोर्ट दीजिए", "ನಿಮ್ಮ ಪಾಸ್‌ಪೋರ್ಟ್ ಕೊಡಿ", "உங்கள் கடவுச்சீட்டைக் கொடுங்கள்", "നിങ്ങളുടെ പാസ്‌പോർട്ട് തരൂ", "আপনার পাসপোর্ট দিন", "तुमचा पासपोर्ट द्या", "여권 주세요", "Su pasaporte, por favor", "Ihren Reisepass, bitte", "Votre passeport, s’il vous plaît", "તમારો પાસપોર્ટ આપો", "আপোনাৰ পাছপৰ্ট দিয়ক"], ["luggage-q", "travel", "Do you have any luggage?", "మీ దగ్గర సామాను ఉందా?", "क्या आपके पास कोई सामान है?", "ನಿಮ್ಮ ಬಳಿ ಏನಾದರೂ ಸಾಮಾನು ಇದೆಯೇ?", "உங்களிடம் ஏதேனும் பொருட்கள் உள்ளனவா?", "നിങ്ങളുടെ കൈവശം ലഗേജ് ഉണ്ടോ?", "আপনার কাছে কি কোনো মালপত্র আছে?", "तुमच्याकडे काही सामान आहे का?", "짐이 있으세요?", "¿Tiene equipaje?", "Haben Sie Gepäck?", "Avez-vous des bagages ?", "શું તમારી પાસે સામાન છે?", "আপোনাৰ লগত কিবা সামগ্ৰী আছেনে?"], ["one-bag", "travel", "Only one bag.", "ఒక్క బ్యాగ్ మాత్రమే", "सिर्फ़ एक बैग", "ಒಂದೇ ಬ್ಯಾಗ್ ಮಾತ್ರ", "ஒரே ஒரு பை மட்டும்", "ഒരു ബാഗ് മാത്രം", "শুধু একটা ব্যাগ", "फक्त एक बॅग", "가방 하나뿐이에요", "Solo una maleta", "Nur eine Tasche", "Seulement un sac", "ફક્ત એક બૅગ", "মাথোঁ এটা বেগ"], ["boarding", "travel", "Here is your boarding pass.", "ఇదిగో మీ బోర్డింగ్ పాస్", "यह रहा आपका बोर्डिंग पास", "ಇದು ನಿಮ್ಮ ಬೋರ್ಡಿಂಗ್ ಪಾಸ್", "இதோ உங்கள் போர்டிங் பாஸ்", "ഇതാ നിങ്ങളുടെ ബോർഡിംഗ് പാസ്", "এই নিন আপনার বোর্ডিং পাস", "हा घ्या तुमचा बोर्डिंग पास", "탑승권 여기 있습니다", "Aquí tiene su tarjeta de embarque", "Hier ist Ihre Bordkarte", "Voici votre carte d’embarquement", "આ રહ્યો તમારો બોર્ડિંગ પાસ", "এইয়া আপোনাৰ বৰ্ডিং পাছ"], ["checkout-q", "travel", "Are you checking out?", "మీరు చెక్ అవుట్ చేస్తున్నారా?", "क्या आप चेक-आउट कर रहे हैं?", "ನೀವು ಚೆಕ್ ಔಟ್ ಮಾಡುತ್ತಿದ್ದೀರಾ?", "நீங்கள் செக்-அவுட் செய்கிறீர்களா?", "നിങ്ങൾ ചെക്ക് ഔട്ട് ചെയ്യുകയാണോ?", "আপনি কি চেক-আউট করছেন?", "तुम्ही चेक-आउट करत आहात का?", "체크아웃하시나요?", "¿Deja usted el hotel?", "Reisen Sie ab?", "Quittez-vous l’hôtel ?", "શું તમે ચેક-આઉટ કરો છો?", "আপুনি চেক-আউট কৰিছেনে?"], ["leaving-today", "travel", "Yes, I am leaving today.", "అవును, నేను ఈ రోజు వెళ్తున్నాను", "हाँ, मैं आज जा रहा हूँ", "ಹೌದು, ನಾನು ಇಂದು ಹೊರಡುತ್ತಿದ್ದೇನೆ", "ஆம், நான் இன்று புறப்படுகிறேன்", "അതെ, ഞാൻ ഇന്ന് പോകുന്നു", "হ্যাঁ, আমি আজ যাচ্ছি", "होय, मी आज निघत आहे", "네, 오늘 떠나요", "Sí, me voy hoy", "Ja, ich reise heute ab", "Oui, je pars aujourd’hui", "હા, હું આજે જાઉં છું", "হয়, মই আজি যাম"], ["everything-fine-q", "travel", "Was everything fine?", "అంతా బాగానే ఉందా?", "क्या सब कुछ ठीक था?", "ಎಲ್ಲವೂ ಚೆನ್ನಾಗಿತ್ತೇ?", "எல்லாம் நன்றாக இருந்ததா?", "എല്ലാം നന്നായിരുന്നോ?", "সব ঠিকঠাক ছিল তো?", "सगळं नीट होतं ना?", "모든 게 괜찮으셨어요?", "¿Todo estuvo bien?", "War alles in Ordnung?", "Tout s’est bien passé ?", "બધું બરાબર હતું?", "সকলো ঠিকে আছিলনে?"], ["very-good", "travel", "Yes, it was very good.", "అవును, చాలా బాగుంది", "हाँ, बहुत अच्छा था", "ಹೌದು, ತುಂಬಾ ಚೆನ್ನಾಗಿತ್ತು", "ஆம், மிக நன்றாக இருந்தது", "അതെ, വളരെ നന്നായിരുന്നു", "হ্যাঁ, খুব ভালো ছিল", "होय, खूप छान होतं", "네, 아주 좋았어요", "Sí, fue muy bueno", "Ja, es war sehr gut", "Oui, c’était très bien", "હા, ખૂબ સારું હતું", "হয়, বৰ ভাল আছিল"], ["tickets-how-many", "travel", "How many tickets?", "ఎన్ని టికెట్లు?", "कितने टिकट?", "ಎಷ್ಟು ಟಿಕೆಟ್‌ಗಳು?", "எத்தனை டிக்கெட்டுகள்?", "എത്ര ടിക്കറ്റ്?", "কয়টা টিকিট?", "किती तिकिटं?", "몇 장이요?", "¿Cuántas entradas?", "Wie viele Karten?", "Combien de billets ?", "કેટલી ટિકિટ?", "কিমানখন টিকিট?"], ["guide-q", "travel", "Would you like a guide?", "మీకు గైడ్ కావాలా?", "क्या आपको गाइड चाहिए?", "ನಿಮಗೆ ಗೈಡ್ ಬೇಕೇ?", "உங்களுக்கு வழிகாட்டி வேண்டுமா?", "നിങ്ങൾക്ക് ഗൈഡ് വേണോ?", "আপনার কি গাইড লাগবে?", "तुम्हाला गाईड हवा आहे का?", "가이드가 필요하세요?", "¿Quiere un guía?", "Möchten Sie einen Führer?", "Voulez-vous un guide ?", "શું તમને ગાઇડ જોઈએ છે?", "আপোনাৰ গাইড লাগিবনে?"], ["no-thanks", "talk", "No, thank you.", "వద్దు, ధన్యవాదాలు", "नहीं, धन्यवाद", "ಬೇಡ, ಧನ್ಯವಾದ", "வேண்டாம், நன்றி", "വേണ്ട, നന്ദി", "না, ধন্যবাদ", "नको, धन्यवाद", "아니요, 괜찮습니다", "No, gracias", "Nein, danke", "Non, merci", "ના, આભાર", "নালাগে, ধন্যবাদ"], ["opens-nine", "travel", "The museum opens at nine.", "మ్యూజియం తొమ్మిది గంటలకు తెరుస్తారు", "संग्रहालय नौ बजे खुलता है", "ವಸ್ತುಸಂಗ್ರಹಾಲಯ ಒಂಬತ್ತು ಗಂಟೆಗೆ ತೆರೆಯುತ್ತದೆ", "அருங்காட்சியகம் ஒன்பது மணிக்குத் திறக்கும்", "മ്യൂസിയം ഒമ്പത് മണിക്ക് തുറക്കും", "জাদুঘর নয়টায় খোলে", "संग्रहालय नऊ वाजता उघडतं", "박물관은 아홉 시에 열어요", "El museo abre a las nueve", "Das Museum öffnet um neun", "Le musée ouvre à neuf heures", "સંગ્રહાલય નવ વાગ્યે ખૂલે છે", "সংগ্ৰহালয় নঅ বজাত খোলে"], ["closes-six", "travel", "It closes at six.", "అది ఆరు గంటలకు మూసేస్తారు", "यह छह बजे बंद होता है", "ಅದು ಆರು ಗಂಟೆಗೆ ಮುಚ್ಚುತ್ತದೆ", "அது ஆறு மணிக்கு மூடப்படும்", "അത് ആറ് മണിക്ക് അടയ്ക്കും", "ছয়টায় বন্ধ হয়", "ते सहा वाजता बंद होतं", "여섯 시에 닫아요", "Cierra a las seis", "Es schließt um sechs", "Il ferme à six heures", "તે છ વાગ્યે બંધ થાય છે", "ছয় বজাত বন্ধ হয়"], ["meter-q", "travel", "Meter or fixed price?", "మీటర్‌పైనా లేక నిర్ణీత ధరకా?", "मीटर से या तय किराये पर?", "ಮೀಟರ್ ಮೇಲೋ ಅಥವಾ ನಿಗದಿತ ದರವೋ?", "மீட்டரிலா, நிர்ணயித்த கட்டணத்திலா?", "മീറ്റർ പ്രകാരമോ നിശ്ചിത നിരക്കിലോ?", "মিটারে, না নির্দিষ্ট ভাড়ায়?", "मीटरने की ठरलेल्या भाड्याने?", "미터기로 갈까요, 정액으로 갈까요?", "¿Con taxímetro o precio fijo?", "Mit Taxameter oder Festpreis?", "Au compteur ou à prix fixe ?", "મીટરથી કે નક્કી ભાડાથી?", "মিটাৰেৰে নে নিৰ্দিষ্ট ভাড়াৰে?"], ["meter", "travel", "Meter, please.", "మీటర్ ప్రకారం వెళ్దాం", "मीटर से चलिए", "ಮೀಟರ್ ಪ್ರಕಾರ ಹೋಗೋಣ", "மீட்டரில் போகலாம்", "മീറ്റർ പ്രകാരം പോകാം", "মিটারে চলুন", "मीटरने चला", "미터기로 가 주세요", "Con taxímetro, por favor", "Mit Taxameter, bitte", "Au compteur, s’il vous plaît", "મીટરથી ચાલો", "মিটাৰেৰে যাওক"], ["traffic-heavy", "travel", "The traffic is heavy today.", "ఈ రోజు ట్రాఫిక్ ఎక్కువగా ఉంది", "आज ट्रैफ़िक बहुत है", "ಇಂದು ಟ್ರಾಫಿಕ್ ಹೆಚ್ಚಿದೆ", "இன்று போக்குவரத்து நெரிசல் அதிகம்", "ഇന്ന് ട്രാഫിക് കൂടുതലാണ്", "আজ যানজট অনেক", "आज वाहतूक जास्त आहे", "오늘 차가 많이 막혀요", "Hoy hay mucho tráfico", "Heute ist viel Verkehr", "Il y a beaucoup de circulation aujourd’hui", "આજે ટ્રાફિક ખૂબ છે", "আজি ট্ৰেফিক বেছি"], ["half-hour", "travel", "About half an hour.", "సుమారు అరగంట", "लगभग आधा घंटा", "ಸುಮಾರು ಅರ್ಧ ಗಂಟೆ", "சுமார் அரை மணி நேரம்", "ഏകദേശം അര മണിക്കൂർ", "প্রায় আধা ঘণ্টা", "साधारण अर्धा तास", "삼십 분 정도요", "Cerca de media hora", "Etwa eine halbe Stunde", "Environ une demi-heure", "લગભગ અડધો કલાક", "প্ৰায় আধা ঘণ্টা"], ["know-time", "time", "Do you know the time?", "మీకు సమయం తెలుసా?", "क्या आपको समय पता है?", "ನಿಮಗೆ ಸಮಯ ಗೊತ್ತೇ?", "உங்களுக்கு நேரம் தெரியுமா?", "നിങ്ങൾക്ക് സമയം അറിയാമോ?", "আপনি কি সময় জানেন?", "तुम्हाला वेळ माहीत आहे का?", "지금 몇 시인지 아세요?", "¿Sabe qué hora es?", "Wissen Sie, wie spät es ist?", "Savez-vous l’heure ?", "શું તમને સમય ખબર છે?", "আপুনি সময় জানেনে?"], ["five-oclock", "time", "It is five o’clock.", "ఇప్పుడు ఐదు గంటలు", "अभी पाँच बजे हैं", "ಈಗ ಐದು ಗಂಟೆ", "இப்போது ஐந்து மணி", "ഇപ്പോൾ അഞ്ച് മണിയാണ്", "এখন পাঁচটা বাজে", "आता पाच वाजले आहेत", "지금 다섯 시예요", "Son las cinco", "Es ist fünf Uhr", "Il est cinq heures", "અત્યારે પાંચ વાગ્યા છે", "এতিয়া পাঁচ বাজিছে"], ["station-near-q", "travel", "Is the station near?", "స్టేషన్ దగ్గరలోనే ఉందా?", "क्या स्टेशन पास में है?", "ನಿಲ್ದಾಣ ಹತ್ತಿರದಲ್ಲೇ ಇದೆಯೇ?", "நிலையம் அருகிலேயே உள்ளதா?", "സ്റ്റേഷൻ അടുത്താണോ?", "স্টেশন কি কাছেই?", "स्टेशन जवळ आहे का?", "역이 가까워요?", "¿Está cerca la estación?", "Ist der Bahnhof in der Nähe?", "La gare est-elle proche ?", "શું સ્ટેશન નજીક છે?", "ষ্টেচন ওচৰতে নেকি?"], ["very-near", "travel", "Yes, it is very near.", "అవును, చాలా దగ్గరలోనే ఉంది", "हाँ, बहुत पास है", "ಹೌದು, ತುಂಬಾ ಹತ್ತಿರವಿದೆ", "ஆம், மிக அருகில் உள்ளது", "അതെ, വളരെ അടുത്താണ്", "হ্যাঁ, খুব কাছে", "होय, खूप जवळ आहे", "네, 아주 가까워요", "Sí, está muy cerca", "Ja, er ist ganz in der Nähe", "Oui, elle est tout près", "હા, ખૂબ નજીક છે", "হয়, বৰ ওচৰতে"], ["thanks-help", "talk", "Thank you for your help.", "మీ సహాయానికి ధన్యవాదాలు", "आपकी मदद के लिए धन्यवाद", "ನಿಮ್ಮ ಸಹಾಯಕ್ಕೆ ಧನ್ಯವಾದ", "உங்கள் உதவிக்கு நன்றி", "നിങ്ങളുടെ സഹായത്തിന് നന്ദി", "আপনার সাহায্যের জন্য ধন্যবাদ", "तुमच्या मदतीबद्दल धन्यवाद", "도와주셔서 감사합니다", "Gracias por su ayuda", "Danke für Ihre Hilfe", "Merci pour votre aide", "તમારી મદદ બદલ આભાર", "আপোনাৰ সহায়ৰ বাবে ধন্যবাদ"], ["this-good", "shop", "This one is very good.", "ఇది చాలా బాగుంది", "यह बहुत अच्छा है", "ಇದು ತುಂಬಾ ಚೆನ್ನಾಗಿದೆ", "இது மிக நன்றாக இருக்கிறது", "ഇത് വളരെ നല്ലതാണ്", "এটা খুব ভালো", "हे खूप छान आहे", "이게 아주 좋아요", "Este es muy bueno", "Dieses ist sehr gut", "Celui-ci est très bien", "આ ખૂબ સારું છે", "এইটো বৰ ভাল"], ["have-bigger", "shop", "Yes, we have a bigger size.", "అవును, పెద్ద సైజు ఉంది", "हाँ, बड़ा साइज़ है", "ಹೌದು, ದೊಡ್ಡ ಗಾತ್ರ ಇದೆ", "ஆம், பெரிய அளவு உள்ளது", "അതെ, വലിയ വലുപ്പം ഉണ്ട്", "হ্যাঁ, বড় সাইজ আছে", "होय, मोठा आकार आहे", "네, 더 큰 사이즈가 있어요", "Sí, tenemos una talla más grande", "Ja, wir haben eine größere Größe", "Oui, nous avons une taille plus grande", "હા, મોટી સાઇઝ છે", "হয়, ডাঙৰ আকাৰ আছে"], ["bag-q", "shop", "Do you want a bag?", "మీకు బ్యాగ్ కావాలా?", "क्या आपको थैला चाहिए?", "ನಿಮಗೆ ಚೀಲ ಬೇಕೇ?", "உங்களுக்குப் பை வேண்டுமா?", "നിങ്ങൾക്ക് ബാഗ് വേണോ?", "আপনার কি ব্যাগ লাগবে?", "तुम्हाला पिशवी हवी आहे का?", "봉투 드릴까요?", "¿Quiere una bolsa?", "Möchten Sie eine Tüte?", "Voulez-vous un sac ?", "શું તમને થેલી જોઈએ છે?", "আপোনাৰ বেগ লাগিবনে?"], ["no-bag", "shop", "No bag, thank you.", "బ్యాగ్ వద్దు, ధన్యవాదాలు", "थैला नहीं चाहिए, धन्यवाद", "ಚೀಲ ಬೇಡ, ಧನ್ಯವಾದ", "பை வேண்டாம், நன்றி", "ബാഗ് വേണ്ട, നന്ദി", "ব্যাগ লাগবে না, ধন্যবাদ", "पिशवी नको, धन्यवाद", "봉투는 괜찮아요", "No quiero bolsa, gracias", "Keine Tüte, danke", "Pas de sac, merci", "થેલી નથી જોઈતી, આભાર", "বেগ নালাগে, ধন্যবাদ"], ["yes-please", "talk", "Yes, please.", "అవును, దయచేసి", "हाँ, कृपया", "ಹೌದು, ದಯವಿಟ್ಟು", "ஆம், தயவுசெய்து", "അതെ, ദയവായി", "হ্যাঁ, দয়া করে", "होय, कृपया", "네, 부탁해요", "Sí, por favor", "Ja, bitte", "Oui, s’il vous plaît", "હા, કૃપા કરીને", "হয়, অনুগ্ৰহ কৰি"], ["that-all", "shop", "That is all.", "అంతే", "इतना ही", "ಅಷ್ಟೇ", "அவ்வளவுதான்", "അത്രമാത്രം", "এটুকুই", "एवढंच", "그게 다예요", "Eso es todo", "Das ist alles", "C’est tout", "બસ એટલું જ", "সিমানেই"], ["what-need", "shop", "What do you need?", "మీకు ఏమి కావాలి?", "आपको क्या चाहिए?", "ನಿಮಗೆ ಏನು ಬೇಕು?", "உங்களுக்கு என்ன வேண்டும்?", "നിങ്ങൾക്ക് എന്താണ് വേണ്ടത്?", "আপনার কী লাগবে?", "तुम्हाला काय हवं आहे?", "무엇이 필요하세요?", "¿Qué necesita?", "Was brauchen Sie?", "De quoi avez-vous besoin ?", "તમને શું જોઈએ છે?", "আপোনাৰ কি লাগে?"], ["prescription-q", "health", "Do you have a prescription?", "మీ దగ్గర ప్రిస్క్రిప్షన్ ఉందా?", "क्या आपके पास पर्ची है?", "ನಿಮ್ಮ ಬಳಿ ಚೀಟಿ ಇದೆಯೇ?", "உங்களிடம் மருந்துச் சீட்டு உள்ளதா?", "നിങ്ങളുടെ കൈവശം കുറിപ്പടി ഉണ്ടോ?", "আপনার কাছে কি প্রেসক্রিপশন আছে?", "तुमच्याकडे चिठ्ठी आहे का?", "처방전이 있으세요?", "¿Tiene receta?", "Haben Sie ein Rezept?", "Avez-vous une ordonnance ?", "શું તમારી પાસે ચિઠ્ઠી છે?", "আপোনাৰ ওচৰত প্ৰেছক্ৰিপচন আছেনে?"], ["no-i-dont", "talk", "No, I do not.", "లేదు, నా దగ్గర లేదు", "नहीं, मेरे पास नहीं है", "ಇಲ್ಲ, ನನ್ನ ಬಳಿ ಇಲ್ಲ", "இல்லை, என்னிடம் இல்லை", "ഇല്ല, എന്റെ കൈവശമില്ല", "না, আমার কাছে নেই", "नाही, माझ्याकडे नाही", "아니요, 없어요", "No, no tengo", "Nein, habe ich nicht", "Non, je n’en ai pas", "ના, મારી પાસે નથી", "নাই, মোৰ ওচৰত নাই"], ["tablet", "health", "Take one tablet after food.", "భోజనం తర్వాత ఒక మాత్ర వేసుకోండి", "खाने के बाद एक गोली लीजिए", "ಊಟದ ನಂತರ ಒಂದು ಮಾತ್ರೆ ತೆಗೆದುಕೊಳ್ಳಿ", "சாப்பிட்ட பிறகு ஒரு மாத்திரை சாப்பிடுங்கள்", "ഭക്ഷണത്തിന് ശേഷം ഒരു ഗുളിക കഴിക്കൂ", "খাবারের পর একটা ট্যাবলেট খান", "जेवणानंतर एक गोळी घ्या", "식후에 한 알 드세요", "Tome una pastilla después de comer", "Nehmen Sie nach dem Essen eine Tablette", "Prenez un comprimé après le repas", "જમ્યા પછી એક ગોળી લો", "খোৱাৰ পাছত এটা বটিকা খাওক"], ["sim-card", "shop", "I need a SIM card.", "నాకు సిమ్ కార్డ్ కావాలి", "मुझे सिम कार्ड चाहिए", "ನನಗೆ ಸಿಮ್ ಕಾರ್ಡ್ ಬೇಕು", "எனக்குச் சிம் கார்டு வேண்டும்", "എനിക്ക് സിം കാർഡ് വേണം", "আমার একটা সিম কার্ড দরকার", "मला सिम कार्ड हवं आहे", "유심 카드가 필요해요", "Necesito una tarjeta SIM", "Ich brauche eine SIM-Karte", "J’ai besoin d’une carte SIM", "મારે સિમ કાર્ડ જોઈએ છે", "মোৰ এখন ছিম কাৰ্ড লাগে"], ["show-passport", "shop", "Please show your passport.", "దయచేసి మీ పాస్‌పోర్ట్ చూపించండి", "कृपया अपना पासपोर्ट दिखाइए", "ದಯವಿಟ್ಟು ನಿಮ್ಮ ಪಾಸ್‌ಪೋರ್ಟ್ ತೋರಿಸಿ", "தயவுசெய்து உங்கள் கடவுச்சீட்டைக் காட்டுங்கள்", "ദയവായി നിങ്ങളുടെ പാസ്‌പോർട്ട് കാണിക്കൂ", "দয়া করে আপনার পাসপোর্ট দেখান", "कृपया तुमचा पासपोर्ट दाखवा", "여권을 보여 주세요", "Muestre su pasaporte, por favor", "Bitte zeigen Sie Ihren Reisepass", "Montrez votre passeport, s’il vous plaît", "કૃપા કરીને તમારો પાસપોર્ટ બતાવો", "অনুগ্ৰহ কৰি আপোনাৰ পাছপৰ্ট দেখুৱাওক"], ["ten-min-work", "shop", "It will work in ten minutes.", "ఇది పది నిమిషాల్లో పనిచేస్తుంది", "यह दस मिनट में चालू हो जाएगा", "ಇದು ಹತ್ತು ನಿಮಿಷದಲ್ಲಿ ಕೆಲಸ ಮಾಡುತ್ತದೆ", "இது பத்து நிமிடத்தில் வேலை செய்யும்", "ഇത് പത്ത് മിനിറ്റിനുള്ളിൽ പ്രവർത്തിക്കും", "এটা দশ মিনিটে চালু হবে", "हे दहा मिनिटांत सुरू होईल", "십 분 후에 사용할 수 있어요", "Funcionará en diez minutos", "Es funktioniert in zehn Minuten", "Cela fonctionnera dans dix minutes", "તે દસ મિનિટમાં ચાલુ થઈ જશે", "এইটো দহ মিনিটত চলিব"], ["too-small", "shop", "It is too small.", "ఇది చాలా చిన్నదిగా ఉంది", "यह बहुत छोटा है", "ಇದು ತುಂಬಾ ಚಿಕ್ಕದಾಗಿದೆ", "இது மிகவும் சிறியதாக உள்ளது", "ഇത് വളരെ ചെറുതാണ്", "এটা খুব ছোট", "हे खूप लहान आहे", "너무 작아요", "Es demasiado pequeño", "Es ist zu klein", "C’est trop petit", "આ ખૂબ નાનું છે", "এইটো বৰ সৰু"], ["have-receipt-q", "shop", "Do you have the receipt?", "మీ దగ్గర రసీదు ఉందా?", "क्या आपके पास रसीद है?", "ನಿಮ್ಮ ಬಳಿ ರಸೀದಿ ಇದೆಯೇ?", "உங்களிடம் ரசீது உள்ளதா?", "നിങ്ങളുടെ കൈവശം രസീത് ഉണ്ടോ?", "আপনার কাছে কি রসিদ আছে?", "तुमच्याकडे पावती आहे का?", "영수증 가지고 계세요?", "¿Tiene el recibo?", "Haben Sie die Quittung?", "Avez-vous le reçu ?", "શું તમારી પાસે રસીદ છે?", "আপোনাৰ ওচৰত ৰচিদ আছেনে?"], ["here-it-is", "shop", "Yes, here it is.", "అవును, ఇదిగో", "हाँ, यह रहा", "ಹೌದು, ಇದೋ", "ஆம், இதோ", "അതെ, ഇതാ", "হ্যাঁ, এই যে", "होय, हे घ्या", "네, 여기 있어요", "Sí, aquí está", "Ja, hier ist sie", "Oui, la voici", "હા, આ રહી", "হয়, এইয়া"], ["can-change", "shop", "I can change it for you.", "నేను మీకు మార్చి ఇవ్వగలను", "मैं इसे आपके लिए बदल सकता हूँ", "ನಾನು ಇದನ್ನು ನಿಮಗೆ ಬದಲಾಯಿಸಿ ಕೊಡಬಲ್ಲೆ", "நான் இதை உங்களுக்கு மாற்றித் தருகிறேன்", "ഞാൻ ഇത് മാറ്റിത്തരാം", "আমি এটা বদলে দিতে পারি", "मी हे तुमच्यासाठी बदलून देऊ शकतो", "바꿔 드릴 수 있어요", "Puedo cambiárselo", "Ich kann es für Sie umtauschen", "Je peux vous l’échanger", "હું તમને આ બદલી આપી શકું", "মই এইটো সলনি কৰি দিব পাৰোঁ"], ["appt-q", "health", "Do you have an appointment?", "మీకు అపాయింట్‌మెంట్ ఉందా?", "क्या आपका अपॉइंटमेंट है?", "ನಿಮಗೆ ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್ ಇದೆಯೇ?", "உங்களுக்கு முன்பதிவு உள்ளதா?", "നിങ്ങൾക്ക് അപ്പോയിന്റ്മെന്റ് ഉണ്ടോ?", "আপনার কি অ্যাপয়েন্টমেন্ট আছে?", "तुमची अपॉइंटमेंट आहे का?", "예약하셨어요?", "¿Tiene cita?", "Haben Sie einen Termin?", "Avez-vous un rendez-vous ?", "શું તમારી પાસે અપૉઇન્ટમેન્ટ છે?", "আপোনাৰ এপইণ্টমেণ্ট আছেনে?"], ["doctor-free-four", "health", "The doctor is free at four.", "డాక్టర్ నాలుగు గంటలకు ఖాళీగా ఉంటారు", "डॉक्टर चार बजे खाली होंगे", "ವೈದ್ಯರು ನಾಲ್ಕು ಗಂಟೆಗೆ ಬಿಡುವಾಗಿರುತ್ತಾರೆ", "மருத்துவர் நான்கு மணிக்கு ஓய்வாக இருப்பார்", "ഡോക്ടർ നാല് മണിക്ക് ഫ്രീയാകും", "ডাক্তার চারটায় ফ্রি হবেন", "डॉक्टर चार वाजता मोकळे असतील", "의사 선생님은 네 시에 시간이 돼요", "El médico está libre a las cuatro", "Der Arzt hat um vier Uhr Zeit", "Le médecin est libre à quatre heures", "ડૉક્ટર ચાર વાગ્યે ફ્રી થશે", "ডাক্তৰ চাৰি বজাত মুক্ত হ’ব"], ["sit-wait", "health", "Please sit and wait.", "దయచేసి కూర్చుని వేచి ఉండండి", "कृपया बैठकर प्रतीक्षा कीजिए", "ದಯವಿಟ್ಟು ಕುಳಿತು ಕಾಯಿರಿ", "தயவுசெய்து உட்கார்ந்து காத்திருங்கள்", "ദയവായി ഇരുന്ന് കാത്തിരിക്കൂ", "দয়া করে বসে অপেক্ষা করুন", "कृपया बसून थांबा", "앉아서 기다려 주세요", "Siéntese y espere, por favor", "Bitte setzen Sie sich und warten Sie", "Asseyez-vous et patientez, s’il vous plaît", "કૃપા કરીને બેસીને રાહ જુઓ", "অনুগ্ৰহ কৰি বহি অপেক্ষা কৰক"], ["what-eat", "health", "What did you eat?", "మీరు ఏమి తిన్నారు?", "आपने क्या खाया?", "ನೀವು ಏನು ತಿಂದಿರಿ?", "நீங்கள் என்ன சாப்பிட்டீர்கள்?", "നിങ്ങൾ എന്താണ് കഴിച്ചത്?", "আপনি কী খেয়েছেন?", "तुम्ही काय खाल्लं?", "무엇을 드셨어요?", "¿Qué comió?", "Was haben Sie gegessen?", "Qu’avez-vous mangé ?", "તમે શું ખાધું?", "আপুনি কি খালে?"], ["ate-outside", "health", "I ate outside.", "నేను బయట తిన్నాను", "मैंने बाहर खाया था", "ನಾನು ಹೊರಗೆ ತಿಂದೆ", "நான் வெளியே சாப்பிட்டேன்", "ഞാൻ പുറത്തുനിന്ന് കഴിച്ചു", "আমি বাইরে খেয়েছি", "मी बाहेर खाल्लं", "밖에서 먹었어요", "Comí fuera", "Ich habe auswärts gegessen", "J’ai mangé dehors", "મેં બહાર ખાધું હતું", "মই বাহিৰত খাইছিলোঁ"], ["rest-water", "health", "You need to rest and drink water.", "మీరు విశ్రాంతి తీసుకుని నీళ్లు తాగాలి", "आपको आराम करना और पानी पीना चाहिए", "ನೀವು ವಿಶ್ರಾಂತಿ ಪಡೆದು ನೀರು ಕುಡಿಯಬೇಕು", "நீங்கள் ஓய்வெடுத்துத் தண்ணீர் குடிக்க வேண்டும்", "നിങ്ങൾ വിശ്രമിക്കുകയും വെള്ളം കുടിക്കുകയും വേണം", "আপনাকে বিশ্রাম নিতে হবে আর জল খেতে হবে", "तुम्ही आराम करा आणि पाणी प्या", "쉬시고 물을 많이 드셔야 해요", "Necesita descansar y beber agua", "Sie müssen sich ausruhen und Wasser trinken", "Vous devez vous reposer et boire de l’eau", "તમારે આરામ કરવો અને પાણી પીવું જોઈએ", "আপুনি জিৰণি ল’ব লাগিব আৰু পানী খাব লাগিব"], ["cold-q", "health", "Do you have a cold?", "మీకు జలుబు ఉందా?", "क्या आपको सर्दी है?", "ನಿಮಗೆ ಶೀತವಿದೆಯೇ?", "உங்களுக்குச் சளி இருக்கிறதா?", "നിങ്ങൾക്ക് ജലദോഷമുണ്ടോ?", "আপনার কি সর্দি হয়েছে?", "तुम्हाला सर्दी झाली आहे का?", "감기 기운이 있으세요?", "¿Tiene un resfriado?", "Sind Sie erkältet?", "Êtes-vous enrhumé ?", "શું તમને શરદી છે?", "আপোনাৰ সৰ্দি হৈছেনে?"], ["warm-water", "health", "Drink warm water and rest.", "గోరువెచ్చని నీళ్లు తాగి విశ్రాంతి తీసుకోండి", "गुनगुना पानी पीजिए और आराम कीजिए", "ಉಗುರುಬೆಚ್ಚಗಿನ ನೀರು ಕುಡಿದು ವಿಶ್ರಾಂತಿ ಪಡೆಯಿರಿ", "வெதுவெதுப்பான தண்ணீர் குடித்து ஓய்வெடுங்கள்", "ചെറുചൂടുവെള്ളം കുടിച്ച് വിശ്രമിക്കൂ", "কুসুম গরম জল খান আর বিশ্রাম নিন", "कोमट पाणी प्या आणि आराम करा", "따뜻한 물을 마시고 쉬세요", "Beba agua tibia y descanse", "Trinken Sie warmes Wasser und ruhen Sie sich aus", "Buvez de l’eau tiède et reposez-vous", "હૂંફાળું પાણી પીઓ અને આરામ કરો", "কুহুমীয়া পানী খাওক আৰু জিৰণি লওক"], ["what-happened", "health", "What happened?", "ఏమి జరిగింది?", "क्या हुआ था?", "ಏನು ನಡೆಯಿತು?", "என்ன நடந்தது?", "എന്താണ് സംഭവിച്ചത്?", "কী হয়েছিল?", "काय झालं होतं?", "무슨 일이 있었어요?", "¿Qué ha pasado?", "Was ist passiert?", "Que s’est-il passé ?", "શું થયું હતું?", "কি হৈছিল?"], ["where-are-you", "health", "Where are you?", "మీరు ఎక్కడ ఉన్నారు?", "आप कहाँ हैं?", "ನೀವು ಎಲ್ಲಿದ್ದೀರಿ?", "நீங்கள் எங்கே இருக்கிறீர்கள்?", "നിങ്ങൾ എവിടെയാണ്?", "আপনি কোথায় আছেন?", "तुम्ही कुठे आहात?", "어디 계세요?", "¿Dónde está usted?", "Wo sind Sie?", "Où êtes-vous ?", "તમે ક્યાં છો?", "আপুনি ক’ত আছে?"], ["near-station", "travel", "I am near the station.", "నేను స్టేషన్ దగ్గర ఉన్నాను", "मैं स्टेशन के पास हूँ", "ನಾನು ನಿಲ್ದಾಣದ ಹತ್ತಿರ ಇದ್ದೇನೆ", "நான் நிலையத்துக்கு அருகில் இருக்கிறேன்", "ഞാൻ സ്റ്റേഷന് അടുത്താണ്", "আমি স্টেশনের কাছে আছি", "मी स्टेशनजवळ आहे", "역 근처에 있어요", "Estoy cerca de la estación", "Ich bin in der Nähe des Bahnhofs", "Je suis près de la gare", "હું સ્ટેશન પાસે છું", "মই ষ্টেচনৰ ওচৰত আছোঁ"], ["stay-there", "health", "Stay there. Help is coming.", "అక్కడే ఉండండి, సహాయం వస్తోంది", "वहीं रुकिए, मदद आ रही है", "ಅಲ್ಲೇ ಇರಿ, ಸಹಾಯ ಬರುತ್ತಿದೆ", "அங்கேயே இருங்கள், உதவி வருகிறது", "അവിടെത്തന്നെ നിൽക്കൂ, സഹായം വരുന്നുണ്ട്", "ওখানেই থাকুন, সাহায্য আসছে", "तिथेच थांबा, मदत येत आहे", "그 자리에 계세요, 도움이 가고 있어요", "Quédese ahí, la ayuda va en camino", "Bleiben Sie dort, Hilfe kommt", "Restez là, les secours arrivent", "ત્યાં જ રહો, મદદ આવી રહી છે", "তাতেই থাকক, সহায় আহি আছে"], ["for-whom", "health", "Who is it for?", "ఇది ఎవరికి?", "यह किसके लिए है?", "ಇದು ಯಾರಿಗೆ?", "இது யாருக்கு?", "ഇത് ആർക്കാണ്?", "এটা কার জন্য?", "हे कोणासाठी आहे?", "누가 쓰실 건가요?", "¿Para quién es?", "Für wen ist das?", "C’est pour qui ?", "આ કોના માટે છે?", "এইটো কাৰ বাবে?"], ["for-me", "health", "It is for me.", "అది నా కోసం", "यह मेरे लिए है", "ಅದು ನನಗಾಗಿ", "அது எனக்காக", "അത് എനിക്കാണ്", "এটা আমার জন্য", "ते माझ्यासाठी आहे", "제가 쓸 거예요", "Es para mí", "Es ist für mich", "C’est pour moi", "તે મારા માટે છે", "সেইটো মোৰ বাবে"], ["intro-yourself", "work", "Please introduce yourself.", "దయచేసి మీ గురించి పరిచయం చేసుకోండి", "कृपया अपना परिचय दीजिए", "ದಯವಿಟ್ಟು ನಿಮ್ಮನ್ನು ಪರಿಚಯಿಸಿಕೊಳ್ಳಿ", "தயவுசெய்து உங்களை அறிமுகப்படுத்திக் கொள்ளுங்கள்", "ദയവായി സ്വയം പരിചയപ്പെടുത്തൂ", "দয়া করে নিজের পরিচয় দিন", "कृपया स्वतःची ओळख करून द्या", "자기소개를 해 주세요", "Preséntese, por favor", "Stellen Sie sich bitte vor", "Présentez-vous, s’il vous plaît", "કૃપા કરીને તમારો પરિચય આપો", "অনুগ্ৰহ কৰি নিজৰ পৰিচয় দিয়ক"], ["why-job", "work", "Why do you want this job?", "మీకు ఈ ఉద్యోగం ఎందుకు కావాలి?", "आप यह नौकरी क्यों चाहते हैं?", "ನಿಮಗೆ ಈ ಕೆಲಸ ಏಕೆ ಬೇಕು?", "உங்களுக்கு இந்த வேலை ஏன் வேண்டும்?", "നിങ്ങൾക്ക് ഈ ജോലി എന്തുകൊണ്ട് വേണം?", "আপনি কেন এই চাকরি চান?", "तुम्हाला ही नोकरी का हवी आहे?", "이 일을 왜 하고 싶으세요?", "¿Por qué quiere este trabajo?", "Warum möchten Sie diese Stelle?", "Pourquoi voulez-vous ce poste ?", "તમને આ નોકરી કેમ જોઈએ છે?", "আপুনি এই চাকৰিটো কিয় বিচাৰে?"], ["like-work", "work", "I like this kind of work.", "నాకు ఈ రకమైన పని ఇష్టం", "मुझे इस तरह का काम पसंद है", "ನನಗೆ ಈ ರೀತಿಯ ಕೆಲಸ ಇಷ್ಟ", "எனக்கு இந்த மாதிரி வேலை பிடிக்கும்", "എനിക്ക് ഇത്തരം ജോലി ഇഷ്ടമാണ്", "আমি এই ধরনের কাজ পছন্দ করি", "मला या प्रकारचं काम आवडतं", "저는 이런 일을 좋아해요", "Me gusta este tipo de trabajo", "Mir gefällt diese Art von Arbeit", "J’aime ce genre de travail", "મને આ પ્રકારનું કામ ગમે છે", "মই এনে ধৰণৰ কাম ভাল পাওঁ"], ["when-start", "work", "When can you start?", "మీరు ఎప్పుడు మొదలుపెట్టగలరు?", "आप कब शुरू कर सकते हैं?", "ನೀವು ಯಾವಾಗ ಪ್ರಾರಂಭಿಸಬಹುದು?", "நீங்கள் எப்போது தொடங்க முடியும்?", "നിങ്ങൾക്ക് എപ്പോൾ തുടങ്ങാനാകും?", "আপনি কবে শুরু করতে পারবেন?", "तुम्ही कधी सुरू करू शकता?", "언제부터 시작할 수 있어요?", "¿Cuándo puede empezar?", "Wann können Sie anfangen?", "Quand pouvez-vous commencer ?", "તમે ક્યારે શરૂ કરી શકો?", "আপুনি কেতিয়া আৰম্ভ কৰিব পাৰিব?"], ["start-tomorrow", "work", "I can start tomorrow.", "నేను రేపటి నుంచి మొదలుపెట్టగలను", "मैं कल से शुरू कर सकता हूँ", "ನಾನು ನಾಳೆಯಿಂದ ಪ್ರಾರಂಭಿಸಬಹುದು", "நான் நாளைக்குத் தொடங்க முடியும்", "എനിക്ക് നാളെ തുടങ്ങാം", "আমি কাল থেকে শুরু করতে পারি", "मी उद्यापासून सुरू करू शकतो", "내일부터 시작할 수 있어요", "Puedo empezar mañana", "Ich kann morgen anfangen", "Je peux commencer demain", "હું કાલથી શરૂ કરી શકું", "মই কাইলৈৰ পৰা আৰম্ভ কৰিব পাৰোঁ"], ["meeting-ready-q", "work", "Are you ready for the meeting?", "మీటింగ్‌కి మీరు సిద్ధంగా ఉన్నారా?", "क्या आप मीटिंग के लिए तैयार हैं?", "ನೀವು ಸಭೆಗೆ ಸಿದ್ಧರಿದ್ದೀರಾ?", "கூட்டத்துக்கு நீங்கள் தயாரா?", "മീറ്റിംഗിന് നിങ്ങൾ തയ്യാറാണോ?", "আপনি কি মিটিংয়ের জন্য প্রস্তুত?", "तुम्ही मीटिंगसाठी तयार आहात का?", "회의 준비되셨어요?", "¿Está listo para la reunión?", "Sind Sie bereit für die Besprechung?", "Êtes-vous prêt pour la réunion ?", "શું તમે મીટિંગ માટે તૈયાર છો?", "আপুনি বৈঠকৰ বাবে সাজুনে?"], ["send-report", "work", "Please send me the report.", "దయచేసి నాకు రిపోర్ట్ పంపండి", "कृपया मुझे रिपोर्ट भेजिए", "ದಯವಿಟ್ಟು ನನಗೆ ವರದಿ ಕಳುಹಿಸಿ", "தயவுசெய்து எனக்கு அறிக்கையை அனுப்புங்கள்", "ദയവായി എനിക്ക് റിപ്പോർട്ട് അയയ്ക്കൂ", "দয়া করে আমাকে রিপোর্ট পাঠান", "कृपया मला अहवाल पाठवा", "보고서를 보내 주세요", "Envíeme el informe, por favor", "Schicken Sie mir bitte den Bericht", "Envoyez-moi le rapport, s’il vous plaît", "કૃપા કરીને મને રિપોર્ટ મોકલો", "অনুগ্ৰহ কৰি মোক প্ৰতিবেদন পঠিয়াওক"], ["finish-q", "work", "Can you finish it today?", "మీరు దీన్ని ఈ రోజు పూర్తి చేయగలరా?", "क्या आप इसे आज पूरा कर सकते हैं?", "ನೀವು ಇದನ್ನು ಇಂದು ಮುಗಿಸಬಹುದೇ?", "இதை இன்று முடிக்க முடியுமா?", "ഇത് ഇന്ന് പൂർത്തിയാക്കാമോ?", "আপনি কি এটা আজ শেষ করতে পারবেন?", "तुम्ही हे आज पूर्ण करू शकाल का?", "오늘 끝낼 수 있어요?", "¿Puede terminarlo hoy?", "Können Sie das heute fertigstellen?", "Pouvez-vous le terminer aujourd’hui ?", "શું તમે આ આજે પૂરું કરી શકશો?", "আপুনি এইটো আজি শেষ কৰিব পাৰিবনে?"], ["by-evening", "work", "Yes, by evening.", "అవును, సాయంత్రానికి", "हाँ, शाम तक", "ಹೌದು, ಸಂಜೆಯ ಹೊತ್ತಿಗೆ", "ஆம், மாலைக்குள்", "അതെ, വൈകുന്നേരത്തിനകം", "হ্যাঁ, সন্ধ্যার মধ্যে", "होय, संध्याकाळपर्यंत", "네, 저녁까지요", "Sí, para la tarde", "Ja, bis zum Abend", "Oui, d’ici ce soir", "હા, સાંજ સુધીમાં", "হয়, গধূলিলৈকে"], ["speak-to", "work", "Who do you want to speak to?", "మీరు ఎవరితో మాట్లాడాలనుకుంటున్నారు?", "आप किससे बात करना चाहते हैं?", "ನೀವು ಯಾರೊಂದಿಗೆ ಮಾತನಾಡಬೇಕು?", "நீங்கள் யாரிடம் பேச வேண்டும்?", "നിങ്ങൾ ആരോടാണ് സംസാരിക്കേണ്ടത്?", "আপনি কার সঙ্গে কথা বলতে চান?", "तुम्हाला कोणाशी बोलायचं आहे?", "누구와 통화하시겠어요?", "¿Con quién quiere hablar?", "Mit wem möchten Sie sprechen?", "Avec qui voulez-vous parler ?", "તમારે કોની સાથે વાત કરવી છે?", "আপুনি কাৰ লগত কথা পাতিব বিচাৰে?"], ["speak-manager", "work", "I want to speak to the manager.", "నేను మేనేజర్‌తో మాట్లాడాలి", "मुझे मैनेजर से बात करनी है", "ನಾನು ಮ್ಯಾನೇಜರ್ ಜೊತೆ ಮಾತನಾಡಬೇಕು", "நான் மேலாளரிடம் பேச வேண்டும்", "എനിക്ക് മാനേജരോട് സംസാരിക്കണം", "আমি ম্যানেজারের সঙ্গে কথা বলতে চাই", "मला मॅनेजरशी बोलायचं आहे", "매니저와 통화하고 싶어요", "Quiero hablar con el gerente", "Ich möchte mit dem Manager sprechen", "Je voudrais parler au directeur", "મારે મેનેજર સાથે વાત કરવી છે", "মই মেনেজাৰৰ লগত কথা পাতিব খোজোঁ"], ["he-busy", "work", "He is busy right now.", "ఆయన ఇప్పుడు బిజీగా ఉన్నారు", "वे अभी व्यस्त हैं", "ಅವರು ಈಗ ಬ್ಯುಸಿಯಾಗಿದ್ದಾರೆ", "அவர் இப்போது பிஸியாக இருக்கிறார்", "അദ്ദേഹം ഇപ്പോൾ തിരക്കിലാണ്", "উনি এখন ব্যস্ত", "ते आत्ता व्यस्त आहेत", "지금 바쁘세요", "Está ocupado ahora", "Er ist gerade beschäftigt", "Il est occupé en ce moment", "તેઓ હમણાં વ્યસ્ત છે", "তেওঁ এতিয়া ব্যস্ত"], ["ask-call", "work", "Please ask him to call me.", "దయచేసి ఆయనను నాకు ఫోన్ చేయమని చెప్పండి", "कृपया उनसे कहिए कि मुझे फ़ोन करें", "ದಯವಿಟ್ಟು ಅವರಿಗೆ ನನಗೆ ಫೋನ್ ಮಾಡಲು ಹೇಳಿ", "தயவுசெய்து அவரை எனக்கு போன் செய்யச் சொல்லுங்கள்", "ദയവായി അദ്ദേഹത്തോട് എന്നെ വിളിക്കാൻ പറയൂ", "দয়া করে ওনাকে আমাকে ফোন করতে বলবেন", "कृपया त्यांना मला फोन करायला सांगा", "저에게 전화해 달라고 전해 주세요", "Dígale que me llame, por favor", "Bitten Sie ihn, mich anzurufen", "Dites-lui de me rappeler, s’il vous plaît", "કૃપા કરીને તેમને મને ફોન કરવા કહેજો", "অনুগ্ৰহ কৰি তেওঁক মোক ফোন কৰিবলৈ কওক"], ["my-number", "work", "My number is …", "నా నంబర్ …", "मेरा नंबर … है", "ನನ್ನ ಸಂಖ್ಯೆ …", "என் எண் …", "എന്റെ നമ്പർ …", "আমার নম্বর …", "माझा नंबर … आहे", "제 번호는 …예요", "Mi número es …", "Meine Nummer ist …", "Mon numéro est …", "મારો નંબર … છે", "মোৰ নম্বৰ …"], ["lunch-q", "work", "Shall we have lunch?", "మనం భోజనం చేద్దామా?", "क्या हम लंच करें?", "ನಾವು ಊಟ ಮಾಡೋಣವೇ?", "நாம் மதிய உணவு சாப்பிடலாமா?", "നമുക്ക് ഉച്ചഭക്ഷണം കഴിക്കാമോ?", "আমরা কি দুপুরের খাবার খাব?", "आपण जेवायला जाऊया का?", "점심 먹을까요?", "¿Almorzamos?", "Wollen wir zu Mittag essen?", "On déjeune ?", "શું આપણે જમવા જઈએ?", "আমি দুপৰীয়াৰ আহাৰ খাওঁ নেকি?"], ["where-shall", "work", "Where shall we go?", "మనం ఎక్కడికి వెళ్దాం?", "हम कहाँ चलें?", "ನಾವು ಎಲ್ಲಿಗೆ ಹೋಗೋಣ?", "நாம் எங்கே போகலாம்?", "നമുക്ക് എവിടെ പോകാം?", "আমরা কোথায় যাব?", "आपण कुठे जाऊया?", "어디로 갈까요?", "¿Adónde vamos?", "Wohin gehen wir?", "Où allons-nous ?", "આપણે ક્યાં જઈએ?", "আমি ক’লৈ যাওঁ?"], ["near-office", "work", "Somewhere near the office.", "ఆఫీసు దగ్గర ఎక్కడైనా", "दफ़्तर के पास कहीं", "ಕಚೇರಿಯ ಹತ್ತಿರ ಎಲ್ಲಾದರೂ", "அலுவலகத்துக்கு அருகில் எங்காவது", "ഓഫീസിന് അടുത്ത് എവിടെയെങ്കിലും", "অফিসের কাছে কোথাও", "कार्यालयाजवळ कुठेतरी", "사무실 근처 아무 데나요", "En algún sitio cerca de la oficina", "Irgendwo in der Nähe des Büros", "Quelque part près du bureau", "ઓફિસ પાસે ક્યાંક", "অফিচৰ ওচৰত ক’ৰবাত"], ["busy-afternoon", "work", "Are you busy this afternoon?", "మీరు ఈ మధ్యాహ్నం బిజీగా ఉన్నారా?", "क्या आप आज दोपहर व्यस्त हैं?", "ನೀವು ಈ ಮಧ್ಯಾಹ್ನ ಬ್ಯುಸಿಯೇ?", "நீங்கள் இன்று பிற்பகல் பிஸியா?", "നിങ്ങൾ ഇന്ന് ഉച്ചയ്ക്ക് തിരക്കിലാണോ?", "আপনি কি আজ দুপুরে ব্যস্ত?", "तुम्ही आज दुपारी व्यस्त आहात का?", "오늘 오후에 바쁘세요?", "¿Está ocupado esta tarde?", "Haben Sie heute Nachmittag zu tun?", "Êtes-vous occupé cet après-midi ?", "શું તમે આજે બપોરે વ્યસ્ત છો?", "আপুনি আজি দুপৰীয়া ব্যস্তনে?"], ["how-can-help", "work", "How can I help you?", "నేను మీకు ఎలా సహాయం చేయగలను?", "मैं आपकी क्या मदद कर सकता हूँ?", "ನಾನು ನಿಮಗೆ ಹೇಗೆ ಸಹಾಯ ಮಾಡಲಿ?", "நான் உங்களுக்கு எப்படி உதவலாம்?", "ഞാൻ നിങ്ങളെ എങ്ങനെ സഹായിക്കണം?", "আমি আপনাকে কীভাবে সাহায্য করতে পারি?", "मी तुमची काय मदत करू शकतो?", "어떻게 도와드릴까요?", "¿En qué le puedo ayudar?", "Wie kann ich Ihnen helfen?", "Comment puis-je vous aider ?", "હું તમને કેવી રીતે મદદ કરી શકું?", "মই আপোনাক কেনেকৈ সহায় কৰিব পাৰোঁ?"], ["internet-down", "work", "The internet is not working.", "ఇంటర్నెట్ పని చేయడం లేదు", "इंटरनेट काम नहीं कर रहा है", "ಇಂಟರ್ನೆಟ್ ಕೆಲಸ ಮಾಡುತ್ತಿಲ್ಲ", "இணையம் வேலை செய்யவில்லை", "ഇന്റർനെറ്റ് പ്രവർത്തിക്കുന്നില്ല", "ইন্টারনেট কাজ করছে না", "इंटरनेट चालत नाही", "인터넷이 안 돼요", "El internet no funciona", "Das Internet funktioniert nicht", "Internet ne marche pas", "ઇન્ટરનેટ ચાલતું નથી", "ইণ্টাৰনেট কাম কৰা নাই"], ["restart", "work", "Please restart it.", "దయచేసి దాన్ని రీస్టార్ట్ చేయండి", "कृपया इसे रीस्टार्ट कीजिए", "ದಯವಿಟ್ಟು ಅದನ್ನು ಮರುಪ್ರಾರಂಭಿಸಿ", "தயவுசெய்து அதை மறுதொடக்கம் செய்யுங்கள்", "ദയവായി അത് റീസ്റ്റാർട്ട് ചെയ്യൂ", "দয়া করে এটা রিস্টার্ট করুন", "कृपया ते रीस्टार्ट करा", "다시 시작해 주세요", "Reinícielo, por favor", "Bitte starten Sie es neu", "Redémarrez-le, s’il vous plaît", "કૃપા કરીને તેને રીસ્ટાર્ટ કરો", "অনুগ্ৰহ কৰি ইয়াক ৰিষ্টাৰ্ট কৰক"], ["working-q", "work", "Is it working now?", "ఇప్పుడు పని చేస్తోందా?", "क्या अब यह काम कर रहा है?", "ಈಗ ಕೆಲಸ ಮಾಡುತ್ತಿದೆಯೇ?", "இப்போது வேலை செய்கிறதா?", "ഇപ്പോൾ പ്രവർത്തിക്കുന്നുണ്ടോ?", "এখন কি কাজ করছে?", "आता चालू आहे का?", "이제 되나요?", "¿Funciona ahora?", "Funktioniert es jetzt?", "Est-ce que ça marche maintenant ?", "શું હવે ચાલે છે?", "এতিয়া কাম কৰিছেনে?"], ["works-thanks", "work", "Yes, it works. Thank you!", "అవును, పని చేస్తోంది. ధన్యవాదాలు!", "हाँ, काम कर रहा है। धन्यवाद!", "ಹೌದು, ಕೆಲಸ ಮಾಡುತ್ತಿದೆ. ಧನ್ಯವಾದ!", "ஆம், வேலை செய்கிறது. நன்றி!", "അതെ, പ്രവർത്തിക്കുന്നു. നന്ദി!", "হ্যাঁ, কাজ করছে। ধন্যবাদ!", "होय, चालू आहे. धन्यवाद!", "네, 돼요. 감사합니다!", "Sí, funciona. ¡Gracias!", "Ja, es funktioniert. Danke!", "Oui, ça marche. Merci !", "હા, ચાલે છે. આભાર!", "হয়, কাম কৰিছে। ধন্যবাদ!"], ["make-home", "home", "Make yourself at home.", "ఇంటి లాగే భావించండి", "इसे अपना ही घर समझिए", "ಇದನ್ನು ನಿಮ್ಮ ಮನೆಯಂತೆಯೇ ಭಾವಿಸಿ", "இதை உங்கள் வீடு போல நினைத்துக் கொள்ளுங்கள்", "സ്വന്തം വീടുപോലെ കരുതൂ", "নিজের বাড়ির মতো মনে করুন", "स्वतःचंच घर समजा", "편하게 계세요", "Siéntase como en su casa", "Fühlen Sie sich wie zu Hause", "Faites comme chez vous", "પોતાનું જ ઘર સમજજો", "নিজৰ ঘৰৰ দৰেই ভাবক"], ["very-kind", "home", "You are very kind.", "మీరు చాలా దయగలవారు", "आप बहुत दयालु हैं", "ನೀವು ತುಂಬಾ ದಯಾಳು", "நீங்கள் மிகவும் கருணை உள்ளவர்", "നിങ്ങൾ വളരെ ദയയുള്ളവരാണ്", "আপনি খুব দয়ালু", "तुम्ही खूप दयाळू आहात", "정말 친절하시네요", "Es usted muy amable", "Sie sind sehr freundlich", "Vous êtes très gentil", "તમે બહુ દયાળુ છો", "আপুনি বৰ দয়ালু"], ["new-neighbour-q", "home", "Are you the new neighbour?", "మీరు కొత్త పొరుగువారా?", "क्या आप नए पड़ोसी हैं?", "ನೀವು ಹೊಸ ನೆರೆಯವರೇ?", "நீங்கள் புதிய அண்டை வீட்டாரா?", "നിങ്ങൾ പുതിയ അയൽക്കാരനാണോ?", "আপনি কি নতুন প্রতিবেশী?", "तुम्ही नवीन शेजारी आहात का?", "새로 이사 오신 이웃이세요?", "¿Es usted el nuevo vecino?", "Sind Sie der neue Nachbar?", "Êtes-vous le nouveau voisin ?", "શું તમે નવા પાડોશી છો?", "আপুনি নতুন চুবুৰীয়া নেকি?"], ["welcome-building", "home", "Welcome to the building.", "ఈ భవనానికి స్వాగతం", "इस इमारत में आपका स्वागत है", "ಈ ಕಟ್ಟಡಕ್ಕೆ ಸ್ವಾಗತ", "இந்தக் கட்டிடத்துக்கு வரவேற்கிறோம்", "ഈ കെട്ടിടത്തിലേക്ക് സ്വാഗതം", "এই ভবনে স্বাগতম", "या इमारतीत तुमचं स्वागत आहे", "이 건물에 오신 걸 환영해요", "Bienvenido al edificio", "Willkommen im Haus", "Bienvenue dans l’immeuble", "આ ઇમારતમાં તમારું સ્વાગત છે", "এই ভৱনলৈ স্বাগতম"], ["call-if-need", "home", "Please call if you need anything.", "ఏదైనా అవసరమైతే దయచేసి ఫోన్ చేయండి", "कुछ भी ज़रूरत हो तो कृपया फ़ोन कीजिए", "ಏನಾದರೂ ಬೇಕಾದರೆ ದಯವಿಟ್ಟು ಫೋನ್ ಮಾಡಿ", "ஏதாவது தேவைப்பட்டால் தயவுசெய்து போன் செய்யுங்கள்", "എന്തെങ്കിലും വേണമെങ്കിൽ ദയവായി വിളിക്കൂ", "কিছু লাগলে দয়া করে ফোন করবেন", "काही हवं असल्यास कृपया फोन करा", "필요한 게 있으면 전화 주세요", "Llame si necesita algo, por favor", "Rufen Sie bitte an, wenn Sie etwas brauchen", "Appelez-moi si vous avez besoin de quoi que ce soit", "કંઈ જોઈએ તો કૃપા કરીને ફોન કરજો", "কিবা লাগিলে অনুগ্ৰহ কৰি ফোন কৰিব"], ["light-broken", "home", "The light is not working.", "లైటు పని చేయడం లేదు", "बत्ती काम नहीं कर रही है", "ದೀಪ ಕೆಲಸ ಮಾಡುತ್ತಿಲ್ಲ", "விளக்கு வேலை செய்யவில்லை", "ലൈറ്റ് പ്രവർത്തിക്കുന്നില്ല", "আলো কাজ করছে না", "दिवा चालत नाही", "전등이 안 켜져요", "La luz no funciona", "Das Licht funktioniert nicht", "La lumière ne marche pas", "લાઇટ ચાલતી નથી", "পোহৰ কাম কৰা নাই"], ["fix-today", "home", "I will fix it today.", "నేను ఈ రోజే దాన్ని బాగు చేస్తాను", "मैं इसे आज ही ठीक कर दूँगा", "ನಾನು ಇದನ್ನು ಇಂದೇ ಸರಿಪಡಿಸುತ್ತೇನೆ", "நான் இதை இன்றே சரி செய்கிறேன்", "ഞാൻ ഇത് ഇന്നുതന്നെ ശരിയാക്കാം", "আমি আজই এটা ঠিক করে দেব", "मी हे आजच दुरुस्त करतो", "오늘 안으로 고칠게요", "Lo arreglaré hoy mismo", "Ich repariere es noch heute", "Je vais le réparer aujourd’hui", "હું આને આજે જ ઠીક કરી દઈશ", "মই এইটো আজিয়েই ঠিক কৰি দিম"], ["takes-one-hour", "home", "It will take one hour.", "దీనికి ఒక గంట పడుతుంది", "इसमें एक घंटा लगेगा", "ಇದಕ್ಕೆ ಒಂದು ಗಂಟೆ ಬೇಕಾಗುತ್ತದೆ", "இதற்கு ஒரு மணி நேரம் ஆகும்", "ഇതിന് ഒരു മണിക്കൂർ എടുക്കും", "এতে এক ঘণ্টা লাগবে", "याला एक तास लागेल", "한 시간 걸려요", "Tardará una hora", "Es dauert eine Stunde", "Cela prendra une heure", "તેમાં એક કલાક લાગશે", "ইয়াত এক ঘণ্টা লাগিব"], ["rent-due", "home", "The rent is due tomorrow.", "అద్దె రేపు చెల్లించాలి", "किराया कल देना है", "ಬಾಡಿಗೆ ನಾಳೆ ಕೊಡಬೇಕು", "வாடகை நாளை செலுத்த வேண்டும்", "വാടക നാളെ നൽകണം", "ভাড়া কাল দিতে হবে", "भाडं उद्या द्यायचं आहे", "월세는 내일까지예요", "El alquiler vence mañana", "Die Miete ist morgen fällig", "Le loyer est dû demain", "ભાડું કાલે આપવાનું છે", "ভাড়া কাইলৈ দিব লাগিব"], ["any-problems", "home", "Do you have any problems?", "మీకు ఏవైనా సమస్యలు ఉన్నాయా?", "क्या आपको कोई समस्या है?", "ನಿಮಗೆ ಏನಾದರೂ ಸಮಸ್ಯೆ ಇದೆಯೇ?", "உங்களுக்கு ஏதேனும் பிரச்சினை உள்ளதா?", "നിങ്ങൾക്ക് എന്തെങ്കിലും പ്രശ്നമുണ്ടോ?", "আপনার কি কোনো সমস্যা আছে?", "तुम्हाला काही अडचण आहे का?", "불편한 점 있으세요?", "¿Tiene algún problema?", "Haben Sie Probleme?", "Avez-vous des problèmes ?", "શું તમને કોઈ સમસ્યા છે?", "আপোনাৰ কিবা সমস্যা আছেনে?"], ["all-fine", "home", "No, everything is fine.", "లేదు, అంతా బాగానే ఉంది", "नहीं, सब ठीक है", "ಇಲ್ಲ, ಎಲ್ಲವೂ ಚೆನ್ನಾಗಿದೆ", "இல்லை, எல்லாம் நன்றாக இருக்கிறது", "ഇല്ല, എല്ലാം നന്നായിരിക്കുന്നു", "না, সব ঠিক আছে", "नाही, सगळं ठीक आहे", "아니요, 다 괜찮아요", "No, todo está bien", "Nein, alles in Ordnung", "Non, tout va bien", "ના, બધું બરાબર છે", "নাই, সকলো ঠিকে আছে"], ["delivery", "home", "I have a delivery for you.", "మీ కోసం ఒక డెలివరీ ఉంది", "आपके लिए एक डिलीवरी है", "ನಿಮಗಾಗಿ ಒಂದು ಡೆಲಿವರಿ ಇದೆ", "உங்களுக்கு ஒரு டெலிவரி வந்திருக்கிறது", "നിങ്ങൾക്ക് ഒരു ഡെലിവറി ഉണ്ട്", "আপনার জন্য একটা ডেলিভারি আছে", "तुमच्यासाठी एक डिलिव्हरी आहे", "배달 왔어요", "Tengo un paquete para usted", "Ich habe eine Lieferung für Sie", "J’ai une livraison pour vous", "તમારા માટે એક ડિલિવરી છે", "আপোনাৰ বাবে এটা ডেলিভাৰী আছে"], ["leave-door", "home", "Please leave it at the door.", "దయచేసి దాన్ని తలుపు దగ్గర ఉంచండి", "कृपया इसे दरवाज़े पर रख दीजिए", "ದಯವಿಟ್ಟು ಅದನ್ನು ಬಾಗಿಲ ಬಳಿ ಇಡಿ", "தயவுசெய்து அதைக் கதவருகே வையுங்கள்", "ദയവായി അത് വാതിലിനടുത്ത് വയ്ക്കൂ", "দয়া করে ওটা দরজার কাছে রেখে দিন", "कृपया ते दाराजवळ ठेवा", "문 앞에 놓아 주세요", "Déjelo en la puerta, por favor", "Legen Sie es bitte an die Tür", "Laissez-le devant la porte, s’il vous plaît", "કૃપા કરીને તેને દરવાજા પાસે મૂકી દો", "অনুগ্ৰহ কৰি সেইটো দুৱাৰমুখত থৈ দিয়ক"], ["sign-here", "home", "Please sign here.", "దయచేసి ఇక్కడ సంతకం చేయండి", "कृपया यहाँ हस्ताक्षर कीजिए", "ದಯವಿಟ್ಟು ಇಲ್ಲಿ ಸಹಿ ಮಾಡಿ", "தயவுசெய்து இங்கே கையெழுத்திடுங்கள்", "ദയവായി ഇവിടെ ഒപ്പിടൂ", "দয়া করে এখানে সই করুন", "कृपया इथे सही करा", "여기에 서명해 주세요", "Firme aquí, por favor", "Bitte unterschreiben Sie hier", "Signez ici, s’il vous plaît", "કૃપા કરીને અહીં સહી કરો", "অনুগ্ৰহ কৰি ইয়াত চহী কৰক"], ["nice-day", "home", "Have a nice day.", "మీకు శుభదినం కావాలి", "आपका दिन शुभ हो", "ನಿಮಗೆ ಶುಭ ದಿನವಾಗಲಿ", "உங்களுக்கு இனிய நாளாக அமையட்டும்", "നല്ലൊരു ദിവസം ആശംസിക്കുന്നു", "আপনার দিনটি শুভ হোক", "तुमचा दिवस शुभ जावो", "좋은 하루 보내세요", "Que tenga un buen día", "Einen schönen Tag noch", "Bonne journée", "તમારો દિવસ શુભ રહે", "আপোনাৰ দিনটো শুভ হওক"], ["you-too", "home", "You too.", "మీకు కూడా", "आपको भी", "ನಿಮಗೂ ಹಾಗೆಯೇ", "உங்களுக்கும் அப்படியே", "നിങ്ങൾക്കും", "আপনারও", "तुम्हालाही", "당신도요", "Igualmente", "Ebenso", "Vous aussi", "તમને પણ", "আপোনাকো"], ["umbrella-q", "home", "Do you have an umbrella?", "మీ దగ్గర గొడుగు ఉందా?", "क्या आपके पास छाता है?", "ನಿಮ್ಮ ಬಳಿ ಛತ್ರಿ ಇದೆಯೇ?", "உங்களிடம் குடை உள்ளதா?", "നിങ്ങളുടെ കൈവശം കുട ഉണ്ടോ?", "আপনার কাছে কি ছাতা আছে?", "तुमच्याकडे छत्री आहे का?", "우산 있으세요?", "¿Tiene paraguas?", "Haben Sie einen Regenschirm?", "Avez-vous un parapluie ?", "શું તમારી પાસે છત્રી છે?", "আপোনাৰ ওচৰত ছাতি আছেনে?"], ["take-mine", "home", "Take mine.", "నాది తీసుకోండి", "मेरा ले लीजिए", "ನನ್ನದನ್ನು ತೆಗೆದುಕೊಳ್ಳಿ", "என்னுடையதை எடுத்துக்கொள்ளுங்கள்", "എന്റേത് എടുത്തോളൂ", "আমারটা নিন", "माझी घ्या", "제 걸 쓰세요", "Tome el mío", "Nehmen Sie meinen", "Prenez le mien", "મારી લઈ લો", "মোৰটো লওক"], ["cold-outside", "home", "It is cold outside.", "బయట చలిగా ఉంది", "बाहर ठंड है", "ಹೊರಗೆ ಚಳಿ ಇದೆ", "வெளியே குளிராக இருக்கிறது", "പുറത്ത് തണുപ്പാണ്", "বাইরে ঠান্ডা", "बाहेर थंडी आहे", "밖이 추워요", "Hace frío fuera", "Draußen ist es kalt", "Il fait froid dehors", "બહાર ઠંડી છે", "বাহিৰত ঠাণ্ডা"]];
   NEW.forEach(function (r) { var o = { id: r[0], cat: r[1], en: r[2] }; NL.forEach(function (l, i) { o[l] = r[3 + i]; }); B.PHRASES.push(o); });
   // script charts for Gujarati and Assamese
   var sp = function (s) { return s.split(' '); };
@@ -4899,14 +6528,8 @@
   B.SCRIPTS.as = { vowels: bn.vowels, cons: bn.cons.filter(function (c) { return c !== 'ৎ'; }).map(function (c) { return c === 'র' ? 'ৰ' : c; }).concat(['ৱ']), signs: bn.signs, base: bn.base, digits: bn.digits };
   B.PHRASE_CATS = ['greet', 'intro', 'talk', 'daily', 'food', 'travel', 'shop', 'health', 'people', 'feel', 'work', 'home', 'time', 'num'];
   // Conversation drills: each turn is [what the other person says, your reply], both phrase ids.
-  B.DRILLS = [
-    { id: 'meet', icon: '🤝', turns: [['how', 'fine'], ['from-q', 'from-india'], ['english-q', 'little'], ['nice', 'nice-too']] },
-    { id: 'rest', icon: '🍛', turns: [['table-how-many', 'table-two'], ['drink-q', 'water'], ['eat-q', 'order-rice'], ['spicy-q', 'notspicy'], ['anything-else', 'bill']] },
-    { id: 'dir', icon: '🧭', turns: [['need-help-q', 'lost'], ['where-go', 'station'], ['straight-then-left', 'far'], ['five-min-walk', 'thanks']] },
-    { id: 'shop', icon: '🛍', turns: [['help-you-q', 'price'], ['price-500', 'expensive'], ['price-400', 'take'], ['cash-or-card', 'pay-card']] },
-    { id: 'doc', icon: '🩺', turns: [['problem-q', 'sick'], ['where-hurt', 'hurts'], ['fever-q', 'since-yesterday'], ['medicine-twice', 'thanks']] },
-    { id: 'hotel', icon: '🏨', turns: [['reservation-q', 'have-reservation'], ['nights-q', 'two-nights'], ['third-floor', 'breakfast-incl'], ['breakfast-8', 'thanks']] }
-  ];
+  B.DRILL_GROUPS = ["social", "food", "travel", "shop", "health", "work", "home"];
+  B.DRILLS = [{"id": "meet", "icon": "🤝", "group": "social", "turns": [["how", "fine"], ["from-q", "from-india"], ["english-q", "little"], ["nice", "nice-too"]]}, {"id": "who-is", "icon": "🧑‍🤝‍🧑", "group": "social", "turns": [["who-q", "this-friend"], ["live-q", "live-here"], ["job-q", "student"]]}, {"id": "phone-call", "icon": "📞", "group": "social", "turns": [["who-speaking", "name-is"], ["good-time", "busy"], ["call-later", "of-course"]]}, {"id": "birthday-invite", "icon": "🎂", "group": "social", "turns": [["bday-today", "birthday"], ["come-dinner", "excited"], ["tomorrow-evening", "of-course"]]}, {"id": "weather-chat", "icon": "☀️", "group": "social", "turns": [["weather-q", "hot-today"], ["water-q", "water"], ["rain-tomorrow", "really"]]}, {"id": "family-talk", "icon": "👪", "group": "social", "turns": [["siblings-q", "brother"], ["mother-q", "she-well"], ["say-hello", "agree"]]}, {"id": "new-in-town", "icon": "🏙", "group": "social", "turns": [["new-q", "came-yesterday"], ["like-here", "beautiful"], ["show-around", "good-idea"]]}, {"id": "make-plans", "icon": "📅", "group": "social", "turns": [["free-tomorrow-q", "free-tomorrow"], ["meet-five", "correct"], ["meet-where", "at-station"]]}, {"id": "apology", "icon": "🙏", "group": "social", "turns": [["you-late", "sorry"], ["its-fine", "thanks"], ["not-again", "on-time"]]}, {"id": "language-swap", "icon": "🗣", "group": "social", "turns": [["english-q", "little"], ["pron-good", "thanks"], ["practise-q", "good-idea"]]}, {"id": "farewell", "icon": "👋", "group": "social", "turns": [["nice-talking", "talking-too"], ["visit-again", "of-course"], ["take-care", "thanks"]]}, {"id": "rest", "icon": "🍛", "group": "food", "turns": [["table-how-many", "table-two"], ["drink-q", "water"], ["eat-q", "order-rice"], ["spicy-q", "notspicy"], ["anything-else", "bill"]]}, {"id": "breakfast", "icon": "🍳", "group": "food", "turns": [["tea-or-coffee", "tea"], ["sugar-q", "no-sugar"], ["eat-q", "bread"]]}, {"id": "street-food", "icon": "🌮", "group": "food", "turns": [["help-you-q", "one-plate"], ["be-careful-hot", "thanks"], ["eat-here-q", "take-away"]]}, {"id": "chai-stall", "icon": "☕", "group": "food", "turns": [["drink-q", "tea"], ["milk-q", "with-milk"], ["cups-q", "two-cups"]]}, {"id": "veg-order", "icon": "🥗", "group": "food", "turns": [["meat-q", "vegetarian"], ["spicy-q", "notspicy"], ["rice-or-bread", "bread"]]}, {"id": "allergy", "icon": "🥜", "group": "food", "turns": [["allergies-q", "allergic-nuts"], ["no-nuts", "thanks"], ["try-q", "of-course"]]}, {"id": "pay-bill", "icon": "🧾", "group": "food", "turns": [["here-bill", "pay-card"], ["receipt-q", "receipt"], ["come-again", "see-you"]]}, {"id": "home-dinner", "icon": "🍲", "group": "food", "turns": [["dinner-ready", "delicious"], ["more-q", "more"], ["full-q", "full"]]}, {"id": "fruit-seller", "icon": "🍎", "group": "food", "turns": [["how-many-q", "half-kilo"], ["fresh-today", "price"], ["price-400", "take"]]}, {"id": "dir", "icon": "🧭", "group": "travel", "turns": [["need-help-q", "lost"], ["where-go", "station"], ["straight-then-left", "far"], ["five-min-walk", "thanks"]]}, {"id": "hotel", "icon": "🏨", "group": "travel", "turns": [["reservation-q", "have-reservation"], ["nights-q", "two-nights"], ["third-floor", "breakfast-incl"], ["breakfast-8", "thanks"]]}, {"id": "buy-ticket", "icon": "🎫", "group": "travel", "turns": [["going-q", "to-centre"], ["oneway-q", "one-way"], ["fifty-rupees", "here-you-are"]]}, {"id": "train-info", "icon": "🚆", "group": "travel", "turns": [["leaves-six", "platform-q"], ["platform-two", "thanks"], ["train-late", "how-long"]]}, {"id": "taxi-ride", "icon": "🚕", "group": "travel", "turns": [["where-to", "take-address"], ["two-hundred", "reduce"], ["wait-q", "wait"]]}, {"id": "bus-ride", "icon": "🚌", "group": "travel", "turns": [["which-bus", "bus-market"], ["bus-twelve", "thanks"], ["every-ten", "understand"]]}, {"id": "lost-way", "icon": "🧭", "group": "travel", "turns": [["you-lost-q", "lost"], ["where-go", "to-station"], ["that-way", "thanks"]]}, {"id": "check-in", "icon": "✈️", "group": "travel", "turns": [["passport-pls", "passport"], ["luggage-q", "one-bag"], ["boarding", "thanks"]]}, {"id": "check-out", "icon": "🏨", "group": "travel", "turns": [["checkout-q", "leaving-today"], ["everything-fine-q", "very-good"], ["here-bill", "pay-card"]]}, {"id": "sightseeing", "icon": "🏛", "group": "travel", "turns": [["tickets-how-many", "tickets-two"], ["guide-q", "no-thanks"], ["opens-nine", "close-q"], ["closes-six", "thanks"]]}, {"id": "auto-rickshaw", "icon": "🛺", "group": "travel", "turns": [["meter-q", "meter"], ["traffic-heavy", "how-long"], ["half-hour", "understand"]]}, {"id": "ask-time", "icon": "🕐", "group": "travel", "turns": [["know-time", "five-oclock"], ["station-near-q", "very-near"], ["thanks-help", "welcome"]]}, {"id": "shop", "icon": "🛍", "group": "shop", "turns": [["help-you-q", "price"], ["price-500", "expensive"], ["price-400", "take"], ["cash-or-card", "pay-card"]]}, {"id": "clothes", "icon": "👕", "group": "shop", "turns": [["help-you-q", "just-looking"], ["this-good", "bigger"], ["have-bigger", "try-on"]]}, {"id": "bargain", "icon": "💰", "group": "shop", "turns": [["price-500", "expensive"], ["price-400", "take"], ["bag-q", "no-bag"]]}, {"id": "pharmacy-buy", "icon": "💊", "group": "shop", "turns": [["what-need", "headache"], ["prescription-q", "no-i-dont"], ["tablet", "understand"]]}, {"id": "grocery", "icon": "🛒", "group": "shop", "turns": [["bag-q", "yes-please"], ["anything-else", "that-all"], ["cash-or-card", "pay-card"]]}, {"id": "sim-card", "icon": "📱", "group": "shop", "turns": [["what-need", "sim-card"], ["show-passport", "passport"], ["ten-min-work", "thanks"]]}, {"id": "exchange", "icon": "🔁", "group": "shop", "turns": [["problem-q", "too-small"], ["have-receipt-q", "here-it-is"], ["can-change", "thanks"]]}, {"id": "doc", "icon": "🩺", "group": "health", "turns": [["problem-q", "sick"], ["where-hurt", "hurts"], ["fever-q", "since-yesterday"], ["medicine-twice", "thanks"]]}, {"id": "appointment", "icon": "🗓", "group": "health", "turns": [["appt-q", "no-i-dont"], ["doctor-free-four", "understand"], ["sit-wait", "thanks"]]}, {"id": "stomach", "icon": "🤢", "group": "health", "turns": [["problem-q", "stomachache"], ["what-eat", "ate-outside"], ["rest-water", "understand"]]}, {"id": "cold-fever", "icon": "🤧", "group": "health", "turns": [["fever-q", "fever"], ["cold-q", "have-cold"], ["warm-water", "thanks"]]}, {"id": "emergency", "icon": "🚑", "group": "health", "turns": [["what-happened", "help"], ["where-are-you", "near-station"], ["stay-there", "thanks"]]}, {"id": "medicine-buy", "icon": "💉", "group": "health", "turns": [["what-need", "medicine"], ["for-whom", "for-me"], ["medicine-twice", "understand"]]}, {"id": "interview", "icon": "💼", "group": "work", "turns": [["intro-yourself", "name-is"], ["job-q", "engineer"], ["why-job", "like-work"], ["when-start", "start-tomorrow"]]}, {"id": "team-meeting", "icon": "📋", "group": "work", "turns": [["meeting-ready-q", "ready"], ["send-report", "of-course"], ["finish-q", "by-evening"]]}, {"id": "office-call", "icon": "☎️", "group": "work", "turns": [["speak-to", "speak-manager"], ["he-busy", "ask-call"], ["phone-q", "my-number"]]}, {"id": "lunch-colleague", "icon": "🍛", "group": "work", "turns": [["lunch-q", "good-idea"], ["where-shall", "near-office"], ["busy-afternoon", "free-today"]]}, {"id": "it-help", "icon": "💻", "group": "work", "turns": [["how-can-help", "internet-down"], ["restart", "of-course"], ["working-q", "works-thanks"]]}, {"id": "guest", "icon": "🏠", "group": "home", "turns": [["come-in", "thanks"], ["water-q", "yes-please"], ["make-home", "very-kind"]]}, {"id": "neighbour", "icon": "🏘", "group": "home", "turns": [["new-neighbour-q", "yes"], ["welcome-building", "thanks"], ["call-if-need", "of-course"]]}, {"id": "repairs", "icon": "🔧", "group": "home", "turns": [["whats-wrong", "light-broken"], ["fix-today", "thanks"], ["takes-one-hour", "understand"]]}, {"id": "rent", "icon": "🏢", "group": "home", "turns": [["rent-due", "understand"], ["any-problems", "all-fine"], ["receipt-q", "receipt"]]}, {"id": "delivery", "icon": "📦", "group": "home", "turns": [["delivery", "leave-door"], ["sign-here", "of-course"], ["nice-day", "you-too"]]}, {"id": "rainy-day", "icon": "🌧", "group": "home", "turns": [["umbrella-q", "no-i-dont"], ["take-mine", "thanks"], ["cold-outside", "cold"]]}];
 })(window.B = window.B || {});
 
 ;
@@ -5165,7 +6788,7 @@
   'use strict';
   var U = B.ui, h = U.h, t = U.t, set = U.set;
   B.views = B.views || {};
-  var DR = { lang: null, sc: null, turn: 0, ok: 0, first: true, hide: false };
+  var DR = { lang: null, sc: null, turn: 0, ok: 0, first: true, hide: false, group: 'all' };
 
   B.views.talk = function (app) {
     app.textContent = ''; DR.lang = DR.lang || set.focus; var lang = DR.lang, LS = B.lesson;
@@ -5182,9 +6805,19 @@
       ls.addEventListener('change', function () { DR.lang = ls.value; B.views.talk(app); });
       var hide = h('input', { type: 'checkbox', id: 'dr-hide' }); hide.checked = DR.hide; hide.addEventListener('change', function () { DR.hide = hide.checked; });
       app.appendChild(h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'dr-lang', text: t('language') }), ls]), h('label', { class: 'tf chk', for: 'dr-hide' }, [hide, h('span', { text: t('drHide') })])]));
-      var grid = h('div', { class: 'cards' });
-      B.DRILLS.forEach(function (d) { grid.appendChild(h('button', { type: 'button', class: 'card', onclick: function () { DR.sc = d; DR.turn = 0; DR.ok = 0; run(); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: d.icon }), h('h2', { text: t('d_' + d.id) }), h('p', { text: t('drTurns', { n: d.turns.length }) })])); });
-      app.appendChild(grid);
+      var tabs = h('div', { class: 'tabs', role: 'group', 'aria-label': t('drGroups') });
+      ['all'].concat(B.DRILL_GROUPS).forEach(function (g) {
+        var n = g === 'all' ? B.DRILLS.length : B.DRILLS.filter(function (d) { return d.group === g; }).length;
+        tabs.appendChild(h('button', { type: 'button', class: 'tab' + (DR.group === g ? ' on' : ''), 'data-group': g, 'aria-pressed': DR.group === g ? 'true' : 'false', text: t('grp_' + g) + ' · ' + n, onclick: function () { DR.group = g; list(); var b = app.querySelector('.tab.on'); if (b) b.focus(); } }));
+      });
+      app.appendChild(tabs);
+      function card(d) { return h('button', { type: 'button', class: 'card', 'data-drill': d.id, onclick: function () { DR.sc = d; DR.turn = 0; DR.ok = 0; run(); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: d.icon }), h('h2', { text: t('d_' + d.id) }), h('p', { text: t('drTurns', { n: d.turns.length }) })]); }
+      B.DRILL_GROUPS.forEach(function (g) {
+        if (DR.group !== 'all' && DR.group !== g) return;
+        var list_ = B.DRILLS.filter(function (d) { return d.group === g; }); if (!list_.length) return;
+        if (DR.group === 'all') app.appendChild(h('h2', { class: 'grp-h', text: t('grp_' + g) }));
+        app.appendChild(h('div', { class: 'cards' }, list_.map(card)));
+      });
     }
     function run() {
       app.textContent = ''; var d = DR.sc, tr = d.turns[DR.turn];
@@ -5222,6 +6855,170 @@
     }
     list();
   };
+})(window.B);
+
+;
+/* Bhasha fun data: proverbs and idioms, tongue twisters, kids' picture words and video search topics.
+   Drafts: must be reviewed by native speakers (see README). Generated; edit with care. */
+(function (B) {
+  'use strict';
+  B.PROVERBS = {"te": [["అతి సర్వత్ర వర్జయేత్", "Avoid excess in everything.", "p"], ["తాను పట్టిన కుందేటికి మూడే కాళ్ళు", "\"The rabbit I caught has only three legs\": stubbornly sticking to your view.", "i"], ["ఇంట గెలిచి రచ్చ గెలువు", "Win at home first, then win outside.", "p"], ["అడగందే అమ్మయినా పెట్టదు", "Even a mother won't feed you unless you ask.", "p"], ["చేతులు కాలాక ఆకులు పట్టుకున్నట్లు", "Grabbing leaves after burning your hands: acting too late.", "i"], ["తల్లి, జన్మభూమి స్వర్గం కంటే గొప్పవి", "Mother and motherland are greater than heaven.", "p"], ["నీరు పల్లమెరుగు నిజము దేవుడెరుగు", "Water knows the low ground; God knows the truth.", "p"], ["కాకి పిల్ల కాకికి ముద్దు", "To a crow, its own chick is lovely.", "p"], ["ఎంత చెట్టుకు అంత గాలి", "The bigger the tree, the stronger the wind.", "p"], ["పిట్ట కొంచెం కూత ఘనం", "A small bird with a mighty call: small but loud.", "p"], ["ఐదు వేళ్ళూ ఒక్కటి కావు", "All five fingers are not alike.", "p"], ["కొరివితో తల గోక్కున్నట్లు", "Like scratching your head with a burning stick: harming yourself.", "i"]], "hi": [["जैसी करनी वैसी भरनी", "As you sow, so you reap.", "p"], ["नाच न जाने आँगन टेढ़ा", "A poor dancer blames the crooked courtyard.", "p"], ["ऊँट के मुँह में जीरा", "A cumin seed in a camel's mouth: far too little.", "i"], ["अब पछताए होत क्या जब चिड़िया चुग गई खेत", "No use crying once the birds have eaten the field.", "p"], ["एक और एक ग्यारह", "One and one make eleven: unity is strength.", "i"], ["नौ दिन चले अढ़ाई कोस", "Nine days to cover two and a half kos: painfully slow.", "i"], ["बंदर क्या जाने अदरक का स्वाद", "What does a monkey know of the taste of ginger?", "p"], ["दूर के ढोल सुहावने", "Distant drums sound pleasant: far things look better.", "p"], ["आम के आम गुठलियों के दाम", "Money for the mangoes and for the stones too: a double gain.", "i"], ["घर की मुर्गी दाल बराबर", "The hen at home is worth no more than lentils: we undervalue what we have.", "i"], ["अंधों में काना राजा", "Among the blind, the one-eyed is king.", "p"], ["कहाँ राजा भोज कहाँ गंगू तेली", "King Bhoj versus Gangu the oilman: no comparison.", "i"]], "kn": [["ಕೈ ಕೆಸರಾದರೆ ಬಾಯಿ ಮೊಸರು", "If your hands get muddy, your mouth gets curd: hard work pays.", "p"], ["ಮಾತು ಬೆಳ್ಳಿ ಮೌನ ಬಂಗಾರ", "Speech is silver, silence is gold.", "p"], ["ಹಾಸಿಗೆ ಇದ್ದಷ್ಟು ಕಾಲು ಚಾಚು", "Stretch your legs only as far as your bed allows.", "p"], ["ಹೆತ್ತವರಿಗೆ ಹೆಗ್ಗಣ ಮುದ್ದು", "To its parents even a rat is dear.", "p"], ["ಗಾಳಿ ಬಂದಾಗ ತೂರಿಕೋ", "Winnow while the wind blows: make hay while the sun shines.", "p"], ["ಅತಿಯಾದರೆ ಅಮೃತವೂ ವಿಷ", "In excess, even nectar is poison.", "p"], ["ಕೋತಿ ತಾನು ಕೆಡುವುದಲ್ಲದೆ ವನವನ್ನೆಲ್ಲಾ ಕೆಡಿಸಿತು", "The monkey spoiled itself and then the whole forest.", "p"], ["ಹೊಟ್ಟೆಗೆ ಹಿಟ್ಟಿಲ್ಲ, ಜುಟ್ಟಿಗೆ ಮಲ್ಲಿಗೆ ಹೂವು", "No flour for the belly but jasmine for the hair: show without substance.", "i"], ["ಮನಸ್ಸಿದ್ದರೆ ಮಾರ್ಗ", "Where there is a will, there is a way.", "p"], ["ಎಲ್ಲರ ಮನೆ ದೋಸೆಯೂ ತೂತೆ", "Everyone's dosa has holes: everyone has flaws.", "p"], ["ನೋಡಿ ಕಲಿ, ಮಾಡಿ ತಿಳಿ", "Learn by watching, understand by doing.", "p"], ["ಒಗ್ಗಟ್ಟಿನಲ್ಲಿ ಬಲವಿದೆ", "There is strength in unity.", "p"]], "ta": [["கற்றது கைமண் அளவு, கல்லாதது உலகளவு", "What you have learned is a handful of earth; what you haven't is the size of the world.", "p"], ["அடி மேல் அடி வைத்தால் அம்மியும் நகரும்", "Step by step, even a grinding stone moves.", "p"], ["ஆடத் தெரியாதவள் தெருக் கோணல் என்றாளாம்", "She who can't dance says the street is crooked.", "p"], ["முயற்சி திருவினை ஆக்கும்", "Effort brings success.", "p"], ["காலம் பொன் போன்றது", "Time is like gold.", "p"], ["சிறு துளி பெருவெள்ளம்", "Small drops make a great flood.", "p"], ["ஊர் இரண்டுபட்டால் கூத்தாடிக்குக் கொண்டாட்டம்", "When a village splits, the entertainer celebrates.", "p"], ["நுணலும் தன் வாயால் கெடும்", "Even a frog is ruined by its own mouth.", "p"], ["பழகப் பழகப் பாலும் புளிக்கும்", "With time, even milk turns sour: familiarity breeds contempt.", "p"], ["அவசரக் கோலம் அள்ளித் தெளித்த கோலம்", "A hasty kolam is a scattered kolam: haste makes waste.", "p"], ["யானைக்கும் அடி சறுக்கும்", "Even an elephant can slip.", "p"], ["அகத்தின் அழகு முகத்தில் தெரியும்", "The beauty of the heart shows on the face.", "p"]], "ml": [["അടിമേൽ അടിച്ചാൽ അമ്മിയും പൊടിയും", "Keep striking and even a grinding stone will crumble.", "p"], ["ആനവായിൽ അമ്പഴങ്ങ", "A small fruit in an elephant's mouth: far too little.", "i"], ["അങ്ങാടിയിൽ തോറ്റതിന് അമ്മയോട്", "Losing in the market, taking it out on mother: blaming the innocent.", "p"], ["ഉള്ളതുകൊണ്ട് ഓണം പോലെ", "Celebrate Onam with what you have: be content.", "p"], ["ഒത്തുപിടിച്ചാൽ മലയും പോരും", "If everyone pulls together, even a mountain will come.", "p"], ["കാക്കയ്ക്കും തൻകുഞ്ഞു പൊൻകുഞ്ഞ്", "Even to a crow, its own chick is a golden chick.", "p"], ["അരമനരഹസ്യം അങ്ങാടിപ്പാട്ട്", "A palace secret becomes a market song.", "p"], ["ചക്കിനു വച്ചതു കൊക്കിനു കൊണ്ടു", "Aimed at the jackfruit, it hit the crane: an unintended result.", "i"], ["അധികമായാൽ അമൃതും വിഷം", "In excess, even nectar is poison.", "p"], ["മൗനം വിദ്വാനു ഭൂഷണം", "Silence is an ornament for the wise.", "p"], ["ഉപ്പുതിന്നവൻ വെള്ളം കുടിക്കും", "He who eats salt will drink water: you face the results of your deeds.", "p"], ["വെള്ളത്തിൽ വരച്ച വര പോലെ", "Like a line drawn on water: it does not last.", "i"]], "bn": [["অতি লোভে তাঁতি নষ্ট", "The weaver is ruined by too much greed.", "p"], ["এক হাতে তালি বাজে না", "One hand cannot clap.", "p"], ["যেমন কুকুর তেমন মুগুর", "The club should match the dog: tit for tat.", "p"], ["ঠেলার নাম বাবাজি", "Under pressure, you'll even call someone 'father': need makes you humble.", "p"], ["নুন আনতে পান্তা ফুরায়", "By the time salt is fetched, the rice is gone: living hand to mouth.", "i"], ["ডুবে ডুবে জল খাওয়া", "Drinking water while submerged: doing things secretly.", "i"], ["যত গর্জে তত বর্ষে না", "Not every thunder brings rain: empty threats.", "p"], ["আপনি বাঁচলে বাপের নাম", "Only if I survive can I honour my father's name: save yourself first.", "p"], ["চোরের মায়ের বড় গলা", "The thief's mother has a loud voice: the guilty shout loudest.", "p"], ["কাকের মাংস কাকে খায় না", "A crow does not eat crow meat: people of a kind protect each other.", "p"], ["সবুরে মেওয়া ফলে", "Patience bears fruit.", "p"], ["দশের লাঠি একের বোঝা", "Ten people's stick is one person's load: together, work is light.", "p"]], "mr": [["नाचता येईना अंगण वाकडे", "A poor dancer says the courtyard is crooked.", "p"], ["असेल माझा हरी तर देईल खाटल्यावरी", "If Hari is mine, he'll serve me on my bed: blind trust in luck.", "p"], ["आधी पोटोबा मग विठोबा", "First the belly, then God.", "p"], ["गर्वाचे घर खाली", "The house of pride falls.", "p"], ["उथळ पाण्याला खळखळाट फार", "Shallow water makes the most noise.", "p"], ["थेंबे थेंबे तळे साचे", "Drop by drop, a lake forms.", "p"], ["अति तिथे माती", "Where there is excess, there is ruin.", "p"], ["एक ना धड भाराभर चिंध्या", "Not one thing done well, only heaps of rags.", "p"], ["जे न देखे रवी ते देखे कवी", "What the sun cannot see, the poet sees.", "p"], ["करावे तसे भरावे", "As you do, so you pay.", "p"], ["उंदराला मांजर साक्ष", "The cat is the mouse's witness: a biased witness.", "p"], ["आलिया भोगासी असावे सादर", "Be ready to face whatever comes.", "p"]], "gu": [["ઉતાવળે આંબા ન પાકે", "Mangoes don't ripen in a hurry.", "p"], ["હાથી જાય બજારે, કૂતરા ભસે હજાર", "The elephant walks through the market while a thousand dogs bark.", "p"], ["પારકી આશ સદા નિરાશ", "Hope placed in others always ends in disappointment.", "p"], ["ખાલી ચણો વાગે ઘણો", "An empty gram makes the most noise.", "p"], ["એક હાથે તાળી ન પડે", "One hand cannot clap.", "p"], ["કીડીને કણ ને હાથીને મણ", "A grain for the ant and a maund for the elephant: each gets what it needs.", "p"], ["દૂરથી ડુંગર રળિયામણા", "Distant hills look lovely.", "p"], ["જેવું વાવો તેવું લણો", "As you sow, so you reap.", "p"], ["નામ મોટા દર્શન ખોટા", "Great name, poor show.", "p"], ["સંપ ત્યાં જંપ", "Where there is unity, there is peace.", "p"], ["ના બોલ્યામાં નવ ગુણ", "There are nine virtues in not speaking.", "p"], ["સો સોનારની, એક લુહારની", "A hundred blows of a goldsmith equal one of a blacksmith: one strong blow beats many light ones.", "p"]], "as": [["নাচিব নজনা আঙনা বেঁকা", "One who can't dance says the courtyard is crooked.", "p"], ["এক হাতে তালি নবাজে", "One hand cannot clap.", "p"], ["যেনে বীজ সিঁচিবা তেনে ফল পাবা", "As you sow, so you reap.", "p"], ["টোপাটোপে সাগৰ হয়", "Drop by drop, an ocean forms.", "p"], ["একতাই বল", "Unity is strength.", "p"], ["সময় সোণ", "Time is gold.", "p"], ["ধৈৰ্যৰ ফল মিঠা", "The fruit of patience is sweet.", "p"], ["মনত থাকিলে উপায় হয়", "Where there's a will, there's a way.", "p"], ["অতি লোভ ভাল নহয়", "Too much greed is not good.", "p"], ["যি গাজে সি নবৰ্ষে", "He who thunders does not rain: empty threats.", "p"], ["কথা ৰূপ, মৌন সোণ", "Speech is silver, silence is gold.", "p"], ["কামে কাম শিকায়", "Work teaches work: you learn by doing.", "p"]], "ko": [["가는 말이 고와야 오는 말이 곱다", "Kind words given are kind words returned.", "p"], ["낮말은 새가 듣고 밤말은 쥐가 듣는다", "Birds hear the day's words and mice hear the night's: walls have ears.", "p"], ["호랑이도 제 말 하면 온다", "Even a tiger comes when you talk about it: speak of the devil.", "p"], ["티끌 모아 태산", "Gather specks of dust to make a mountain.", "p"], ["백지장도 맞들면 낫다", "Even a sheet of paper is lighter when carried together.", "p"], ["원숭이도 나무에서 떨어진다", "Even monkeys fall from trees.", "p"], ["시작이 반이다", "Starting is half the job.", "p"], ["천 리 길도 한 걸음부터", "A journey of a thousand li begins with one step.", "p"], ["우물 안 개구리", "A frog in a well: someone with a narrow view.", "i"], ["누워서 떡 먹기", "Eating rice cake lying down: very easy.", "i"], ["소 잃고 외양간 고친다", "Fixing the barn after losing the cow.", "p"], ["보기 좋은 떡이 먹기도 좋다", "A good-looking rice cake tastes good too.", "p"]], "es": [["Más vale tarde que nunca.", "Better late than never.", "p"], ["A caballo regalado no se le mira el diente.", "Don't look a gift horse in the mouth.", "p"], ["Quien madruga, Dios le ayuda.", "God helps the early riser.", "p"], ["Al mal tiempo, buena cara.", "Face bad times with a good face.", "p"], ["En boca cerrada no entran moscas.", "Flies don't enter a closed mouth: sometimes silence is wise.", "p"], ["Camarón que se duerme se lo lleva la corriente.", "The shrimp that falls asleep is carried away by the current.", "p"], ["No hay mal que por bien no venga.", "Every cloud has a silver lining.", "p"], ["Dime con quién andas y te diré quién eres.", "Tell me who you walk with and I'll tell you who you are.", "p"], ["El que no arriesga, no gana.", "Nothing ventured, nothing gained.", "p"], ["A buen entendedor, pocas palabras.", "To a good listener, few words are needed.", "p"], ["Perro que ladra no muerde.", "A barking dog doesn't bite.", "p"], ["Estar en las nubes.", "To be in the clouds: to be daydreaming.", "i"]], "de": [["Übung macht den Meister.", "Practice makes perfect.", "p"], ["Aller Anfang ist schwer.", "Every beginning is hard.", "p"], ["Der frühe Vogel fängt den Wurm.", "The early bird catches the worm.", "p"], ["Morgenstund hat Gold im Mund.", "The morning hour has gold in its mouth.", "p"], ["Kleinvieh macht auch Mist.", "Small animals also make manure: small amounts add up.", "p"], ["Wer rastet, der rostet.", "He who rests, rusts.", "p"], ["Ohne Fleiß kein Preis.", "No prize without effort.", "p"], ["Es ist noch kein Meister vom Himmel gefallen.", "No master has ever fallen from the sky.", "p"], ["Hunde, die bellen, beißen nicht.", "Dogs that bark don't bite.", "p"], ["Ich verstehe nur Bahnhof.", "I only understand 'train station': I don't understand a thing.", "i"], ["Da steppt der Bär.", "The bear is tap dancing there: it is a lively party.", "i"], ["Das ist nicht mein Bier.", "That is not my beer: that's not my business.", "i"]], "fr": [["Petit à petit, l’oiseau fait son nid.", "Little by little, the bird builds its nest.", "p"], ["Qui vivra verra.", "Who lives will see.", "p"], ["Après la pluie, le beau temps.", "After the rain, the good weather.", "p"], ["L’habit ne fait pas le moine.", "The habit does not make the monk: don't judge by appearances.", "p"], ["Il ne faut pas vendre la peau de l’ours avant de l’avoir tué.", "Don't sell the bear's skin before you've killed it.", "p"], ["Mieux vaut tard que jamais.", "Better late than never.", "p"], ["Tel père, tel fils.", "Like father, like son.", "p"], ["Quand le chat n’est pas là, les souris dansent.", "When the cat's away, the mice dance.", "p"], ["Avoir le cafard.", "To have the cockroach: to feel down.", "i"], ["Poser un lapin à quelqu’un.", "To put a rabbit on someone: to stand them up.", "i"], ["Coûter les yeux de la tête.", "To cost the eyes of your head: to be very expensive.", "i"], ["Avoir un chat dans la gorge.", "To have a cat in the throat: to have a frog in the throat.", "i"]]};
+  B.TWISTERS = {"te": [["చిన్న చిలుక చెట్టు చివర చేరి చక్కగా చదివింది", "A small parrot reached the top of the tree and read beautifully."], ["కాకి కొక్కెర కొమ్మ కింద కూర్చున్నాయి", "A crow and a crane sat under the branch."], ["పండు పండిన పనస పైన పిట్టలు పాడాయి", "Birds sang on the ripe jackfruit tree."]], "hi": [["कच्चा पापड़ पक्का पापड़", "Raw papad, cooked papad."], ["चंदू के चाचा ने चंदू की चाची को चांदनी चौक में चांदी के चम्मच से चटनी चटाई", "Chandu's uncle fed chutney to Chandu's aunt with a silver spoon in Chandni Chowk."], ["छोटे छाते की छोटी छाया", "The small umbrella's small shade."]], "kn": [["ಕಾಗೆ ಕೊಕ್ಕರೆ ಕೊಳದ ಕಡೆ ಕುಳಿತವು", "A crow and a crane sat by the pond."], ["ಹಸಿರು ಹುಲ್ಲಿನ ಹಾದಿಯಲ್ಲಿ ಹಸು ಹೋಯಿತು", "The cow went along the green grass path."], ["ಬೆಟ್ಟದ ಬದಿಯ ಬೇವಿನ ಮರದ ಬಳಿ ಬಾಲಕ ಬಂದ", "A boy came near the neem tree beside the hill."]], "ta": [["வாழைப்பழத் தோல் வழுக்கி விழுந்தவன் அழுதான்", "The man who slipped on a banana peel cried."], ["பாட்டி பருப்பு பாயசம் பருகப் பருக பிடித்தது", "Grandmother liked the lentil payasam more as she drank it."], ["குருவி குளத்தருகே குதித்துக் குடித்தது", "A sparrow hopped beside the pond and drank."]], "ml": [["ഒരു കുടം കൊണ്ട് കുളത്തിൽ കുളിച്ചു", "He bathed in the pond with a pot."], ["പഴുത്ത പഴം പറിച്ച് പപ്പു പാടി", "Pappu sang after plucking a ripe fruit."], ["കൊച്ചു കോഴി കൂവി കൂട്ടിൽ കയറി", "The little hen crowed and went into the coop."]], "bn": [["চোর চুরি করে চুপি চুপি চলে গেল", "The thief stole and went away quietly."], ["পাকা পেঁপে পড়ল পুকুরের পাড়ে", "A ripe papaya fell on the pond's bank."], ["বড় বাঘ বনে বসে বাঁশি বাজায়", "A big tiger sits in the forest and plays a flute."]], "mr": [["काका काकडी कापून कपात काढली", "Uncle cut a cucumber and took it out in a cup."], ["पाच पोपट पिंपळाच्या पानावर पळाले", "Five parrots ran on a peepal leaf."], ["सात साधू सकाळी सरोवरात स्नान करतात", "Seven monks bathe in the lake in the morning."]], "gu": [["કાકાએ કાચી કેરી કાપી કાકીને આપી", "Uncle cut a raw mango and gave it to aunt."], ["પાંચ પોપટ પીપળાના પાન પર પહોંચ્યા", "Five parrots reached a peepal leaf."], ["સાત સસલા સવારે સરોવર સુધી સરક્યા", "Seven rabbits crept to the lake in the morning."]], "as": [["কাউৰী কৰবাত কঠিয়া কটাৰী কাটিলে", "A crow cut a log with a knife somewhere."], ["পাকিল পেপেটা পুখুৰীৰ পাৰত পৰিল", "The ripe papaya fell on the pond's bank."], ["বগলী বিলৰ বাটত বহি আছিল", "A heron was sitting on the path by the wetland."]], "ko": [["간장 공장 공장장은 강 공장장이고 된장 공장 공장장은 공 공장장이다", "The soy sauce factory manager is Manager Kang, and the soybean paste factory manager is Manager Gong."], ["내가 그린 기린 그림은 목이 긴 기린 그림이고 네가 그린 기린 그림은 목이 짧은 기린 그림이다", "My giraffe drawing is of a long-necked giraffe; your giraffe drawing is of a short-necked one."], ["저기 저 콩깍지가 깐 콩깍지인가 안 깐 콩깍지인가", "Is that pea pod over there a shelled pod or an unshelled pod?"]], "es": [["Tres tristes tigres tragaban trigo en un trigal.", "Three sad tigers swallowed wheat in a wheat field."], ["Pablito clavó un clavito en la calva de un calvito.", "Little Pablo nailed a little nail into a little bald man's head."], ["El perro de San Roque no tiene rabo porque Ramón Ramírez se lo ha robado.", "Saint Roch's dog has no tail because Ramón Ramírez stole it."]], "de": [["Fischers Fritze fischt frische Fische, frische Fische fischt Fischers Fritze.", "Fisher's Fritz catches fresh fish."], ["Blaukraut bleibt Blaukraut und Brautkleid bleibt Brautkleid.", "Red cabbage stays red cabbage and a wedding dress stays a wedding dress."], ["Zwischen zwei Zwetschgenzweigen zwitschern zwei Schwalben.", "Two swallows twitter between two plum branches."]], "fr": [["Les chaussettes de l’archiduchesse sont-elles sèches, archi-sèches ?", "Are the archduchess's socks dry, extremely dry?"], ["Un chasseur sachant chasser doit savoir chasser sans son chien.", "A hunter who knows how to hunt must know how to hunt without his dog."], ["Ton thé t’a-t-il ôté ta toux ?", "Did your tea take away your cough?"]]};
+  B.KIDS = { cats: ['animals', 'fruits', 'colours', 'body', 'things'], words: [{"id": "dog", "e": "🐶", "cat": "animals", "en": "dog", "te": "కుక్క", "hi": "कुत्ता", "kn": "ನಾಯಿ", "ta": "நாய்", "ml": "നായ", "bn": "কুকুর", "mr": "कुत्रा", "ko": "개", "es": "perro", "de": "Hund", "fr": "chien", "gu": "કૂતરો", "as": "কুকুৰ"}, {"id": "cat", "e": "🐱", "cat": "animals", "en": "cat", "te": "పిల్లి", "hi": "बिल्ली", "kn": "ಬೆಕ್ಕು", "ta": "பூனை", "ml": "പൂച്ച", "bn": "বিড়াল", "mr": "मांजर", "ko": "고양이", "es": "gato", "de": "Katze", "fr": "chat", "gu": "બિલાડી", "as": "মেকুৰী"}, {"id": "cow", "e": "🐮", "cat": "animals", "en": "cow", "te": "ఆవు", "hi": "गाय", "kn": "ಹಸು", "ta": "பசு", "ml": "പശു", "bn": "গরু", "mr": "गाय", "ko": "소", "es": "vaca", "de": "Kuh", "fr": "vache", "gu": "ગાય", "as": "গৰু"}, {"id": "elephant", "e": "🐘", "cat": "animals", "en": "elephant", "te": "ఏనుగు", "hi": "हाथी", "kn": "ಆನೆ", "ta": "யானை", "ml": "ആന", "bn": "হাতি", "mr": "हत्ती", "ko": "코끼리", "es": "elefante", "de": "Elefant", "fr": "éléphant", "gu": "હાથી", "as": "হাতী"}, {"id": "lion", "e": "🦁", "cat": "animals", "en": "lion", "te": "సింహం", "hi": "शेर", "kn": "ಸಿಂಹ", "ta": "சிங்கம்", "ml": "സിംഹം", "bn": "সিংহ", "mr": "सिंह", "ko": "사자", "es": "león", "de": "Löwe", "fr": "lion", "gu": "સિંહ", "as": "সিংহ"}, {"id": "bird", "e": "🐦", "cat": "animals", "en": "bird", "te": "పక్షి", "hi": "चिड़िया", "kn": "ಹಕ್ಕಿ", "ta": "பறவை", "ml": "പക്ഷി", "bn": "পাখি", "mr": "पक्षी", "ko": "새", "es": "pájaro", "de": "Vogel", "fr": "oiseau", "gu": "પક્ષી", "as": "চৰাই"}, {"id": "fish", "e": "🐟", "cat": "animals", "en": "fish", "te": "చేప", "hi": "मछली", "kn": "ಮೀನು", "ta": "மீன்", "ml": "മീൻ", "bn": "মাছ", "mr": "मासा", "ko": "물고기", "es": "pez", "de": "Fisch", "fr": "poisson", "gu": "માછલી", "as": "মাছ"}, {"id": "horse", "e": "🐴", "cat": "animals", "en": "horse", "te": "గుర్రం", "hi": "घोड़ा", "kn": "ಕುದುರೆ", "ta": "குதிரை", "ml": "കുതിര", "bn": "ঘোড়া", "mr": "घोडा", "ko": "말", "es": "caballo", "de": "Pferd", "fr": "cheval", "gu": "ઘોડો", "as": "ঘোঁৰা"}, {"id": "monkey", "e": "🐵", "cat": "animals", "en": "monkey", "te": "కోతి", "hi": "बंदर", "kn": "ಮಂಗ", "ta": "குரங்கு", "ml": "കുരങ്ങ്", "bn": "বানর", "mr": "माकड", "ko": "원숭이", "es": "mono", "de": "Affe", "fr": "singe", "gu": "વાંદરો", "as": "বান্দৰ"}, {"id": "tiger", "e": "🐯", "cat": "animals", "en": "tiger", "te": "పులి", "hi": "बाघ", "kn": "ಹುಲಿ", "ta": "புலி", "ml": "പുലി", "bn": "বাঘ", "mr": "वाघ", "ko": "호랑이", "es": "tigre", "de": "Tiger", "fr": "tigre", "gu": "વાઘ", "as": "বাঘ"}, {"id": "mango", "e": "🥭", "cat": "fruits", "en": "mango", "te": "మామిడి పండు", "hi": "आम", "kn": "ಮಾವಿನ ಹಣ್ಣು", "ta": "மாம்பழம்", "ml": "മാങ്ങ", "bn": "আম", "mr": "आंबा", "ko": "망고", "es": "mango", "de": "Mango", "fr": "mangue", "gu": "કેરી", "as": "আম"}, {"id": "banana", "e": "🍌", "cat": "fruits", "en": "banana", "te": "అరటి పండు", "hi": "केला", "kn": "ಬಾಳೆ ಹಣ್ಣು", "ta": "வாழைப்பழம்", "ml": "വാഴപ്പഴം", "bn": "কলা", "mr": "केळं", "ko": "바나나", "es": "plátano", "de": "Banane", "fr": "banane", "gu": "કેળું", "as": "কল"}, {"id": "apple", "e": "🍎", "cat": "fruits", "en": "apple", "te": "ఆపిల్", "hi": "सेब", "kn": "ಸೇಬು", "ta": "ஆப்பிள்", "ml": "ആപ്പിൾ", "bn": "আপেল", "mr": "सफरचंद", "ko": "사과", "es": "manzana", "de": "Apfel", "fr": "pomme", "gu": "સફરજન", "as": "আপেল"}, {"id": "orange", "e": "🍊", "cat": "fruits", "en": "orange", "te": "నారింజ", "hi": "संतरा", "kn": "ಕಿತ್ತಳೆ", "ta": "ஆரஞ்சு", "ml": "ഓറഞ്ച്", "bn": "কমলালেবু", "mr": "संत्रं", "ko": "귤", "es": "naranja", "de": "Orange", "fr": "orange", "gu": "નારંગી", "as": "কমলা"}, {"id": "grapes", "e": "🍇", "cat": "fruits", "en": "grapes", "te": "ద్రాక్ష", "hi": "अंगूर", "kn": "ದ್ರಾಕ್ಷಿ", "ta": "திராட்சை", "ml": "മുന്തിരി", "bn": "আঙুর", "mr": "द्राक्षं", "ko": "포도", "es": "uvas", "de": "Trauben", "fr": "raisin", "gu": "દ્રાક્ષ", "as": "আঙুৰ"}, {"id": "watermelon", "e": "🍉", "cat": "fruits", "en": "watermelon", "te": "పుచ్చకాయ", "hi": "तरबूज़", "kn": "ಕಲ್ಲಂಗಡಿ", "ta": "தர்பூசணி", "ml": "തണ്ണിമത്തൻ", "bn": "তরমুজ", "mr": "कलिंगड", "ko": "수박", "es": "sandía", "de": "Wassermelone", "fr": "pastèque", "gu": "તરબૂચ", "as": "ত'ৰমুজ"}, {"id": "red", "e": "🔴", "cat": "colours", "en": "red", "te": "ఎరుపు", "hi": "लाल", "kn": "ಕೆಂಪು", "ta": "சிவப்பு", "ml": "ചുവപ്പ്", "bn": "লাল", "mr": "लाल", "ko": "빨강", "es": "rojo", "de": "Rot", "fr": "rouge", "gu": "લાલ", "as": "ৰঙা"}, {"id": "blue", "e": "🔵", "cat": "colours", "en": "blue", "te": "నీలం", "hi": "नीला", "kn": "ನೀಲಿ", "ta": "நீலம்", "ml": "നീല", "bn": "নীল", "mr": "निळा", "ko": "파랑", "es": "azul", "de": "Blau", "fr": "bleu", "gu": "વાદળી", "as": "নীলা"}, {"id": "green", "e": "🟢", "cat": "colours", "en": "green", "te": "ఆకుపచ్చ", "hi": "हरा", "kn": "ಹಸಿರು", "ta": "பச்சை", "ml": "പച്ച", "bn": "সবুজ", "mr": "हिरवा", "ko": "초록", "es": "verde", "de": "Grün", "fr": "vert", "gu": "લીલો", "as": "সেউজীয়া"}, {"id": "yellow", "e": "🟡", "cat": "colours", "en": "yellow", "te": "పసుపు", "hi": "पीला", "kn": "ಹಳದಿ", "ta": "மஞ்சள்", "ml": "മഞ്ഞ", "bn": "হলুদ", "mr": "पिवळा", "ko": "노랑", "es": "amarillo", "de": "Gelb", "fr": "jaune", "gu": "પીળો", "as": "ফেঁকুৰী"}, {"id": "white", "e": "⚪", "cat": "colours", "en": "white", "te": "తెలుపు", "hi": "सफ़ेद", "kn": "ಬಿಳಿ", "ta": "வெள்ளை", "ml": "വെള്ള", "bn": "সাদা", "mr": "पांढरा", "ko": "하양", "es": "blanco", "de": "Weiß", "fr": "blanc", "gu": "સફેદ", "as": "বগা"}, {"id": "black", "e": "⚫", "cat": "colours", "en": "black", "te": "నలుపు", "hi": "काला", "kn": "ಕಪ್ಪು", "ta": "கருப்பு", "ml": "കറുപ്പ്", "bn": "কালো", "mr": "काळा", "ko": "검정", "es": "negro", "de": "Schwarz", "fr": "noir", "gu": "કાળો", "as": "ক'লা"}, {"id": "eye", "e": "👁️", "cat": "body", "en": "eye", "te": "కన్ను", "hi": "आँख", "kn": "ಕಣ್ಣು", "ta": "கண்", "ml": "കണ്ണ്", "bn": "চোখ", "mr": "डोळा", "ko": "눈", "es": "ojo", "de": "Auge", "fr": "œil", "gu": "આંખ", "as": "চকু"}, {"id": "nose", "e": "👃", "cat": "body", "en": "nose", "te": "ముక్కు", "hi": "नाक", "kn": "ಮೂಗು", "ta": "மூக்கு", "ml": "മൂക്ക്", "bn": "নাক", "mr": "नाक", "ko": "코", "es": "nariz", "de": "Nase", "fr": "nez", "gu": "નાક", "as": "নাক"}, {"id": "ear", "e": "👂", "cat": "body", "en": "ear", "te": "చెవి", "hi": "कान", "kn": "ಕಿವಿ", "ta": "காது", "ml": "ചെവി", "bn": "কান", "mr": "कान", "ko": "귀", "es": "oreja", "de": "Ohr", "fr": "oreille", "gu": "કાન", "as": "কাণ"}, {"id": "mouth", "e": "👄", "cat": "body", "en": "mouth", "te": "నోరు", "hi": "मुँह", "kn": "ಬಾಯಿ", "ta": "வாய்", "ml": "വായ", "bn": "মুখ", "mr": "तोंड", "ko": "입", "es": "boca", "de": "Mund", "fr": "bouche", "gu": "મોં", "as": "মুখ"}, {"id": "hand", "e": "✋", "cat": "body", "en": "hand", "te": "చేయి", "hi": "हाथ", "kn": "ಕೈ", "ta": "கை", "ml": "കൈ", "bn": "হাত", "mr": "हात", "ko": "손", "es": "mano", "de": "Hand", "fr": "main", "gu": "હાથ", "as": "হাত"}, {"id": "foot", "e": "🦶", "cat": "body", "en": "foot", "te": "పాదం", "hi": "पैर", "kn": "ಪಾದ", "ta": "பாதம்", "ml": "കാൽ", "bn": "পা", "mr": "पाय", "ko": "발", "es": "pie", "de": "Fuß", "fr": "pied", "gu": "પગ", "as": "ভৰি"}, {"id": "sun", "e": "☀️", "cat": "things", "en": "sun", "te": "సూర్యుడు", "hi": "सूरज", "kn": "ಸೂರ್ಯ", "ta": "சூரியன்", "ml": "സൂര്യൻ", "bn": "সূর্য", "mr": "सूर्य", "ko": "해", "es": "sol", "de": "Sonne", "fr": "soleil", "gu": "સૂર્ય", "as": "সূৰ্য"}, {"id": "moon", "e": "🌙", "cat": "things", "en": "moon", "te": "చంద్రుడు", "hi": "चाँद", "kn": "ಚಂದ್ರ", "ta": "நிலா", "ml": "ചന്ദ്രൻ", "bn": "চাঁদ", "mr": "चंद्र", "ko": "달", "es": "luna", "de": "Mond", "fr": "lune", "gu": "ચંદ્ર", "as": "জোন"}, {"id": "star", "e": "⭐", "cat": "things", "en": "star", "te": "నక్షత్రం", "hi": "तारा", "kn": "ನಕ್ಷತ್ರ", "ta": "நட்சத்திரம்", "ml": "നക്ഷത്രം", "bn": "তারা", "mr": "तारा", "ko": "별", "es": "estrella", "de": "Stern", "fr": "étoile", "gu": "તારો", "as": "তৰা"}, {"id": "water", "e": "💧", "cat": "things", "en": "water", "te": "నీళ్లు", "hi": "पानी", "kn": "ನೀರು", "ta": "தண்ணீர்", "ml": "വെള്ളം", "bn": "জল", "mr": "पाणी", "ko": "물", "es": "agua", "de": "Wasser", "fr": "eau", "gu": "પાણી", "as": "পানী"}, {"id": "tree", "e": "🌳", "cat": "things", "en": "tree", "te": "చెట్టు", "hi": "पेड़", "kn": "ಮರ", "ta": "மரம்", "ml": "മരം", "bn": "গাছ", "mr": "झाड", "ko": "나무", "es": "árbol", "de": "Baum", "fr": "arbre", "gu": "ઝાડ", "as": "গছ"}, {"id": "flower", "e": "🌸", "cat": "things", "en": "flower", "te": "పువ్వు", "hi": "फूल", "kn": "ಹೂವು", "ta": "பூ", "ml": "പൂവ്", "bn": "ফুল", "mr": "फूल", "ko": "꽃", "es": "flor", "de": "Blume", "fr": "fleur", "gu": "ફૂલ", "as": "ফুল"}, {"id": "house", "e": "🏠", "cat": "things", "en": "house", "te": "ఇల్లు", "hi": "घर", "kn": "ಮನೆ", "ta": "வீடு", "ml": "വീട്", "bn": "বাড়ি", "mr": "घर", "ko": "집", "es": "casa", "de": "Haus", "fr": "maison", "gu": "ઘર", "as": "ঘৰ"}, {"id": "book", "e": "📖", "cat": "things", "en": "book", "te": "పుస్తకం", "hi": "किताब", "kn": "ಪುಸ್ತಕ", "ta": "புத்தகம்", "ml": "പുസ്തകം", "bn": "বই", "mr": "पुस्तक", "ko": "책", "es": "libro", "de": "Buch", "fr": "livre", "gu": "પુસ્તક", "as": "কিতাপ"}, {"id": "ball", "e": "⚽", "cat": "things", "en": "ball", "te": "బంతి", "hi": "गेंद", "kn": "ಚೆಂಡು", "ta": "பந்து", "ml": "പന്ത്", "bn": "বল", "mr": "चेंडू", "ko": "공", "es": "pelota", "de": "Ball", "fr": "ballon", "gu": "બોલ", "as": "বল"}, {"id": "car", "e": "🚗", "cat": "things", "en": "car", "te": "కారు", "hi": "गाड़ी", "kn": "ಕಾರು", "ta": "கார்", "ml": "കാർ", "bn": "গাড়ি", "mr": "गाडी", "ko": "자동차", "es": "coche", "de": "Auto", "fr": "voiture", "gu": "ગાડી", "as": "গাড়ী"}] };
+  B.VIDEOS = { names: {"te": "Telugu", "hi": "Hindi", "kn": "Kannada", "ta": "Tamil", "ml": "Malayalam", "bn": "Bengali", "mr": "Marathi", "gu": "Gujarati", "as": "Assamese", "ko": "Korean", "es": "Spanish", "de": "German", "fr": "French"}, topics: [["begin", "learn {L} for beginners"], ["alpha", "{L} alphabet and pronunciation"], ["kids", "{L} kids songs and rhymes"], ["story", "{L} short stories"], ["talk", "{L} everyday conversation practice"], ["cook", "{L} home cooking recipe"], ["travel", "{L} travel vlog"], ["school", "{L} school lessons science maths"], ["grammar", "{L} grammar lessons in English"]], channels: {"hi": ["HindiPod101"], "te": ["Telugu Badi"], "ml": ["Learn Malayalam with Elikutty"], "as": ["e-Kaksha Assam"], "ko": ["Talk To Me In Korean"], "es": ["Dreaming Spanish", "Easy Spanish"], "de": ["Easy German", "Learn German with Anja"], "fr": ["Easy French", "Learn French with Alexa"]} };
+})(window.B = window.B || {});
+
+;
+/* Fun and family: Proverbs and idioms, Tongue twisters, Kids corner (picture games). */
+(function (B) {
+  'use strict';
+  var U = B.ui, h = U.h, t = U.t, set = U.set;
+  B.views = B.views || {};
+  function alive() { return !!document.getElementById('kd-back'); }
+  function shuffle(a) { return a.slice().sort(function () { return Math.random() - 0.5; }); }
+  function rom(txt, lang) { return B.isBrahmic(txt) ? B.translit(txt, set.scheme, lang) : ''; }
+  function dayNo() { var d = new Date(); return Math.floor(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5); }
+  function langSel(id, cur, fn) {
+    var s = h('select', { id: id, 'aria-label': t('language') }, B.LEARN.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); s.value = cur;
+    s.addEventListener('change', function () { fn(s.value); });
+    return h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: id, text: t('language') }), s])]);
+  }
+  function audioBtns(txt, lang, label) {
+    return h('div', { class: 'ph-a' }, [
+      h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + label, text: '🔊', onclick: function () { U.speak(txt, lang, null, set.rate); } }),
+      h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + label, text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55, true); } })]);
+  }
+
+  // ---------------- Proverbs and idioms
+  var PR = { lang: null, i: 0, all: false };
+  B.views.proverbs = function (app) {
+    app.textContent = ''; PR.lang = PR.lang || set.focus; var lang = PR.lang, list = B.PROVERBS[lang] || [];
+    app.appendChild(h('h1', { text: t('prH') })); app.appendChild(h('p', { class: 'lede', text: t('prLede') }));
+    app.appendChild(langSel('pr-lang', lang, function (v) { PR.lang = v; PR.i = 0; B.views.proverbs(app); }));
+    var today = (dayNo() + PR.i) % list.length, it = list[today], r = rom(it[0], lang);
+    var card = h('section', { class: 'panel saying', id: 'pr-today' }, [
+      h('h2', { text: t('prToday') }), h('span', { class: 'chip', text: t(it[2] === 'i' ? 'prI' : 'prP') }),
+      h('p', { class: 'ph-t big', lang: lang, text: it[0] }), r ? h('p', { class: 'ph-r', text: r }) : null,
+      h('p', { class: 'ph-n' }, [h('b', { text: t('prMeaning') + ': ' }), it[1]]), audioBtns(it[0], lang, it[1]),
+      h('div', { class: 'acts', id: 'pr-acts' }, [h('button', { type: 'button', class: 'abtn gold', id: 'pr-next', text: t('prAnother'), onclick: function () { PR.i++; B.views.proverbs(app); var n = document.getElementById('pr-next'); if (n) n.focus(); } })])]);
+    app.appendChild(card); if (B.fx) B.fx.enter(card);
+    card.querySelector('#pr-acts').appendChild(U.pronToggle(card, it[0], lang));
+    var all = h('section', { class: 'panel' }, [h('h2', { text: t('prAll') })]);
+    list.forEach(function (x) {
+      var rr = rom(x[0], lang), row = h('div', { class: 'ph', 'data-saying': '1' }, [h('div', { class: 'ph-main' }, [h('div', { class: 'ph-t', lang: lang, text: x[0] }), rr ? h('div', { class: 'ph-r', text: rr }) : null, h('div', { class: 'ph-n', text: x[1] })])]);
+      var a = audioBtns(x[0], lang, x[1]); a.appendChild(h('span', { class: 'chip', text: t(x[2] === 'i' ? 'prI' : 'prP') })); row.appendChild(a); all.appendChild(row);
+    });
+    app.appendChild(all);
+  };
+
+  // ---------------- Tongue twisters
+  var TW = { lang: null };
+  B.views.twisters = function (app) {
+    app.textContent = ''; TW.lang = TW.lang || set.focus; var lang = TW.lang, list = B.TWISTERS[lang] || [];
+    app.appendChild(h('h1', { text: t('twH') })); app.appendChild(h('p', { class: 'lede', text: t('twLede') }));
+    app.appendChild(langSel('tw-lang', lang, function (v) { TW.lang = v; B.views.twisters(app); }));
+    list.forEach(function (x) {
+      var r = rom(x[0], lang), card = h('section', { class: 'panel twister', 'data-twister': '1' }, [
+        h('p', { class: 'ph-t big', lang: lang, text: x[0] }), r ? h('p', { class: 'ph-r', text: r }) : null, h('p', { class: 'ph-n', text: x[1] })]);
+      var row = h('div', { class: 'acts' });
+      [['twSlow', 0.55, '🐢'], ['twNormal', 0.9, '🔊'], ['twFast', 1.2, '⚡']].forEach(function (sp) {
+        row.appendChild(h('button', { type: 'button', class: 'abtn', 'data-speed': String(sp[1]), text: sp[2] + ' ' + t(sp[0]), onclick: function () { U.speak(x[0], lang, null, sp[1], true); } }));
+      });
+      row.appendChild(U.pronToggle(card, x[0], lang)); card.appendChild(row); app.appendChild(card);
+    });
+  };
+
+  // ---------------- Kids corner
+  var KD = { lang: null, cat: 'all', game: null, stars: 0, round: 0, seq: [], busy: false, first: true, pairs: null, flipped: [], matched: 0 };
+  function pool() { var w = B.KIDS.words; return KD.cat === 'all' ? w : w.filter(function (x) { return x.cat === KD.cat; }); }
+  function wordRom(w) { return rom(w[KD.lang], KD.lang); }
+  B.views.kids = function (app) {
+    app.textContent = ''; KD.lang = KD.lang || set.focus; clearTimeout(KD.tm);
+    if (!KD.game) return menu(app);
+    if (KD.game === 'match') return match(app);
+    return quiz(app);
+  };
+  function menu(app) {
+    app.appendChild(h('h1', { text: '🧒 ' + t('kdH') })); app.appendChild(h('p', { class: 'lede', text: t('kdLede') }));
+    app.appendChild(langSel('kd-lang', KD.lang, function (v) { KD.lang = v; B.views.kids(app); }));
+    app.appendChild(h('div', { class: 'stats' }, [h('div', { class: 'stat' }, [h('b', { id: 'kd-stars', text: '⭐ ' + KD.stars }), h('span', { text: t('kdStars', { n: KD.stars }) })])]));
+    var tabs = h('div', { class: 'tabs', role: 'group', 'aria-label': t('kdAll') });
+    ['all'].concat(B.KIDS.cats).forEach(function (c) {
+      tabs.appendChild(h('button', { type: 'button', class: 'tab' + (KD.cat === c ? ' on' : ''), 'data-cat': c, 'aria-pressed': String(KD.cat === c), text: c === 'all' ? t('kdAll') : t('kdC_' + c), onclick: function () { KD.cat = c; B.views.kids(app); var b = app.querySelector('.tab.on'); if (b) b.focus(); } }));
+    });
+    app.appendChild(tabs);
+    var grid = h('div', { class: 'cards' });
+    [['tap', '👆', 'kdG1', 'kdListen'], ['what', '❓', 'kdG2', 'kdWhat'], ['match', '🃏', 'kdG3', 'kdMatch']].forEach(function (g) {
+      grid.appendChild(h('button', { type: 'button', class: 'card kdcard', 'data-game': g[0], onclick: function () { KD.game = g[0]; KD.round = 0; KD.busy = false; KD.first = true; KD.seq = shuffle(pool()).slice(0, 8); KD.pairs = null; B.views.kids(app); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: g[1] }), h('h2', { text: t(g[2]) }), h('p', { text: t(g[3]) })]));
+    });
+    app.appendChild(grid);
+  }
+  function head(app, title) {
+    app.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn', id: 'kd-back', text: '← ' + t('kdBack'), onclick: function () { KD.game = null; B.views.kids(app); } }), h('span', { class: 'chip', id: 'kd-stars', text: '⭐ ' + KD.stars })]));
+    app.appendChild(h('h1', { text: title }));
+  }
+  function finish(app) {
+    app.textContent = ''; if (B.fx) B.fx.celebrate(app);
+    app.appendChild(h('h1', { id: 'kd-done', text: '🎉 ' + t('kdWell') })); app.appendChild(h('p', { class: 'lede', text: t('kdStars', { n: KD.stars }) }));
+    app.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold big', text: t('kdAgain'), onclick: function () { var g = KD.game; KD.game = null; B.views.kids(app); app.querySelector('[data-game="' + g + '"]').click(); } }), h('button', { type: 'button', class: 'abtn', text: t('kdBack'), onclick: function () { KD.game = null; B.views.kids(app); } })]));
+  }
+  function distract(target, n) {
+    var seen = {}; seen[target[KD.lang]] = 1;
+    var from = shuffle(B.KIDS.words.filter(function (w) { return w.id !== target.id && w.cat === target.cat; })).concat(shuffle(B.KIDS.words.filter(function (w) { return w.id !== target.id && w.cat !== target.cat; }))), out = [];
+    from.forEach(function (w) { if (out.length < n && !seen[w[KD.lang]]) { seen[w[KD.lang]] = 1; out.push(w); } });
+    return out;
+  }
+  function quiz(app) {
+    var w = KD.seq[KD.round]; if (!w) return finish(app);
+    app.textContent = ''; KD.first = true; KD.busy = false; var lang = KD.lang, tap = KD.game === 'tap';
+    head(app, t(tap ? 'kdG1' : 'kdG2') + ' · ' + (KD.round + 1) + '/' + KD.seq.length);
+    var panel = h('section', { class: 'panel kdpanel' }); app.appendChild(panel);
+    var opts = shuffle([w].concat(distract(w, tap ? 3 : 2)));
+    if (tap) {
+      var r = wordRom(w);
+      panel.appendChild(h('p', { class: 'ph-t big kdword', lang: lang, text: w[lang] })); if (r) panel.appendChild(h('p', { class: 'ph-r', text: r }));
+      panel.appendChild(h('button', { type: 'button', class: 'abtn', id: 'kd-hear', 'aria-label': t('speak') + ': ' + w.en, text: '🔊 ' + t('speak'), onclick: function () { U.speak(w[lang], lang, null, set.rate); } }));
+      setTimeout(function () { U.speak(w[lang], lang, null, set.rate); }, 200);
+    } else {
+      panel.appendChild(h('div', { class: 'kdemoji', role: 'img', 'aria-label': w.en, text: w.e }));
+    }
+    var res = h('p', { class: 'qz-res', 'aria-live': 'polite' }), box = h('div', { class: 'kdopts' + (tap ? ' pics' : '') });
+    opts.forEach(function (o) {
+      var rr = tap ? '' : wordRom(o), b = h('button', { type: 'button', class: 'abtn kdopt', 'data-id': o.id, 'aria-label': tap ? o.en : null, onclick: function () {
+        if (KD.busy) return;
+        if (o.id === w.id) {
+          KD.busy = true; b.classList.add('right'); res.textContent = t('kdWell'); if (B.fx) B.fx.good(); if (KD.first) { KD.stars++; var s = document.getElementById('kd-stars'); if (s) s.textContent = '⭐ ' + KD.stars; }
+          U.speak(w[lang], lang, null, set.rate); U.logReview && U.logReview();
+          KD.tm = setTimeout(function () { if (alive()) { KD.round++; quiz(app); } }, 1100);
+        } else { KD.first = false; b.classList.add('wrong'); b.disabled = true; if (B.fx) B.fx.bad(); }
+      } }, tap ? [h('span', { class: 'kdpic', 'aria-hidden': 'true', text: o.e })] : [h('span', { lang: lang, text: o[lang] }), rr ? h('span', { class: 'r', text: rr }) : null]);
+      box.appendChild(b);
+    });
+    panel.appendChild(box); panel.appendChild(res);
+  }
+  function match(app) {
+    app.textContent = ''; var lang = KD.lang; head(app, t('kdG3'));
+    if (!KD.pairs) { KD.busy = false; KD.flipped = []; KD.matched = 0; var chosen = shuffle(pool()), seen = {}, pick = []; chosen.forEach(function (w) { if (pick.length < 6 && !seen[w[lang]]) { seen[w[lang]] = 1; pick.push(w); } }); KD.pairs = shuffle(pick.map(function (w) { return { w: w, k: 'e' }; }).concat(pick.map(function (w) { return { w: w, k: 'w' }; }))); KD.need = pick.length; }
+    var grid = h('div', { class: 'kdgrid' }), res = h('p', { class: 'qz-res', 'aria-live': 'polite' });
+    KD.pairs.forEach(function (c, i) {
+      var b = h('button', { type: 'button', class: 'kdcell', 'data-id': c.w.id, 'data-kind': c.k, 'aria-label': '?', text: '❔' });
+      function show() { b.classList.add('up'); b.textContent = c.k === 'e' ? c.w.e : c.w[lang]; b.setAttribute('aria-label', c.w.en); if (c.k === 'w') b.setAttribute('lang', lang); }
+      function hide() { b.classList.remove('up'); b.textContent = '❔'; b.setAttribute('aria-label', '?'); b.removeAttribute('lang'); }
+      b.addEventListener('click', function () {
+        if (KD.busy || b.classList.contains('up') || b.classList.contains('done')) return;
+        show(); if (B.fx) B.fx.tap(); if (c.k === 'w') U.speak(c.w[lang], lang, null, set.rate);
+        KD.flipped.push({ b: b, c: c, hide: hide });
+        if (KD.flipped.length < 2) return;
+        var a = KD.flipped[0], z = KD.flipped[1]; KD.flipped = [];
+        if (a.c.w.id === z.c.w.id && a.c.k !== z.c.k) {
+          a.b.classList.add('done'); z.b.classList.add('done'); KD.matched++; if (B.fx) B.fx.good(); KD.stars++; var s = document.getElementById('kd-stars'); if (s) s.textContent = '⭐ ' + KD.stars;
+          if (KD.matched >= KD.need) { KD.busy = true; KD.tm = setTimeout(function () { if (alive()) finish(app); }, 900); }
+        } else { KD.busy = true; if (B.fx) B.fx.bad(); KD.tm = setTimeout(function () { a.hide(); z.hide(); KD.busy = false; }, 1000); }
+      });
+      grid.appendChild(b);
+    });
+    app.appendChild(grid); app.appendChild(res);
+  }
 })(window.B);
 
 ;
@@ -5311,7 +7108,26 @@
     if (S.pair.length) player(root); else setup(root);
   };
 
-  function setup(root) {
+  // ---- suggested videos: links to YouTube searches (nothing is loaded or sent from Bhasha)
+  var WS = { lang: null };
+  function yt(q) { return 'https://www.youtube.com/results?search_query=' + encodeURIComponent(q); }
+  function suggest() {
+    WS.lang = WS.lang || set.focus; var V = B.VIDEOS, lang = WS.lang, L = V.names[lang], box = h('section', { class: 'panel', id: 'ws-sug' });
+    function link(text, q) { return h('a', { class: 'abtn', href: yt(q), target: '_blank', rel: 'noopener noreferrer', text: text + ' ↗' }); }
+    box.appendChild(h('h2', { text: '🎓 ' + t('wsH') }));
+    box.appendChild(h('p', { class: 'note', text: t('wsLede', { l: L }) }));
+    var ls = h('select', { id: 'ws-lang', 'aria-label': t('language') }, B.LEARN.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); ls.value = lang;
+    ls.addEventListener('change', function () { WS.lang = ls.value; var n = suggest(); box.replaceWith(n); var f = n.querySelector('#ws-lang'); if (f) f.focus(); });
+    box.appendChild(h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'ws-lang', text: t('language') }), ls])]));
+    box.appendChild(h('div', { class: 'acts wrap-acts' }, V.topics.map(function (tp) { return link(t('wsT_' + tp[0]), tp[1].replace('{L}', L)); })));
+    var ch = V.channels[lang];
+    if (ch && ch.length) { box.appendChild(h('h3', { text: t('wsCh') })); box.appendChild(h('div', { class: 'acts wrap-acts' }, ch.map(function (c) { return link(c, c); }))); }
+    box.appendChild(h('p', { class: 'note', text: t('wsTip', { r: t('nav_read') }) }));
+    return box;
+  }
+
+  function setup(root) { setup0(root); root.appendChild(suggest()); }
+  function setup0(root) {
     root.textContent = '';
     var info = h('div', { class: 'wt-info', 'aria-live': 'polite' }), subs = [null, null], files = { media: null };
     function status() { info.textContent = [files.media ? '🎞 ' + files.media.name : '', subs[0] ? '📝 ' + subs[0].name + ' (' + subs[0].lines.length + ')' : '', subs[1] ? '🌐 ' + subs[1].name + ' (' + subs[1].lines.length + ')' : ''].filter(Boolean).join('   '); startBtn.disabled = !subs[0]; }
@@ -5559,7 +7375,7 @@
       h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'hm-focus', text: t('focusLang') }), (function () { var s = h('select', { id: 'hm-focus' }, B.INDIC.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); s.value = set.focus; s.addEventListener('change', function () { set.focus = s.value; U.saveSet(); B.views.home(app); }); return s; })()])])]));
     var stats = h('div', { class: 'stats' }, [stat(saved, t('statWords')), stat(due, t('statDue')), stat(U.streak(), t('statStreak'))]);
     app.appendChild(stats);
-    var cards = [['/today/', '📅', 'nav_today', 'cToday'], ['/say/', '🗣', 'nav_say', 'cSay'], ['/talk/', '💬', 'nav_talk', 'cTalk'], ['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '📚', 'nav_phrases', 'cPhrases'], ['/privacy/', '🔒', 'pvTitle', 'cPrivacy']];
+    var cards = [['/today/', '📅', 'nav_today', 'cToday'], ['/say/', '🗣', 'nav_say', 'cSay'], ['/talk/', '💬', 'nav_talk', 'cTalk'], ['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '📚', 'nav_phrases', 'cPhrases'], ['/kids/', '🧒', 'nav_kids', 'cKids'], ['/proverbs/', '💬', 'prH', 'cProverbs'], ['/twisters/', '👅', 'twH', 'cTwisters'], ['/privacy/', '🔒', 'pvTitle', 'cPrivacy']];
     var grid = h('div', { class: 'cards' });
     cards.forEach(function (c) { grid.appendChild(h('a', { class: 'card', href: B.base + c[0].slice(1), onclick: function (e) { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); U.go(c[0]); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: c[1] }), h('h2', { text: t(c[2]) }), h('p', { text: t(c[3]) }), c[0] === '/review/' && due ? h('span', { class: 'chip lr', text: t('dueCount', { n: due }) }) : null])); });
     app.appendChild(grid);
@@ -5649,8 +7465,9 @@
   var U = B.ui, h = U.h, t = U.t, set = U.set, $ = U.$;
   var ORIGIN = 'https://eknathalabs.com', MARK = 'M29.2 23.2V35.5Q29.2 37.5 28.4 38.4Q27.6 39.4 26.1 39.4Q25 39.4 23.8 38.7Q22.6 38.1 21.6 37Q20.7 36 20 34.8Q19.4 33.6 19.4 32.5Q19.4 31.2 20.1 30.4Q20.9 29.6 22.9 29.6L23 29.7V23.2H18V18.2H46V23.2H41.9V45.8H35.7V23.2Z';
   B.MARK = MARK; B.base = '/';
-  var ROUTES = { '': 'home', today: 'today', talk: 'talk', privacy: 'privacy', read: 'read', say: 'say', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases' };
+  var ROUTES = { '': 'home', today: 'today', talk: 'talk', kids: 'kids', proverbs: 'proverbs', twisters: 'twisters', privacy: 'privacy', read: 'read', say: 'say', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases' };
   var NAV = [['today', '📅'], ['say', '🗣'], ['talk', '💬'], ['watch', '🎬'], ['read', '📖'], ['words', '🗂'], ['review', '🧠'], ['scripts', 'अ'], ['phrases', '📚']];
+  var KIDNAV = [['kids', '🧒'], ['today', '📅'], ['talk', '💬'], ['phrases', '📚']];
   var app;
   function mark() { var NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg'), p = document.createElementNS(NS, 'path'); s.setAttribute('viewBox', '14 14 36 36'); s.setAttribute('width', '22'); s.setAttribute('height', '22'); s.setAttribute('aria-hidden', 'true'); p.setAttribute('d', MARK); p.setAttribute('fill', 'currentColor'); s.appendChild(p); return s; }
   function pathKey() { var p = location.pathname.replace(/index\.html$/, '').replace(/^\/+|\/+$/g, ''); return p; }
@@ -5674,6 +7491,7 @@
     sel('s-rate', t('voiceSpeed'), [['0.6', '0.6×'], ['0.75', '0.75×'], ['0.9', '0.9×'], ['1', '1×'], ['1.15', '1.15×']], String(set.rate), function (v) { set.rate = +v; U.saveSet(); });
     sel('s-perday', t('perDay'), [['5', '5'], ['10', '10'], ['20', '20'], ['40', '40'], ['0', t('unlimited')]], String(set.perDay), function (v) { set.perDay = +v; U.saveSet(); });
     seg(t('theme'), [['light', t('light')], ['dark', t('dark')], ['new', t('new')]], set.theme, function (v) { set.theme = v; U.saveSet(); U.applyTheme(); });
+    seg(t('kdMode'), [['1', t('on')], ['0', t('off')]], set.kids ? '1' : '0', function (v) { set.kids = v === '1'; U.saveSet(); U.applyKids(); buildChrome(); route(); });
     seg(t('setSound'), [['1', t('on')], ['0', t('off')]], set.sound ? '1' : '0', function (v) { set.sound = v === '1'; U.saveSet(); if (set.sound && B.fx) B.fx.good(); });
     seg(t('setHaptic'), [['1', t('on')], ['0', t('off')]], set.haptic ? '1' : '0', function (v) { set.haptic = v === '1'; U.saveSet(); if (set.haptic && B.fx) B.fx.tap(); });
     panel.appendChild(h('button', { type: 'button', class: 'abtn', style: 'margin-top:12px', text: '🔊 ' + t('voiceCheck'), onclick: function () { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); U.openVoiceCheck(); } }));
@@ -5683,7 +7501,7 @@
     if (!buildChrome.bound) { buildChrome.bound = true; document.addEventListener('keydown', function (e) { var p = $('#setp'); if (e.key === 'Escape' && p && !p.hidden) { p.hidden = true; var b = $('[aria-controls=setp]'); if (b) { b.setAttribute('aria-expanded', 'false'); b.focus(); } } }); document.addEventListener('click', function (e) { var p = $('#setp'); if (p && !p.hidden && !p.parentNode.contains(e.target)) { p.hidden = true; $('[aria-controls=setp]').setAttribute('aria-expanded', 'false'); } }); }
     hd.appendChild(bar);
     var nav = h('nav', { class: 'wrap tabsnav', 'aria-label': t('mainNav'), id: 'mnav' });
-    NAV.forEach(function (n) { nav.appendChild(h('a', { href: '/' + n[0] + '/', 'data-nav': '1', 'data-k': n[0] }, [h('span', { 'aria-hidden': 'true', text: n[1] }), h('span', { text: t('nav_' + n[0]) })])); });
+    (set.kids ? KIDNAV : NAV).forEach(function (n) { nav.appendChild(h('a', { href: '/' + n[0] + '/', 'data-nav': '1', 'data-k': n[0] }, [h('span', { 'aria-hidden': 'true', text: n[1] }), h('span', { text: t('nav_' + n[0]) })])); });
     hd.appendChild(nav);
     var sk = $('.skip'); if (sk) sk.textContent = t('skip');
     var ft = $('#ftr'); ft.textContent = ''; ft.appendChild(h('div', { class: 'wrap' }, [h('span', null, [t('part') + ' · ', h('a', { href: ORIGIN + (set.ui === 'en' || U.MAINSITE.indexOf(set.ui) < 0 ? '/' : '/' + set.ui + '/'), text: 'eknathalabs.com' })]), h('a', { class: 'pvlink', href: '/privacy/', 'data-nav': '1', text: '🔒 ' + t('pvBadge') }), h('span', { text: t('privacyNote') })]));
@@ -5691,6 +7509,7 @@
 
   function route() {
     var k = pathKey(), view = ROUTES[k]; if (!view) { k = ''; view = 'home'; }
+    if (view === 'home' && set.kids) { view = 'kids'; k = 'kids'; }
     U.closePopup(); app.textContent = ''; if (U.pronClose) U.pronClose(); if (B.views._cleanup) B.views._cleanup();
     B.views[view](app);
     document.title = (k ? t('nav_' + k) + ' · ' : '') + 'Bhasha · EknathaLabs';
@@ -5698,7 +7517,7 @@
   }
 
   function init() {
-    app = $('#app'); U.applyTheme(); U.applyLang(); buildChrome();
+    app = $('#app'); U.applyTheme(); U.applyLang(); U.applyKids(); buildChrome();
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a[data-nav]'); if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); U.go(a.getAttribute('href')); });
     window.addEventListener('popstate', route);
     route();

@@ -23,8 +23,13 @@
       sc = (tag === code ? 2 : 1) + (v.localService ? 0.5 : 0) + (v['default'] ? 0.1 : 0);
       if (sc > bs) { bs = sc; best = v; }
     }
+    var want = set.voices && set.voices[lang];
+    if (want && !dead[lang]) for (i = 0; i < voices.length; i++) if (voices[i].voiceURI === want && (voices[i].lang || '').toLowerCase().split(/[-_]/)[0] === pre) return voices[i];
     return dead[lang] ? null : best;
   };
+  // speed: a language's own speed, unless a caller asks for a fixed slow speed
+  U.rateFor = function (lang) { var r = set.rates && set.rates[lang]; return r > 0 ? r : set.rate; };
+  U.voicesFor = function (lang) { load(); var pre = B.bcp(lang).toLowerCase().split(/[-_]/)[0]; return voices.filter(function (v) { return (v.lang || '').toLowerCase().split(/[-_]/)[0] === pre; }); };
   // ---- offline engine
   var ESP = { en: 'en-us', zh: 'cmn', pt: 'pt-pt', no: 'nb', iw: 'he' };
   function espCode(lang) { return ESP[lang] || lang; }
@@ -88,9 +93,10 @@
     try { speechSynthesis.cancel(); } catch (e) { }
     next();
   }
-  U.speak = function (text, lang, onend, rate) {
+  U.speak = function (text, lang, onend, rate, fixed) {
     if (!text) { if (onend) onend(); return false; }
     var my = ++tok; if (audioEl) { try { audioEl.pause(); } catch (e) { } }
+    if (!fixed && (rate == null || rate === set.rate)) rate = U.rateFor(lang);
     if (!U.canSpeak()) { fallback(text, lang, onend, rate, my); return true; }
     whenVoices().then(function () {
       if (my !== tok) return; load(); var v = U.voiceFor(lang);
@@ -110,7 +116,16 @@
       B.LEARN.concat(['en']).forEach(function (l) {
         var v = U.voiceFor(l), st = v ? t('vcDevice') + ': ' + v.name : (engine ? t('vcOffline') : (set.ov === 'no' ? t('vcNone') : t('vcOfflineAvail')));
         var phr = (B.PHRASES.filter(function (p) { return p.id === 'hello'; })[0] || {})[l] || 'Hello';
-        rows.appendChild(h('div', { class: 'vc-row' }, [h('div', { class: 'vc-l' }, [h('b', { text: U.langNative(l) }), h('span', { text: ' ' + U.langName(l) })]), h('div', { class: 'vc-s', text: st }), h('button', { type: 'button', class: 'abtn', text: '🔊 ' + t('vcTest'), onclick: function () { U.speak(phr, l, function () { paint(); }, 0.9); } })]));
+        var vs = U.voicesFor(l), vsel = null, rsel = null;
+        if (vs.length) {
+          vsel = h('select', { id: 'vc-v-' + l, 'aria-label': t('vcVoice') + ': ' + U.langName(l) }, [h('option', { value: '', text: t('vcAuto') })].concat(vs.map(function (x) { return h('option', { value: x.voiceURI, text: x.name + ' (' + x.lang + ')' }); })));
+          vsel.value = (set.voices && set.voices[l]) || ''; if (vsel.value !== ((set.voices && set.voices[l]) || '')) vsel.value = '';
+          vsel.addEventListener('change', function () { if (vsel.value) set.voices[l] = vsel.value; else delete set.voices[l]; delete dead[l]; U.saveSet(); var id = vsel.id; paint(); var nn = document.getElementById(id); if (nn) nn.focus(); });
+        }
+        rsel = h('select', { id: 'vc-r-' + l, 'aria-label': t('vcSpeed') + ': ' + U.langName(l) }, [h('option', { value: '', text: t('vcDefault') })].concat(['0.6', '0.75', '0.9', '1', '1.15'].map(function (x) { return h('option', { value: x, text: x + '×' }); })));
+        rsel.value = set.rates && set.rates[l] ? String(set.rates[l]) : '';
+        rsel.addEventListener('change', function () { if (rsel.value) set.rates[l] = +rsel.value; else delete set.rates[l]; U.saveSet(); });
+        rows.appendChild(h('div', { class: 'vc-row' }, [h('div', { class: 'vc-l' }, [h('b', { text: U.langNative(l) }), h('span', { text: ' ' + U.langName(l) })]), h('div', { class: 'vc-s', text: st }), vsel ? h('label', { class: 'vc-c', for: 'vc-v-' + l }, [h('span', { text: t('vcVoice') }), vsel]) : null, h('label', { class: 'vc-c', for: 'vc-r-' + l }, [h('span', { text: t('vcSpeed') }), rsel]), h('button', { type: 'button', class: 'abtn', text: '🔊 ' + t('vcTest'), onclick: function () { U.speak(phr, l, function () { paint(); }); } })]));
       });
     }
     var seg = h('div', { class: 'seg', role: 'group', 'aria-label': t('ovLabel') });
