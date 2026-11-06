@@ -106,14 +106,14 @@
     if (tap) {
       var r = wordRom(w);
       panel.appendChild(h('p', { class: 'ph-t big kdword', lang: lang, text: w[lang] })); if (r) panel.appendChild(h('p', { class: 'ph-r', text: r }));
-      panel.appendChild(h('button', { type: 'button', class: 'abtn', id: 'kd-hear', 'aria-label': t('speak') + ': ' + w.en, text: '🔊 ' + t('speak'), onclick: function () { U.speak(w[lang], lang, null, set.rate); } }));
+      panel.appendChild(h('button', { type: 'button', class: 'abtn', id: 'kd-hear', 'aria-label': t('speak') + ': ' + U.mn(w, lang), text: '🔊 ' + t('speak'), onclick: function () { U.speak(w[lang], lang, null, set.rate); } }));
       setTimeout(function () { U.speak(w[lang], lang, null, set.rate); }, 200);
     } else {
-      panel.appendChild(h('div', { class: 'kdemoji', role: 'img', 'aria-label': w.en, text: w.e }));
+      panel.appendChild(h('div', { class: 'kdemoji', role: 'img', 'aria-label': U.mn(w, lang), text: w.e }));
     }
     var res = h('p', { class: 'qz-res', 'aria-live': 'polite' }), box = h('div', { class: 'kdopts' + (tap ? ' pics' : '') });
     opts.forEach(function (o) {
-      var rr = tap ? '' : wordRom(o), b = h('button', { type: 'button', class: 'abtn kdopt', 'data-id': o.id, 'aria-label': tap ? o.en : null, onclick: function () {
+      var rr = tap ? '' : wordRom(o), b = h('button', { type: 'button', class: 'abtn kdopt', 'data-id': o.id, 'aria-label': tap ? U.mn(o, lang) : null, onclick: function () {
         if (KD.busy) return;
         if (o.id === w.id) {
           KD.busy = true; b.classList.add('right'); res.textContent = t('kdWell'); if (B.fx) B.fx.good(); if (KD.first) { KD.stars++; var s = document.getElementById('kd-stars'); if (s) s.textContent = '⭐ ' + KD.stars; }
@@ -131,7 +131,7 @@
     var grid = h('div', { class: 'kdgrid' }), res = h('p', { class: 'qz-res', 'aria-live': 'polite' });
     KD.pairs.forEach(function (c, i) {
       var b = h('button', { type: 'button', class: 'kdcell', 'data-id': c.w.id, 'data-kind': c.k, 'aria-label': '?', text: '❔' });
-      function show() { b.classList.add('up'); b.textContent = c.k === 'e' ? c.w.e : c.w[lang]; b.setAttribute('aria-label', c.w.en); if (c.k === 'w') b.setAttribute('lang', lang); }
+      function show() { b.classList.add('up'); b.textContent = c.k === 'e' ? c.w.e : c.w[lang]; b.setAttribute('aria-label', U.mn(c.w, lang)); if (c.k === 'w') b.setAttribute('lang', lang); }
       function hide() { b.classList.remove('up'); b.textContent = '❔'; b.setAttribute('aria-label', '?'); b.removeAttribute('lang'); }
       b.addEventListener('click', function () {
         if (KD.busy || b.classList.contains('up') || b.classList.contains('done')) return;

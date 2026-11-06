@@ -11,7 +11,7 @@
       h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'hm-focus', text: t('focusLang') }), (function () { var s = h('select', { id: 'hm-focus' }, B.INDIC.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); s.value = set.focus; s.addEventListener('change', function () { set.focus = s.value; U.saveSet(); B.views.home(app); }); return s; })()])])]));
     var stats = h('div', { class: 'stats' }, [stat(saved, t('statWords')), stat(due, t('statDue')), stat(U.streak(), t('statStreak'))]);
     app.appendChild(stats);
-    var cards = [['/today/', '📅', 'nav_today', 'cToday'], ['/say/', '🗣', 'nav_say', 'cSay'], ['/talk/', '💬', 'nav_talk', 'cTalk'], ['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '📚', 'nav_phrases', 'cPhrases'], ['/kids/', '🧒', 'nav_kids', 'cKids'], ['/proverbs/', '💬', 'prH', 'cProverbs'], ['/twisters/', '👅', 'twH', 'cTwisters'], ['/privacy/', '🔒', 'pvTitle', 'cPrivacy']];
+    var cards = [['/today/', '📅', 'nav_today', 'cToday'], ['/say/', '🗣', 'nav_say', 'cSay'], ['/talk/', '💬', 'nav_talk', 'cTalk'], ['/watch/', '🎬', 'nav_watch', 'cWatch'], ['/read/', '📖', 'nav_read', 'cRead'], ['/review/', '🧠', 'nav_review', 'cReview'], ['/words/', '🗂', 'nav_words', 'cWords'], ['/scripts/', 'अ', 'nav_scripts', 'cScripts'], ['/phrases/', '📚', 'nav_phrases', 'cPhrases'], ['/kids/', '🧒', 'nav_kids', 'cKids'], ['/proverbs/', '💬', 'prH', 'cProverbs'], ['/twisters/', '👅', 'twH', 'cTwisters'], ['/stories/', '📖', 'nav_stories', 'cStories'], ['/write/', '✍', 'nav_write', 'cWrite'], ['/pairs/', '👂', 'nav_pairs', 'cPairs'], ['/manage/', '⚙', 'nav_manage', 'cManage'], ['/privacy/', '🔒', 'pvTitle', 'cPrivacy']];
     var grid = h('div', { class: 'cards' });
     cards.forEach(function (c) { grid.appendChild(h('a', { class: 'card', href: B.base + c[0].slice(1), onclick: function (e) { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button) return; e.preventDefault(); U.go(c[0]); } }, [h('span', { class: 'ci', 'aria-hidden': 'true', text: c[1] }), h('h2', { text: t(c[2]) }), h('p', { text: t(c[3]) }), c[0] === '/review/' && due ? h('span', { class: 'chip lr', text: t('dueCount', { n: due }) }) : null])); });
     app.appendChild(grid);
@@ -86,8 +86,18 @@
       B.PHRASES.filter(function (p) { return p.cat === PH.cat; }).forEach(function (p) {
         var txt = p[PH.lang], tgt = h('div', { class: 'ph-t', lang: PH.lang }); tgt.appendChild(U.renderText(txt, PH.lang, { roman: false }));
         U.bindWords(tgt, function () { return PH.lang; }, function () { return txt; }, function () { draw(); });
-        var row = h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, (B.isBrahmic(txt) ? h('div', { class: 'ph-r', text: B.translit(txt, set.scheme, PH.lang) }) : null), h('div', { class: 'ph-n', text: p.en })]), h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, PH.lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, PH.lang, null, 0.55); } })])]);
-        row.querySelector('.ph-a').appendChild(U.pronToggle(row, txt, PH.lang)); list.appendChild(row);
+        var row = h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, (B.isBrahmic(txt) ? h('div', { class: 'ph-r', text: B.translit(txt, set.scheme, PH.lang) }) : null), h('div', { class: 'ph-n', text: U.mn(p, PH.lang) })]), h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, PH.lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, PH.lang, null, 0.55); } })])]);
+        row.querySelector('.ph-a').appendChild(U.pronToggle(row, txt, PH.lang));
+        var al = B.ALTS && B.ALTS[p.id] && B.ALTS[p.id][PH.lang];
+        if (al) {
+          var altBox = h('div', { class: 'alts', hidden: true }), altBtn = h('button', { type: 'button', class: 'abtn alt-btn', 'aria-expanded': 'false', text: '≈ ' + t('altBtn'), onclick: function () { altBox.hidden = !altBox.hidden; altBtn.setAttribute('aria-expanded', String(!altBox.hidden)); } });
+          [[t('altPolite'), al[0]], [t('altCasual'), al[1]]].forEach(function (x) {
+            var rr = B.isBrahmic(x[1]) ? B.translit(x[1], set.scheme, PH.lang) : '';
+            altBox.appendChild(h('div', { class: 'alt' }, [h('span', { class: 'chip', text: x[0] }), h('span', { class: 'alt-t', lang: PH.lang, text: x[1] }), rr ? h('span', { class: 'ph-r', text: rr }) : null, h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + x[1], text: '🔊', onclick: function () { U.speak(x[1], PH.lang, null, set.rate); } })]));
+          });
+          row.querySelector('.ph-main').appendChild(altBtn); row.querySelector('.ph-main').appendChild(altBox);
+        }
+        list.appendChild(row);
       });
     }
     draw();

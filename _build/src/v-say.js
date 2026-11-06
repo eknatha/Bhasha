@@ -29,7 +29,7 @@
     app.textContent = ''; U.stopSpeak(); Y.to = Y.to || set.focus;
     app.appendChild(h('h1', { text: t('nav_say') })); app.appendChild(h('p', { class: 'lede', text: t('sayLede') }));
     var ta = h('textarea', { id: 'sy-text', rows: 3, maxlength: 600, placeholder: t('sayPlaceholder'), 'aria-label': t('sayInput'), spellcheck: 'true', lang: 'en' }); ta.value = Y.text;
-    var sel = h('select', { id: 'sy-to', 'aria-label': t('sayTo') }, B.LEARN.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); sel.value = Y.to;
+    var sel = h('select', { id: 'sy-to', 'aria-label': t('sayTo') }, B.LEARN.filter(function (l) { return l !== 'en'; }).map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); sel.value = Y.to;
     var out = h('div', { class: 'say-out', 'aria-live': 'polite' }), status = h('p', { class: 'note', hidden: true });
     sel.addEventListener('change', function () { Y.to = sel.value; if (Y.text) go(false); });
     ta.addEventListener('input', function () { Y.text = ta.value; });

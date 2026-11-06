@@ -60,7 +60,7 @@
       }
       if (!L.ids.length && !L.recall.length) { box.appendChild(h('p', { text: t('tdDone') })); return; }
       box.appendChild(h('h2', { text: t('tdLearn') + ': ' + L.ids.length }));
-      box.appendChild(h('ul', { class: 'plain' }, L.ids.map(function (id) { return h('li', { lang: lang, text: B.lesson.P(id).en }); })));
+      box.appendChild(h('ul', { class: 'plain' }, L.ids.map(function (id) { return h('li', { lang: lang, text: U.mn(B.lesson.P(id), lang) }); })));
       if (L.recall.length) box.appendChild(h('p', { class: 'note', text: t('tdRecallN', { n: L.recall.length }) }));
       box.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold big', text: t('tdStart'), onclick: function () { TD.step = L.ids.length ? 'learn' : 'recall'; TD.i = 0; TD.right = 0; TD.total = 0; draw(); } })]));
     }
@@ -70,8 +70,8 @@
       L.ids.forEach(function (id) {
         var p = B.lesson.P(id), txt = p[lang], tgt = h('div', { class: 'ph-t', lang: lang }); tgt.appendChild(U.renderText(txt, lang, { roman: false }));
         U.bindWords(tgt, function () { return lang; }, function () { return txt; }, function () { });
-        var row = h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, rom(txt) ? h('div', { class: 'ph-r', text: rom(txt) }) : null, h('div', { class: 'ph-n', text: p.en })]),
-          h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55); } })])]);
+        var row = h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, rom(txt) ? h('div', { class: 'ph-r', text: rom(txt) }) : null, h('div', { class: 'ph-n', text: U.mn(p, lang) })]),
+          h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + U.mn(p, lang), text: '🔊', onclick: function () { U.speak(txt, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55); } })])]);
         row.querySelector('.ph-a').appendChild(U.pronToggle(row, txt, lang)); list.appendChild(row);
       });
       box.appendChild(list);
@@ -82,22 +82,22 @@
       if (TD.i >= ids.length) { if (kind === 'listen' && L.recall.length) { TD.step = 'recall'; TD.i = 0; return draw(); } TD.step = 'done'; return draw(); }
       var id = ids[TD.i], p = B.lesson.P(id), txt = p[lang];
       box.appendChild(steps(kind)); box.appendChild(h('p', { class: 'note', text: (TD.i + 1) + ' / ' + ids.length }));
-      var keyOf = kind === 'listen' ? function (q) { return q.en; } : function (q) { return q[lang]; };
+      var keyOf = kind === 'listen' ? function (q) { return U.mn(q, lang); } : function (q) { return q[lang]; };
       var opts = B.lesson.shuffle([p].concat(B.lesson.distract(id, 2, keyOf)));
       if (kind === 'listen') {
         box.appendChild(h('h2', { text: t('tdListenQ') }));
         box.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn big', text: '🔊', 'aria-label': t('speak'), onclick: function () { U.speak(txt, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', text: '🐢', 'aria-label': t('slow'), onclick: function () { U.speak(txt, lang, null, 0.55); } })]));
         setTimeout(function () { U.speak(txt, lang, null, set.rate); }, 150);
       } else {
-        box.appendChild(h('h2', { text: t('tdRecallQ') })); box.appendChild(h('p', { class: 'ph-n big', text: p.en }));
+        box.appendChild(h('h2', { text: t('tdRecallQ') })); box.appendChild(h('p', { class: 'ph-n big', text: U.mn(p, lang) }));
       }
       var res = h('p', { class: 'qz-res', 'aria-live': 'polite' }), done = false, nb = h('button', { type: 'button', class: 'abtn gold', text: t('tdNext'), hidden: true, onclick: function () { TD.i++; draw(); } });
       var wrap = h('div', { class: 'opts' }, opts.map(function (o) {
-        var kids = kind === 'listen' ? [h('span', { text: o.en })] : [h('span', { lang: lang, text: o[lang] }), rom(o[lang]) ? h('span', { class: 'r', text: rom(o[lang]) }) : null];
+        var kids = kind === 'listen' ? [h('span', { text: U.mn(o, lang) })] : [h('span', { lang: lang, text: o[lang] }), rom(o[lang]) ? h('span', { class: 'r', text: rom(o[lang]) }) : null];
         return h('button', { type: 'button', class: 'abtn opt', onclick: function (ev) {
           if (done) return; done = true; var ok = o.id === id, b = ev.currentTarget; b.classList.add(ok ? 'right' : 'wrong');
           if (!ok) [].forEach.call(wrap.children, function (x, i) { if (opts[i].id === id) x.classList.add('right'); });
-          res.textContent = ok ? t('correct') : t('wrongIs', { a: kind === 'listen' ? p.en : txt }); U.speak(txt, lang, null, set.rate);
+          res.textContent = ok ? t('correct') : t('wrongIs', { a: kind === 'listen' ? U.mn(p, lang) : txt }); U.speak(txt, lang, null, set.rate);
           TD.total++; if (ok) TD.right++; U.logReview(); if (B.fx) { if (ok) B.fx.good(); else B.fx.bad(); }
           var c = st.cards[id] || B.srsNew(Date.now()); st.cards[id] = B.srsNext(c, ok ? 2 : 0, Date.now());
           if (kind === 'recall' || !ok) save(); else save();

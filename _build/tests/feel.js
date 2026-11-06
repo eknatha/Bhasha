@@ -94,5 +94,5 @@ async function page(o,perm,init){const c=await b.newContext({viewport:{width:110
 for(const l of ['en','hi','te','kn','ta','ml','bn','mr','ko','es','de','fr','gu','as']){const p=await page({ui:l});await p.goto(BASE+'/privacy/');await p.waitForTimeout(150);
  const want=await p.evaluate(l=>B.I18N[l].pvTitle,l);ok((await p.textContent('h1')).includes(want),'privacy '+l+': title in own language');
  const ov=await p.evaluate(()=>document.documentElement.scrollWidth>document.documentElement.clientWidth+1);ok(!ov,'privacy '+l+': no horizontal overflow');
- await p.goto(BASE+'/phrases/');await p.click('.ph:first-child button[aria-label]:last-child');const lab=await p.evaluate(l=>B.I18N[l].pronRec,l);ok((await p.textContent('.pron .abtn.gold')).includes(lab),'pron '+l+': record label in own language');await p.ctx.close();}
+ await p.goto(BASE+'/phrases/');await p.click('.ph:first-child .ph-a button:last-child');const lab=await p.evaluate(l=>B.I18N[l].pronRec,l);ok((await p.textContent('.pron .abtn.gold')).includes(lab),'pron '+l+': record label in own language');await p.ctx.close();}
 console.log(fails?'FAILED '+fails:'ALL PASS');await b.close();process.exit(fails?1:0);})();

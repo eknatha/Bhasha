@@ -67,14 +67,14 @@ node tests/core.test.js            # transliteration, spaced repetition, subtitl
 node tests/flow.js                 # read, save, words, CSV export, review, Say it (with and without a translator), scripts, phrases, watch with real audio
 node tests/extras.js               # sayings, twisters, kids games and kids mode, per-language voice and speed, Watch suggestions, themes
 node tests/validate.js             # 420 phrases x 13 languages, 56 conversations, script and romanization checks, interface text complete in 14 languages
-node tests/voice.js                # offline voice produces audible audio for all thirteen languages (browser with no device voices)
+node tests/voice.js                # offline voice produces audible audio for all seventeen languages (browser with no device voices)
 node tests/voice2.js               # device voice matching (odd language tags), Voice check dialog
 node tests/audit.js                # overflow at 4 widths x 3 themes x 14 languages x 14 pages, contrast, keyboard, no outside requests, offline
 ```
 
 ## Needs a native speaker before you rely on it
 
-- **Interface text** for every language except English, and the **420-phrase phrasebook and 56 conversations in all thirteen languages** (`src/data.js`), are careful drafts, not reviewed by native speakers. `node tests/validate.js` checks completeness, script and placeholders, not correctness of meaning.
+- **Interface text** for every language except English, and the **460-phrase phrasebook and 56 conversations in all seventeen languages** (`src/data.js`), are careful drafts, not reviewed by native speakers. `node tests/validate.js` checks completeness, script and placeholders, not correctness of meaning.
 - **Say it** uses machine translation when the browser provides it. Treat results as a study aid. Marathi and Hindi detection is by script only, so choose the language yourself for Devanagari text.
 - **Romanization** is rule-based. It follows common spoken pronunciation (for example Hindi drops the final schwa), so it can differ from what a given speaker says. Simple style does not mark long and short vowels; scholarly style does.
 - **Speech voices** come from the device first. If a language has no device voice (common for Assamese, Telugu, Kannada, Malayalam, Tamil, Bengali, Marathi on some systems) Bhasha offers a one-time ~18 MB download of an offline voice (eSpeak NG, robotic but audible). Settings, Voice check shows what each language will use. Tested here: all ten languages produce audio via the offline voice; real device voices vary and were checked only with mocks.
@@ -92,3 +92,6 @@ Short synthesised sounds (no audio files), vibration on phones and a confetti bu
 
 ## More tests
 `node tests/feel.js` covers recording, the waveform, a blocked or missing microphone, sounds and vibration (including off), reduced motion, the Settings switches, and the whole Free and private page (counts, no outside requests, no cookies, export, delete, restore, wrong file) in all 14 interface languages. Run it with Chromium's fake microphone (the test sets this up itself).
+
+## Added in this release
+English, Odia, Nepali and Japanese as learning languages (17 in all); 40 more phrases (460); polite and casual alternatives for 12 common phrases; Minimal pairs listening game; Stories (10 short dialogues with a quiz); Write (type the translation, dictation, fill the gap); Review Manager (filter, sort, bulk actions, weak spots); known-word tracking and colouring in Read. New text for Odia, Nepali, Japanese readings, alternatives, stories and minimal pairs is a draft awaiting native review. Test: `node tests/newfeat.js`.

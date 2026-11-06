@@ -2,19 +2,19 @@
 (function (B) {
   'use strict';
   // ---------- languages
-  B.LANGS = { te: { name: 'Telugu', native: 'తెలుగు', bcp: 'te-IN', script: 'Telugu' }, hi: { name: 'Hindi', native: 'हिन्दी', bcp: 'hi-IN', script: 'Devanagari' }, kn: { name: 'Kannada', native: 'ಕನ್ನಡ', bcp: 'kn-IN', script: 'Kannada' }, ta: { name: 'Tamil', native: 'தமிழ்', bcp: 'ta-IN', script: 'Tamil' }, ml: { name: 'Malayalam', native: 'മലയാളം', bcp: 'ml-IN', script: 'Malayalam' }, bn: { name: 'Bengali', native: 'বাংলা', bcp: 'bn-IN', script: 'Bengali' }, mr: { name: 'Marathi', native: 'मराठी', bcp: 'mr-IN', script: 'Devanagari' }, ko: { name: 'Korean', native: '한국어', bcp: 'ko-KR', script: 'Hangul' }, gu: { name: 'Gujarati', native: 'ગુજરાતી', bcp: 'gu-IN', script: 'Gujarati' }, as: { name: 'Assamese', native: 'অসমীয়া', bcp: 'as-IN', script: 'Bengali' }, fr: { name: 'French', native: 'Français', bcp: 'fr-FR', script: 'Latin' }, es: { name: 'Spanish', native: 'Español', bcp: 'es-ES', script: 'Latin' }, de: { name: 'German', native: 'Deutsch', bcp: 'de-DE', script: 'Latin' } };
-  B.LEARN = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'gu', 'as', 'ko', 'es', 'de', 'fr']; // languages with phrasebook, voice and Say it
-  B.SCRIPT_LANGS = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'gu', 'as', 'ko']; // languages with a script chart
+  B.LANGS = { te: { name: 'Telugu', native: 'తెలుగు', bcp: 'te-IN', script: 'Telugu' }, hi: { name: 'Hindi', native: 'हिन्दी', bcp: 'hi-IN', script: 'Devanagari' }, kn: { name: 'Kannada', native: 'ಕನ್ನಡ', bcp: 'kn-IN', script: 'Kannada' }, ta: { name: 'Tamil', native: 'தமிழ்', bcp: 'ta-IN', script: 'Tamil' }, ml: { name: 'Malayalam', native: 'മലയാളം', bcp: 'ml-IN', script: 'Malayalam' }, bn: { name: 'Bengali', native: 'বাংলা', bcp: 'bn-IN', script: 'Bengali' }, mr: { name: 'Marathi', native: 'मराठी', bcp: 'mr-IN', script: 'Devanagari' }, ko: { name: 'Korean', native: '한국어', bcp: 'ko-KR', script: 'Hangul' }, gu: { name: 'Gujarati', native: 'ગુજરાતી', bcp: 'gu-IN', script: 'Gujarati' }, as: { name: 'Assamese', native: 'অসমীয়া', bcp: 'as-IN', script: 'Bengali' }, fr: { name: 'French', native: 'Français', bcp: 'fr-FR', script: 'Latin' }, es: { name: 'Spanish', native: 'Español', bcp: 'es-ES', script: 'Latin' }, de: { name: 'German', native: 'Deutsch', bcp: 'de-DE', script: 'Latin' }, en: { name: 'English', native: 'English', bcp: 'en-US', script: 'Latin' }, or: { name: 'Odia', native: 'ଓଡ଼ିଆ', bcp: 'or-IN', script: 'Odia' }, ne: { name: 'Nepali', native: 'नेपाली', bcp: 'ne-NP', script: 'Devanagari' }, ja: { name: 'Japanese', native: '日本語', bcp: 'ja-JP', script: 'Kana and kanji' } };
+  B.LEARN = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'gu', 'as', 'ko', 'es', 'de', 'fr', 'en', 'or', 'ne', 'ja']; // languages with phrasebook, voice and Say it
+  B.SCRIPT_LANGS = ['te', 'hi', 'kn', 'ta', 'ml', 'bn', 'mr', 'gu', 'as', 'ko', 'or', 'ne', 'ja']; // languages with a script chart
   B.INDIC = B.LEARN;
   // other reading languages: code, English name, native name, BCP 47 for speech
   B.OTHER = [['en', 'English', 'English', 'en-US'], ['es', 'Spanish', 'Español', 'es-ES'], ['fr', 'French', 'Français', 'fr-FR'], ['de', 'German', 'Deutsch', 'de-DE'], ['it', 'Italian', 'Italiano', 'it-IT'], ['pt', 'Portuguese', 'Português', 'pt-PT'], ['ru', 'Russian', 'Русский', 'ru-RU'], ['ja', 'Japanese', '日本語', 'ja-JP'], ['ko', 'Korean', '한국어', 'ko-KR'], ['zh', 'Chinese', '中文', 'zh-CN'], ['ar', 'Arabic', 'العربية', 'ar-SA'], ['bn', 'Bengali', 'বাংলা', 'bn-IN'], ['mr', 'Marathi', 'मराठी', 'mr-IN'], ['gu', 'Gujarati', 'ગુજરાતી', 'gu-IN'], ['pa', 'Punjabi', 'ਪੰਜਾਬੀ', 'pa-IN'], ['ur', 'Urdu', 'اردو', 'ur-PK'], ['tr', 'Turkish', 'Türkçe', 'tr-TR'], ['id', 'Indonesian', 'Bahasa Indonesia', 'id-ID'], ['th', 'Thai', 'ไทย', 'th-TH'], ['vi', 'Vietnamese', 'Tiếng Việt', 'vi-VN']];
   B.allLangs = function () { return B.LEARN.map(function (c) { return [c, B.LANGS[c].name, B.LANGS[c].native, B.LANGS[c].bcp]; }).concat(B.OTHER.filter(function (o) { return !B.LANGS[o[0]]; })); };
   B.bcp = function (code) { var a = B.allLangs().filter(function (x) { return x[0] === code; })[0]; return a ? a[3] : code; };
   B.detectLang = function (text) {
-    var c = { te: 0, hi: 0, kn: 0, ta: 0, ml: 0, ja: 0, ko: 0, zh: 0, ar: 0, ru: 0, th: 0, bn: 0, gu: 0, pa: 0 }, n = 0, i, cp;
+    var c = { te: 0, hi: 0, kn: 0, ta: 0, ml: 0, ja: 0, ko: 0, zh: 0, ar: 0, ru: 0, th: 0, bn: 0, gu: 0, pa: 0, or: 0 }, n = 0, i, cp;
     for (i = 0; i < text.length && n < 600; i++) {
       cp = text.charCodeAt(i);
-      if (cp >= 0xC00 && cp < 0xC80) c.te++; else if (cp >= 0x900 && cp < 0x980) c.hi++; else if (cp >= 0xC80 && cp < 0xD00) c.kn++; else if (cp >= 0xB80 && cp < 0xC00) c.ta++; else if (cp >= 0xD00 && cp < 0xD80) c.ml++;
+      if (cp >= 0xC00 && cp < 0xC80) c.te++; else if (cp >= 0x900 && cp < 0x980) c.hi++; else if (cp >= 0xC80 && cp < 0xD00) c.kn++; else if (cp >= 0xB80 && cp < 0xC00) c.ta++; else if (cp >= 0xD00 && cp < 0xD80) c.ml++; else if (cp >= 0xB00 && cp < 0xB80) c.or++;
       else if ((cp >= 0x3040 && cp < 0x3100)) c.ja++; else if (cp >= 0xAC00 && cp < 0xD7B0) c.ko++; else if (cp >= 0x4E00 && cp < 0xA000) c.zh++; else if (cp >= 0x600 && cp < 0x700) c.ar++; else if (cp >= 0x400 && cp < 0x500) c.ru++; else if (cp >= 0xE00 && cp < 0xE80) c.th++; else if (cp >= 0x980 && cp < 0xA00) c.bn++; else if (cp >= 0xA80 && cp < 0xB00) c.gu++; else if (cp >= 0xA00 && cp < 0xA80) c.pa++; else continue;
       n++;
     }
@@ -30,13 +30,14 @@
   var CON = { 0x15: ['k', 'k'], 0x16: ['kh', 'kh'], 0x17: ['g', 'g'], 0x18: ['gh', 'gh'], 0x19: ['ng', 'ṅ'], 0x1A: ['ch', 'c'], 0x1B: ['chh', 'ch'], 0x1C: ['j', 'j'], 0x1D: ['jh', 'jh'], 0x1E: ['ny', 'ñ'], 0x1F: ['t', 'ṭ'], 0x20: ['th', 'ṭh'], 0x21: ['d', 'ḍ'], 0x22: ['dh', 'ḍh'], 0x23: ['n', 'ṇ'], 0x24: ['t', 't'], 0x25: ['th', 'th'], 0x26: ['d', 'd'], 0x27: ['dh', 'dh'], 0x28: ['n', 'n'], 0x29: ['n', 'ṉ'], 0x2A: ['p', 'p'], 0x2B: ['ph', 'ph'], 0x2C: ['b', 'b'], 0x2D: ['bh', 'bh'], 0x2E: ['m', 'm'], 0x2F: ['y', 'y'], 0x30: ['r', 'r'], 0x31: ['r', 'ṟ'], 0x32: ['l', 'l'], 0x33: ['l', 'ḷ'], 0x34: ['zh', 'ḻ'], 0x35: ['v', 'v'], 0x36: ['sh', 'ś'], 0x37: ['sh', 'ṣ'], 0x38: ['s', 's'], 0x39: ['h', 'h'] };
   var NUKTA = { 0x58: ['q', 'q'], 0x59: ['kh', 'kh'], 0x5A: ['gh', 'ġ'], 0x5B: ['z', 'z'], 0x5C: ['r', 'ṛ'], 0x5D: ['rh', 'ṛh'], 0x5E: ['f', 'f'], 0x5F: ['y', 'y'] };
   var CHILLU = { 0xD7A: ['n', 'ṇ'], 0xD7B: ['n', 'n'], 0xD7C: ['r', 'r'], 0xD7D: ['l', 'l'], 0xD7E: ['l', 'ḷ'], 0xD7F: ['k', 'k'] };
-  function script(cp) { if (cp >= 0x900 && cp < 0x980) return 'hi'; if (cp >= 0x980 && cp < 0xA00) return 'bn'; if ((cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0x3131 && cp <= 0x3163) || (cp >= 0x1100 && cp <= 0x11FF)) return 'ko'; if (cp >= 0xB80 && cp < 0xC00) return 'ta'; if (cp >= 0xC00 && cp < 0xC80) return 'te'; if (cp >= 0xC80 && cp < 0xD00) return 'kn'; if (cp >= 0xA80 && cp < 0xB00) return 'gu'; if (cp >= 0xD00 && cp < 0xD80) return 'ml'; return null; }
+  function script(cp) { if (cp >= 0x900 && cp < 0x980) return 'hi'; if (cp >= 0x980 && cp < 0xA00) return 'bn'; if ((cp >= 0xAC00 && cp <= 0xD7A3) || (cp >= 0x3131 && cp <= 0x3163) || (cp >= 0x1100 && cp <= 0x11FF)) return 'ko'; if (cp >= 0xB80 && cp < 0xC00) return 'ta'; if (cp >= 0xC00 && cp < 0xC80) return 'te'; if (cp >= 0xC80 && cp < 0xD00) return 'kn'; if (cp >= 0xA80 && cp < 0xB00) return 'gu'; if (cp >= 0xB00 && cp < 0xB80) return 'or'; if ((cp >= 0x3041 && cp <= 0x30FF && cp !== 0x30FB) || (cp >= 0x4E00 && cp <= 0x9FFF) || cp === 0x3005) return 'ja'; if (cp >= 0xD00 && cp < 0xD80) return 'ml'; return null; }
   B.isBrahmic = function (s) { for (var i = 0; i < s.length; i++) if (script(s.charCodeAt(i))) return true; return false; };
 
   // Bengali-specific values (index = offset in the Bengali block): inherent vowel is 'o'
   var BN_V = { 5: ['o', 'ô'], 6: ['a', 'ā'], 7: ['i', 'i'], 8: ['i', 'ī'], 9: ['u', 'u'], 10: ['u', 'ū'], 11: ['ri', 'ṛ'], 12: ['li', 'ḷ'], 15: ['e', 'e'], 16: ['oi', 'ai'], 19: ['o', 'o'], 20: ['ou', 'au'] };
   var BN_S = { 0x3E: 6, 0x3F: 7, 0x40: 8, 0x41: 9, 0x42: 10, 0x43: 11, 0x47: 15, 0x48: 16, 0x4B: 19, 0x4C: 20 };
   var AS_C = { 0x16: ['kh', 'kh'], 0x1A: ['s', 'c'], 0x1B: ['s', 'ch'], 0x1C: ['z', 'j'], 0x1D: ['z', 'jh'], 0x2F: ['z', 'y'], 0x36: ['x', 'ś'], 0x37: ['x', 'ṣ'], 0x38: ['x', 's'] };
+  var OR_C = { 0x1E: ['ny', 'ñ'], 0x2F: ['j', 'y'], 0x38: ['s', 's'] };
   var BN_C = { 0x1C: ['j', 'j'], 0x1E: ['n', 'ñ'], 0x23: ['n', 'ṇ'], 0x2F: ['j', 'y'], 0x36: ['sh', 'ś'], 0x37: ['sh', 'ṣ'], 0x38: ['sh', 's'] };
   // Korean (Revised Romanization with the common sound rules)
   var HL = ['g', 'kk', 'n', 'd', 'tt', 'r', 'm', 'b', 'pp', 's', 'ss', '', 'j', 'jj', 'ch', 'k', 't', 'p', 'h'];
@@ -62,6 +63,53 @@
     }
     return o;
   }
+
+  // ---------- Japanese: kana to Hepburn romaji; kanji read from the phrasebook reading dictionaries
+  B.JAMAP = B.JAMAP || {};   // kanji chunk -> hiragana reading
+  B.JAFULL = B.JAFULL || {}; // whole text -> spaced hiragana reading (particles marked by their own chunk)
+  var KROM = {}; (function () {
+    var base = 'あ a い i う u え e お o か ka き ki く ku け ke こ ko さ sa し shi す su せ se そ so た ta ち chi つ tsu て te と to な na に ni ぬ nu ね ne の no は ha ひ hi ふ fu へ he ほ ho ま ma み mi む mu め me も mo や ya ゆ yu よ yo ら ra り ri る ru れ re ろ ro わ wa を o ん n が ga ぎ gi ぐ gu げ ge ご go ざ za じ ji ず zu ぜ ze ぞ zo だ da ぢ ji づ zu で de ど do ば ba び bi ぶ bu べ be ぼ bo ぱ pa ぴ pi ぷ pu ぺ pe ぽ po ゔ vu'.split(' ');
+    for (var i = 0; i < base.length; i += 2) KROM[base[i]] = base[i + 1];
+    var dg = 'きゃ kya きゅ kyu きょ kyo しゃ sha しゅ shu しょ sho ちゃ cha ちゅ chu ちょ cho にゃ nya にゅ nyu にょ nyo ひゃ hya ひゅ hyu ひょ hyo みゃ mya みゅ myu みょ myo りゃ rya りゅ ryu りょ ryo ぎゃ gya ぎゅ gyu ぎょ gyo じゃ ja じゅ ju じょ jo びゃ bya びゅ byu びょ byo ぴゃ pya ぴゅ pyu ぴょ pyo ふぁ fa ふぃ fi ふぇ fe ふぉ fo てぃ ti でぃ di うぃ wi うぇ we うぉ wo ゔぁ va ゔぃ vi ゔぇ ve ゔぉ vo しぇ she じぇ je ちぇ che つぁ tsa'.split(' ');
+    for (i = 0; i < dg.length; i += 2) KROM[dg[i]] = dg[i + 1];
+  })();
+  function toHira(ch) { var c = ch.charCodeAt(0); return c >= 0x30A1 && c <= 0x30F6 ? String.fromCharCode(c - 0x60) : ch; }
+  var LV = { a: 'ā', i: 'ī', u: 'ū', e: 'ē', o: 'ō' };
+  // one chunk of kana (no spaces) to romaji; si=1 keeps macrons for long a/u/o, si=0 drops the lengthening
+  function kana2ro(k, si) {
+    var out = '', i = 0, gem = false;
+    k = k.split('').map(toHira).join('');
+    while (i < k.length) {
+      var c = k[i], two = k.substr(i, 2), r, lastv = out.slice(-1);
+      if (c === 'っ') { gem = true; i++; continue; }
+      if (c === 'ー') { if (LV[lastv]) out = out.slice(0, -1) + (si ? LV[lastv] : (lastv === 'i' || lastv === 'e' ? lastv + lastv : lastv)); i++; continue; }
+      if (two.length === 2 && KROM[two]) { r = KROM[two]; i += 2; } else if (KROM[c]) { r = KROM[c]; i++; } else { out += c; i++; continue; }
+      if (gem) { r = (r.charAt(0) === 'c' ? 't' : r.charAt(0)) + r; gem = false; }
+      if (r === 'n' && KROM[k[i]] && /^[aiueoy]/.test(KROM[k[i]])) r = "n'";
+      var lv = (lastv === 'o' && (r === 'u' || r === 'o')) || (lastv === 'u' && r === 'u') || (lastv === 'a' && r === 'a');
+      if (lv && (c === 'う' || c === 'お' || c === 'あ')) { if (si) out = out.slice(0, -1) + LV[lastv]; continue; }
+      out += r;
+    }
+    return out;
+  }
+  // spaced reading (hiragana chunks) to romaji; the chunks は へ を on their own are particles
+  B.readingToRomaji = function (rd, si) {
+    return rd.split(/(\s+)/).map(function (c) { if (c === 'こんにちは') return 'konnichiwa'; if (c === 'こんばんは') return 'konbanwa'; if (c === 'は') return 'wa'; if (c === 'へ') return 'e'; if (c === 'を') return 'o'; return kana2ro(c, si); }).join('');
+  };
+  B.romaji = function (w, si) {
+    var tail = /[。、！？!?.,\s]+$/.exec(w), core = tail ? w.slice(0, tail.index) : w;
+    if (B.JAFULL[core]) return B.readingToRomaji(B.JAFULL[core], si) + (tail ? tail[0] : '');
+    var out = '', i = 0, kb = '';
+    function fl() { if (kb) { out += kana2ro(kb, si); kb = ''; } }
+    while (i < w.length) {
+      var cp = w.charCodeAt(i);
+      if ((cp >= 0x4E00 && cp <= 0x9FFF) || cp === 0x3005) {
+        var hit = '', n; for (n = Math.min(8, w.length - i); n >= 1; n--) if (B.JAMAP[w.substr(i, n)]) { hit = w.substr(i, n); break; }
+        if (hit) { kb += B.JAMAP[hit]; i += hit.length; } else { fl(); out += w[i]; i++; }
+      } else { kb += w[i]; i++; }
+    }
+    fl(); return out;
+  };
   // Transliterate one word or a whole string. scheme: 'simple' (default) or 'iast'.
   B.translit = function (str, scheme, lang) {
     var si = scheme === 'iast' ? 1 : 0, out = '', i = 0, n = str.length;
@@ -69,21 +117,23 @@
     var token = [], res = [];
     function flush() { if (token.length) { res.push(word(token.join(''))); token = []; } }
     for (i = 0; i < n; i++) { var cp = str.charCodeAt(i), sc = script(cp); if (sc || (token.length && (cp === 0x200C || cp === 0x200D))) token.push(str[i]); else { flush(); res.push(str[i]); } }
-    flush(); return res.join('');
+    flush(); return res.join('').replace(/。/g, '.').replace(/、/g, ',').replace(/！/g, '!').replace(/？/g, '?');
     function word(w) {
       if (script(w.charCodeAt(0)) === 'ko') return hangul(w);
+      if (script(w.charCodeAt(0)) === 'ja') return B.romaji(w, si);
       var units = [], k, cp, sc = script(w.charCodeAt(0)), base = BASES[sc], AS = lang === 'as' || /[\u09F0\u09F1]/.test(w), pendingA = -1, vowelCount = 0, prevVowel = false, prevNasalVir = false;
       if (sc === 'gu') { sc = 'hi'; base = 0xA80; }
+      var OR = false; if (sc === 'or') { sc = 'bn'; base = 0xB00; OR = true; }
       for (k = 0; k < w.length; k++) {
         cp = w.charCodeAt(k); var idx = cp - base;
         if (cp === 0x200C || cp === 0x200D) continue;
         if (sc === 'ml' && CHILLU[cp]) { var ch = CHILLU[cp][si]; units.push({ t: ch, type: 'c', fin: true }); pendingA = -1; vowelCount++; continue; }
-        if (idx >= 5 && idx <= 20 && (sc === 'bn' ? BN_V[idx] : VOW[idx])) { units.push({ t: (sc === 'bn' ? BN_V : VOW)[idx][si], type: 'v' }); pendingA = -1; vowelCount++; continue; }
+        if (idx >= 5 && idx <= 20 && (sc === 'bn' ? BN_V[idx] : VOW[idx])) { units.push({ t: OR && idx === 5 ? 'a' : (sc === 'bn' ? BN_V : VOW)[idx][si], type: 'v' }); pendingA = -1; vowelCount++; continue; }
         if (sc === 'bn' && (cp === 0x9F0 || cp === 0x9F1)) { var c0 = cp === 0x9F0 ? ['r', 'r'] : ['w', 'w']; units.push({ t: c0[si], type: 'c', idx: cp === 0x9F0 ? 0x30 : 0x35, a: true }); pendingA = units.length - 1; vowelCount++; continue; }
         if ((idx >= 0x15 && idx <= 0x39) || NUKTA[idx] && (sc === 'hi' || sc === 'bn')) {
-          var c = ((sc === 'hi' || sc === 'bn') && NUKTA[idx]) ? NUKTA[idx] : (sc === 'bn' && AS && AS_C[idx]) ? AS_C[idx] : (sc === 'bn' && BN_C[idx]) ? BN_C[idx] : CON[idx]; if (!c) continue;
+          var c = ((sc === 'hi' || sc === 'bn') && NUKTA[idx]) ? NUKTA[idx] : (sc === 'bn' && AS && AS_C[idx]) ? AS_C[idx] : (OR && OR_C[idx]) ? OR_C[idx] : (sc === 'bn' && BN_C[idx]) ? BN_C[idx] : CON[idx]; if (!c) continue;
           if (sc === 'bn' && AS && idx === 0x37 && units.length && units[units.length - 1].vir && units[units.length - 1].idx === 0x15) { units[units.length - 1].t = ''; c = ['kh', 'kṣ']; }
-          if (sc === 'bn' && !AS && idx === 0x2F && units.length && units[units.length - 1].vir && units[units.length - 1].type === 'c' && units[units.length - 1].idx !== 0x39) { var pu = units[units.length - 1]; pu.t = pu.t + pu.t; pu.vir = false; pu.a = true; pu.g = true; pendingA = units.length - 1; vowelCount++; continue; }
+          if (sc === 'bn' && !AS && !OR && idx === 0x2F && units.length && units[units.length - 1].vir && units[units.length - 1].type === 'c' && units[units.length - 1].idx !== 0x39) { var pu = units[units.length - 1]; pu.t = pu.t + pu.t; pu.vir = false; pu.a = true; pu.g = true; pendingA = units.length - 1; vowelCount++; continue; }
           if (sc === 'bn' && idx === 0x2F && units.length && units[units.length - 1].vir) c = ['y', 'y'];
           var nx = w.charCodeAt(k + 1) - base;
           if (sc === 'te' && idx === 0x15 && false) { }
@@ -93,7 +143,8 @@
         if (idx === 0x3C && (sc === 'hi' || sc === 'bn') && units.length) { var NK = { 0x15: 0x58, 0x16: 0x59, 0x17: 0x5A, 0x1C: 0x5B, 0x21: 0x5C, 0x22: 0x5D, 0x2B: 0x5E, 0x2F: 0x5F }, pk = units[units.length - 1]; if (pk.type === 'c' && NK[pk.idx]) { pk.t = NUKTA[NK[pk.idx]][si]; } continue; }
         if (idx === 0x4D) { if (pendingA >= 0) { units[pendingA].a = false; units[pendingA].vir = true; vowelCount--; pendingA = -1; } continue; }
         if (idx === 0x01) { units.push({ t: si ? 'm̐' : 'n', type: 'm' }); continue; }
-        if (idx === 0x02) { units.push({ t: si ? 'ṃ' : (sc === 'bn' ? 'ng' : 'm'), type: 'm', anu: sc !== 'bn' }); continue; }
+        if (idx === 0x02) { units.push({ t: si ? 'ṃ' : (OR ? 'n' : sc === 'bn' ? 'ng' : 'm'), type: 'm', anu: sc !== 'bn' }); continue; }
+        if (OR && cp === 0xB71) { units.push({ t: 'w', type: 'c', idx: 0x35, a: true }); pendingA = units.length - 1; vowelCount++; continue; }
         if (cp === 0x9CE) { units.push({ t: 't', type: 'c', fin: true }); pendingA = -1; vowelCount++; continue; }
         if (idx === 0x03) { units.push({ t: si ? 'ḥ' : 'h', type: 'm' }); continue; }
         if (idx >= 0x66 && idx <= 0x6F) { units.push({ t: String(idx - 0x66), type: 'd' }); continue; }
@@ -128,7 +179,7 @@
       for (k = 0; k < units.length; k++) {
         var x = units[k]; o += x.t;
         if (x.type === 'c' && !x.fin) {
-          if (x.vs) o += x.vs; else if (x.a) { var last = k === units.length - 1 || units[k + 1].type === 'p'; if ((sc === 'hi' || sc === 'bn') && last && vowelCount >= 2 && !x.g) { } else o += (sc === 'bn' ? 'o' : 'a'); }
+          if (x.vs) o += x.vs; else if (x.a) { var last = k === units.length - 1 || units[k + 1].type === 'p'; if ((sc === 'hi' || sc === 'bn') && last && vowelCount >= 2 && !x.g) { } else o += (sc === 'bn' && !OR ? 'o' : 'a'); }
           else if (x.vir && sc === 'ml' && k === units.length - 1) o += 'u';
         }
       }

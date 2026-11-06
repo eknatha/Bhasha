@@ -36,6 +36,8 @@
   U.t = function (k, v) { var d = B.I18N[set.ui] || B.I18N.en, s = d[k]; if (s == null) s = B.I18N.en[k]; if (s == null) s = k; if (v) for (var x in v) s = s.split('{' + x + '}').join(v[x]); return s; };
   var t = U.t;
   U.applyTheme = function () { document.documentElement.setAttribute('data-theme', set.theme); var m = $('meta[name=theme-color]'); if (m) m.setAttribute('content', { light: '#1c1b4b', dark: '#1c1b4b', new: '#0b3d3a' }[set.theme]); };
+  // The meaning shown under a phrase: English, unless the learner is studying English (then the interface language, else Hindi).
+  U.mn = function (p, lang) { if ((lang || set.focus) !== 'en') return p.en; var l = set.ui; return (l !== 'en' && p[l]) || p.hi; };
   U.applyLang = function () { document.documentElement.lang = set.ui; };
   U.applyKids = function () { if (set.kids) document.documentElement.setAttribute('data-kids', ''); else document.documentElement.removeAttribute('data-kids'); };
   var toastT; U.toast = function (m) { var e = $('#toast'); if (!e) return; e.textContent = m; e.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { e.hidden = true; }, 2200); };
@@ -54,7 +56,7 @@
   W.get = function (lang, w) { var id = W.id(lang, w), i; for (i = 0; i < W.list.length; i++) if (W.list[i].id === id) return W.list[i]; return null; };
   W.put = function (e) { var old = W.get(e.lang, e.w); if (old) { Object.keys(e).forEach(function (k) { if (e[k] !== undefined) old[k] = e[k]; }); } else { var n = Object.assign({ m: '', c: '', n: '', st: 1, added: Date.now() }, B.srsNew(), e); n.w = B.normWord(e.w); n.id = W.id(e.lang, e.w); W.list.push(n); old = n; } W.save(); return old; };
   W.del = function (id) { W.list = W.list.filter(function (x) { return x.id !== id; }); W.save(); };
-  W.due = function (lang) { var now = Date.now(); return W.list.filter(function (x) { return x.st < 2 && x.due <= now && (!lang || x.lang === lang); }); };
+  W.due = function (lang) { var now = Date.now(); return W.list.filter(function (x) { return x.st < 2 && !x.sus && x.due <= now && (!lang || x.lang === lang); }); };
   W.load();
   var ST = U.stats = jget('bh-stats', {});
   U.logReview = function () { var d = U.today(); ST[d] = (ST[d] || 0) + 1; store.set('bh-stats', JSON.stringify(ST)); };

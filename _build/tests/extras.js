@@ -8,8 +8,8 @@ const FAKEVOICES=`(()=>{const mk=(n,l,u)=>({name:n,lang:l,voiceURI:u,localServic
 async function page(o,w,fake){const c=await b.newContext({viewport:{width:w||1100,height:900}});
  await c.addInitScript(([s,f])=>{if(!localStorage.getItem('__i')){localStorage.setItem('__i','1');localStorage.setItem('bh-set',s);}if(f)eval(f);},[SET(o),fake?FAKEVOICES:null]);
  const p=await c.newPage();p.errs=[];p.on('pageerror',e=>p.errs.push(e.message));p.on('console',m=>{if(m.type()==='error')p.errs.push(m.text());});p.ctx=c;return p;}
-const LEARN=['te','hi','kn','ta','ml','bn','mr','gu','as','ko','es','de','fr'];
-const SCRIPT={te:/[ఀ-౿]/,hi:/[ऀ-ॿ]/,mr:/[ऀ-ॿ]/,kn:/[ಀ-೿]/,ta:/[஀-௿]/,ml:/[ഀ-ൿ]/,bn:/[ঀ-৿]/,as:/[ঀ-৿]/,gu:/[઀-૿]/,ko:/[가-힯]/,es:/[a-z]/i,de:/[a-z]/i,fr:/[a-z]/i};
+const LEARN=['te','hi','kn','ta','ml','bn','mr','gu','as','ko','es','de','fr','or','ne','ja'];
+const SCRIPT={te:/[ఀ-౿]/,hi:/[ऀ-ॿ]/,mr:/[ऀ-ॿ]/,kn:/[ಀ-೿]/,ta:/[஀-௿]/,ml:/[ഀ-ൿ]/,bn:/[ঀ-৿]/,as:/[ঀ-৿]/,gu:/[઀-૿]/,ko:/[가-힯]/,es:/[a-z]/i,de:/[a-z]/i,fr:/[a-z]/i,or:/[\u0B00-\u0B7F]/,ne:/[ऀ-ॿ]/,ja:/[ぁ-ヿ一-鿿]/};
 // ---- sayings
 {const p=await page();await p.goto(BASE+'/proverbs/');await p.waitForTimeout(300);
  ok((await p.title()).startsWith('Sayings'),'sayings: page title');ok(await p.isVisible('h1:has-text("Proverbs and idioms")'),'sayings: heading');
@@ -71,7 +71,7 @@ for(const l of ['ko','as','fr']){const p=await page({focus:l},420);await p.goto(
  ok(await p.isVisible('.ph-list')&&!(await p.$('.kdword')),'kids: timer does not repaint another page');await p.ctx.close();}
 // ---- kids mode
 {const p=await page({focus:'hi'});await p.goto(BASE+'/');await p.waitForTimeout(300);
- ok((await p.$$('#mnav a')).length===9,'kids mode off: 9 menu items');
+ ok((await p.$$('#mnav a')).length===13,'kids mode off: 13 menu items');
  await p.click('[aria-controls=setp]');await p.click('#setp .seg[aria-label="Kids mode"] button:has-text("On")');await p.waitForTimeout(250);
  ok(await p.evaluate(()=>document.documentElement.hasAttribute('data-kids')),'kids mode: attribute set');ok((await p.$$('#mnav a')).length===4,'kids mode: simple 4-item menu');
  ok(await p.isVisible('h1:has-text("Kids corner")'),'kids mode: home is the kids corner');
@@ -79,7 +79,7 @@ for(const l of ['ko','as','fr']){const p=await page({focus:l},420);await p.goto(
  ok(await p.evaluate(()=>JSON.parse(localStorage.getItem('bh-set')).kids===true),'kids mode: remembered');
  await p.reload();await p.waitForTimeout(250);ok((await p.$$('#mnav a')).length===4&&await p.evaluate(()=>document.documentElement.hasAttribute('data-kids')),'kids mode: survives reload');
  await p.click('[aria-controls=setp]');await p.click('#setp .seg[aria-label="Kids mode"] button:has-text("Off")');await p.waitForTimeout(250);
- ok((await p.$$('#mnav a')).length===9&&!(await p.evaluate(()=>document.documentElement.hasAttribute('data-kids'))),'kids mode: back to normal');
+ ok((await p.$$('#mnav a')).length===13&&!(await p.evaluate(()=>document.documentElement.hasAttribute('data-kids'))),'kids mode: back to normal');
  ok(p.errs.length===0,'kids mode: no page errors '+p.errs.join(';'));await p.ctx.close();}
 // ---- themes on the new pages
 for(const th of ['light','dark','new']){const p=await page({focus:'te'},390);await p.goto(BASE+'/');await p.click('[aria-controls=setp]');await p.click('#setp .seg[aria-label="Theme"] button:nth-child('+({light:1,dark:2,new:3}[th])+')');

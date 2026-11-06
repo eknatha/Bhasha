@@ -10,8 +10,8 @@
     function rom(txt) { return B.isBrahmic(txt) ? B.translit(txt, set.scheme, lang) : ''; }
     function line(p, who) {
       var txt = p[lang], r = rom(txt);
-      return h('div', { class: 'bubble ' + who }, [h('div', { class: 'bub-t' }, [h('div', { class: 'ph-t', lang: lang, text: txt }), r ? h('div', { class: 'ph-r', text: r }) : null, h('div', { class: 'ph-n', text: p.en })]),
-        h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55); } })])]);
+      return h('div', { class: 'bubble ' + who }, [h('div', { class: 'bub-t' }, [h('div', { class: 'ph-t', lang: lang, text: txt }), r ? h('div', { class: 'ph-r', text: r }) : null, h('div', { class: 'ph-n', text: U.mn(p, lang) })]),
+        h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + U.mn(p, lang), text: '🔊', onclick: function () { U.speak(txt, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55); } })])]);
     }
     function list() {
       DR.sc = null; app.textContent = '';
@@ -45,7 +45,7 @@
       var tb = line(them, 'them'); panel.appendChild(tb);
       if (DR.hide) { tb.classList.add('veil'); tb.querySelector('.bub-t').hidden = true; panel.appendChild(h('button', { type: 'button', class: 'abtn', id: 'dr-show', text: '👁 ' + t('drThem'), onclick: function (e) { tb.querySelector('.bub-t').hidden = false; e.currentTarget.remove(); } })); }
       setTimeout(function () { U.speak(them[lang], lang, null, set.rate); }, 200);
-      panel.appendChild(h('h2', { class: 'yt', text: t('drYou') })); panel.appendChild(h('p', { class: 'ph-n big', text: you.en }));
+      panel.appendChild(h('h2', { class: 'yt', text: t('drYou') })); panel.appendChild(h('p', { class: 'ph-n big', text: U.mn(you, lang) }));
       var others = []; d.turns.forEach(function (x) { if (x[1] !== tr[1] && others.indexOf(x[1]) < 0 && LS.P(x[1])[lang] !== you[lang]) others.push(x[1]); });
       var picks = LS.shuffle(others).slice(0, 2).map(LS.P); if (picks.length < 2) picks = picks.concat(LS.distract(tr[1], 2 - picks.length, function (q) { return q[lang]; }));
       var opts = LS.shuffle([you].concat(picks)), res = h('p', { class: 'qz-res', 'aria-live': 'polite' }), last = DR.turn + 1 >= d.turns.length, solved = false;

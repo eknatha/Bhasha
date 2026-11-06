@@ -113,7 +113,7 @@
     var box = h('div', { class: 'popup vc', id: 'vc', role: 'dialog', 'aria-label': t('voiceCheck') }), rows = h('div', { class: 'vc-rows' });
     function paint() {
       load(); rows.textContent = '';
-      B.LEARN.concat(['en']).forEach(function (l) {
+      B.LEARN.forEach(function (l) {
         var v = U.voiceFor(l), st = v ? t('vcDevice') + ': ' + v.name : (engine ? t('vcOffline') : (set.ov === 'no' ? t('vcNone') : t('vcOfflineAvail')));
         var phr = (B.PHRASES.filter(function (p) { return p.id === 'hello'; })[0] || {})[l] || 'Hello';
         var vs = U.voicesFor(l), vsel = null, rsel = null;
