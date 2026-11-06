@@ -15,12 +15,20 @@
     });
     return ready;
   }
+  // natural-sounding voices score higher; robotic, novelty and compact voices score lower
+  var GOOD = /natural|neural|online|premium|enhanced|wavenet|siri|google|samantha|ava\b|allison|susan|serena|karen|moira|tessa|daniel|oliver|jenny|aria|guy|libby|sonia|ryan|neerja|prabhat|heera|ravi/i,
+    BAD = /compact|espeak|zarvox|fred|albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|junior|kathy|organ|ralph|trinoids|whisper|wobble|superstar|pipe|agnes|princess|vicki|bruce/i;
+  function quality(v, pre) {
+    var n = v.name || '', q = 0; if (GOOD.test(n)) q += 3; if (/natural|neural|online|premium|enhanced|wavenet/i.test(n)) q += 2; if (BAD.test(n)) q -= 6;
+    if (pre === 'en' && /^en[-_](us|gb|in|au)$/i.test(v.lang || '')) q += 0.3;
+    return q;
+  }
   // best device voice for a language: exact tag first, then same primary language; offline (local) voices win ties
   U.voiceFor = function (lang) {
     var code = B.bcp(lang).toLowerCase().replace('_', '-'), pre = code.split('-')[0], best = null, bs = -1, i, v, tag, sc;
     for (i = 0; i < voices.length; i++) {
       v = voices[i]; tag = (v.lang || '').toLowerCase().replace('_', '-'); if (tag.split('-')[0] !== pre) continue;
-      sc = (tag === code ? 2 : 1) + (v.localService ? 0.5 : 0) + (v['default'] ? 0.1 : 0);
+      sc = (tag === code ? 2 : 1) + (v.localService ? 0.5 : 0) + (v['default'] ? 0.1 : 0) + quality(v, pre);
       if (sc > bs) { bs = sc; best = v; }
     }
     var want = set.voices && set.voices[lang];
