@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const SRC = path.join(__dirname, 'src'), OUT = path.resolve(process.env.BHASHA_OUT || path.join(__dirname, '..'));
 const BASE = process.env.BHASHA_BASE || 'https://bhasha.eknathalabs.com';
-const FILES = ['core', 'data', 'ui', 'fx', 'pron', 'speech', 'i18n', 'phrases2', 'phrases3', 'v-read', 'v-say', 'v-today', 'v-talk', 'fundata', 'fundata2', 'alts', 'pairs', 'fun', 'v-privacy', 'v-watch', 'v-words', 'v-listen', 'v-write', 'v-learn', 'app'];
+const FILES = ['core', 'data', 'ui', 'fx', 'pron', 'speech', 'i18n', 'phrases2', 'phrases3', 'phrases4', 'v-read', 'v-say', 'v-today', 'v-talk', 'fundata', 'fundata2', 'alts', 'pairs', 'fun', 'v-privacy', 'v-watch', 'v-words', 'v-listen', 'v-write', 'v-learn', 'app'];
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const MARK = fs.readFileSync(path.join(__dirname, 'icons', 'icon.svg'), 'utf8').match(/d="(M29\.2[^"]+)"/)[1];
 const ROUTES = [
@@ -23,7 +23,7 @@ const ROUTES = [
   ['pairs', 'Sound pairs', 'Minimal-pair listening', 'Hear one word and pick which of two similar-sounding words it was. Train your ear for sounds that are easy to confuse.'],
   ['manage', 'Review manager', 'Manage your cards', 'See every saved card by state, find weak spots, and mark, pause, reset, delete or practise many cards at once. Stays in your browser.'],
   ['privacy', 'Free and private', 'Free, private and offline', 'Bhasha is free, has no accounts, no ads and no tracking. See exactly what is saved in your browser, download it, restore it or delete it.'],
-  ['phrases', 'Phrases', 'Everyday phrases', 'A phrasebook of 460 everyday phrases (greetings, conversation, travel, shopping, health, work and numbers) in seventeen languages with romanization and audio.']
+  ['phrases', 'Phrases', 'Everyday phrases', 'A phrasebook of 560 everyday phrases (greetings, conversation, travel, shopping, health, work and numbers) in seventeen languages with romanization and audio.']
 ];
 fs.mkdirSync(OUT, { recursive: true });
 for (const e of fs.readdirSync(OUT, { withFileTypes: true })) { const p = path.join(OUT, e.name); if (e.isDirectory() && ROUTES.some(r => r[0] && r[0] === e.name)) fs.rmSync(p, { recursive: true }); }

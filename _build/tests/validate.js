@@ -3,12 +3,12 @@ const fs=require('fs'),path=require('path');globalThis.window={B:undefined};
 const load=f=>new Function('window',fs.readFileSync(path.join(__dirname,'../src/'+f),'utf8'))(globalThis.window);
 globalThis.window.B=undefined;
 // core/data use (function(B){})(window.B = window.B || {}) style or global B; emulate
-globalThis.window={B:{}};load('core.js');load('data.js');load('phrases2.js');load('phrases3.js');load('fundata.js');load('fundata2.js');load('i18n.js');
+globalThis.window={B:{}};load('core.js');load('data.js');load('phrases2.js');load('phrases3.js');load('phrases4.js');load('fundata.js');load('fundata2.js');load('i18n.js');
 const B=globalThis.window.B;let fails=0;const bad=(m)=>{fails++;console.log('FAIL',m)};
 const R={te:/[ఀ-౿]/,hi:/[ऀ-ॿ]/,mr:/[ऀ-ॿ]/,kn:/[ಀ-೿]/,ta:/[஀-௿]/,ml:/[ഀ-ൿ]/,bn:/[ঀ-৿]/,ko:/[가-힯]/,es:/[a-záéíóúñü¿¡]/i,de:/[a-zäöüß]/i,fr:/[a-zàâçéèêëîïôûùüÿœ]/i,gu:/[\u0A80-\u0AFF]/,as:/[\u0980-\u09FF]/,en:/[A-Za-z]/,or:/[\u0B00-\u0B7F]/,ne:/[ऀ-ॿ]/,ja:/[\u3040-\u30FF\u4E00-\u9FFF]/};
 const LAT=/[A-Za-z]/;
 const P=B.PHRASES;
-if(P.length!==460)bad('phrase count (want 460) '+P.length);
+if(P.length!==560)bad('phrase count (want 560) '+P.length);
 if(new Set(P.map(p=>p.id)).size!==P.length)bad('duplicate ids');
 const cats=new Set(B.PHRASE_CATS);
 P.forEach(p=>{if(!cats.has(p.cat))bad(p.id+' bad cat '+p.cat);if(!p.en)bad(p.id+' no en');

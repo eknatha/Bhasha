@@ -101,9 +101,9 @@ await p.keyboard.press('Escape');
 // ---- Conversations
 {const c=await b.newContext({viewport:{width:1100,height:900}});await c.addInitScript(()=>{if(!localStorage.getItem('__init')){localStorage.setItem('__init','1');localStorage.setItem('bh-set',JSON.stringify({ui:'en',focus:'hi',scheme:'simple',roman:true,perDay:10,rate:.9,ov:'no'}));}});
  const q=await c.newPage();const qe=[];q.on('pageerror',e=>qe.push(e.message));await q.goto(BASE+'/talk/');await q.waitForTimeout(300);
- ok((await q.$$('.cards .card')).length===56,'talk: 56 conversations listed');
+ ok((await q.$$('.cards .card')).length===156,'talk: 156 conversations listed');
  ok((await q.$$('.tabs .tab')).length===8,'talk: All plus seven group tabs');
- await q.click('.tabs .tab[data-group="food"]');ok((await q.$$('.cards .card')).length===9&&!(await q.$('.grp-h')),'talk: food tab shows its 9 conversations');
+ await q.click('.tabs .tab[data-group="food"]');ok((await q.$$('.cards .card')).length===24&&!(await q.$('.grp-h')),'talk: food tab shows its 24 conversations');
  ok((await q.getAttribute('.tabs .tab[data-group="food"]','aria-pressed'))==='true','talk: active tab is pressed');
  await q.click('.tabs .tab[data-group="all"]');
  await q.click('text=At a restaurant');await q.waitForTimeout(250);
@@ -130,7 +130,7 @@ await p.keyboard.press('Escape');
   const out=await q.textContent('.say-out');ok(out.includes(thanks),'say: Thank you in '+l);if(rom)ok(out.includes(rom),'say: romanization for '+l+' ('+rom+')');}
  await q.goto(BASE+'/phrases/');await q.selectOption('#ph-lang','as');
  const tabs=await q.$$eval('.tabs .tab',e=>e.length);ok(tabs===14,'phrases: 14 categories ('+tabs+')');
- let total=0;for(let i=0;i<tabs;i++){await q.click('.tabs .tab:nth-child('+(i+1)+')');total+=(await q.$$('.ph-list .ph')).length;}ok(total===460,'phrases: 420 phrases shown for Assamese ('+total+')');
+ let total=0;for(let i=0;i<tabs;i++){await q.click('.tabs .tab:nth-child('+(i+1)+')');total+=(await q.$$('.ph-list .ph')).length;}ok(total===560,'phrases: 560 phrases shown for Assamese ('+total+')');
  await q.goto(BASE+'/scripts/');for(const l of ['gu','as']){await q.selectOption('#sc-lang',l);await q.waitForTimeout(100);const gl=await q.$$eval('.glyphs .gl',e=>e.length);ok(gl>40,'scripts: '+l+' chart has '+gl+' glyphs');}
  ok(qe.length===0,'new languages: no page errors '+qe.join(';'));await c.close();}
 // ---- every interface language shows its own text

@@ -1,6 +1,6 @@
 // node tests/core.test.js  (DOM-free checks of core.js)
 const fs=require('fs'),path=require('path');globalThis.window=undefined;
-new Function(fs.readFileSync(path.join(__dirname,'../src/core.js'),'utf8'))();new Function(fs.readFileSync(path.join(__dirname,'../src/data.js'),'utf8'))();new Function('window',fs.readFileSync(path.join(__dirname,'../src/phrases2.js'),'utf8'))(globalThis);new Function('window',fs.readFileSync(path.join(__dirname,'../src/phrases3.js'),'utf8'))(globalThis);
+new Function(fs.readFileSync(path.join(__dirname,'../src/core.js'),'utf8'))();new Function(fs.readFileSync(path.join(__dirname,'../src/data.js'),'utf8'))();new Function('window',fs.readFileSync(path.join(__dirname,'../src/phrases2.js'),'utf8'))(globalThis);new Function('window',fs.readFileSync(path.join(__dirname,'../src/phrases3.js'),'utf8'))(globalThis);new Function('window',fs.readFileSync(path.join(__dirname,'../src/phrases4.js'),'utf8'))(globalThis);
 const B=globalThis.B;let fails=0;const eq=(a,b,m)=>{if(JSON.stringify(a)!==JSON.stringify(b)){fails++;console.log('FAIL',m,JSON.stringify(a),'!=',JSON.stringify(b))}else console.log('ok  ',m)};
 [['తెలుగు','telugu'],['నుండి','nundi'],['हिन्दी','hindee'],['हैं','hain'],['நன்றி','nandri'],['ഒന്ന്','onnu']].forEach(([s,r])=>eq(B.translit(s,'simple'),r,'translit '+s));
 eq(B.translit('అంగ','iast'),'aṃga','iast anusvara as ṃ');
