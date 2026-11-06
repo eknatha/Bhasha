@@ -42,13 +42,38 @@
     }).catch(function (e) { engineP = null; throw e; });
     return engineP;
   }
+  // espeak ends its WAV on a non-zero sample, which clicks. Remove DC offset, fade both ends, add a little silence.
+  function smooth(d) {
+    try {
+      var dv = new DataView(d.buffer, d.byteOffset, d.byteLength), pos = 12, off = -1, len = 0, rate = 22050, ch = 1;
+      while (pos + 8 <= d.length) {
+        var id = String.fromCharCode(d[pos], d[pos + 1], d[pos + 2], d[pos + 3]), sz = dv.getUint32(pos + 4, true);
+        if (id === 'fmt ') { ch = dv.getUint16(pos + 10, true); rate = dv.getUint32(pos + 12, true); }
+        if (id === 'data') { off = pos + 8; len = Math.min(sz, d.length - off); break; }
+        pos += 8 + sz + (sz & 1);
+      }
+      if (off < 0 || ch !== 1) return d;
+      var n = len >> 1, x = new Float32Array(n), i, mean = 0;
+      for (i = 0; i < n; i++) { x[i] = dv.getInt16(off + i * 2, true); mean += x[i]; }
+      mean /= Math.max(1, n); for (i = 0; i < n; i++) x[i] -= mean;
+      var end = n; while (end > 0 && Math.abs(x[end - 1]) < 60) end--;   // trim trailing near-silence
+      var fade = Math.min(Math.round(rate * 0.03), end >> 1), tail = Math.round(rate * 0.12), total = end + tail;
+      for (i = 0; i < fade; i++) { x[i] *= i / fade; x[end - 1 - i] *= i / fade; }
+      var out = new Uint8Array(44 + total * 2), o = new DataView(out.buffer);
+      function w(a, str) { for (var k = 0; k < str.length; k++) out[a + k] = str.charCodeAt(k); }
+      w(0, 'RIFF'); o.setUint32(4, 36 + total * 2, true); w(8, 'WAVE'); w(12, 'fmt '); o.setUint32(16, 16, true); o.setUint16(20, 1, true); o.setUint16(22, 1, true);
+      o.setUint32(24, rate, true); o.setUint32(28, rate * 2, true); o.setUint16(32, 2, true); o.setUint16(34, 16, true); w(36, 'data'); o.setUint32(40, total * 2, true);
+      for (i = 0; i < end; i++) o.setInt16(44 + i * 2, Math.max(-32768, Math.min(32767, Math.round(x[i]))), true);
+      return out;
+    } catch (e) { return d; }
+  }
   function synth(text, lang, rate) {
     var wpm = Math.max(80, Math.min(350, Math.round(175 * (rate || set.rate)))), key = lang + '|' + wpm + '|' + text;
     if (cache[key]) return Promise.resolve(cache[key]);
     return ensureEngine().then(function (E) {
       return E.factory({ arguments: ['-v', espCode(lang), '-s', String(wpm), '-w', 'o.wav', ' ' + text], print: function () { }, printErr: function () { }, instantiateWasm: function (imports, ok) { WebAssembly.instantiate(E.mod, imports).then(function (i) { ok(i, E.mod); }); return {}; } });
     }).then(function (m) {
-      var d = m.FS.readFile('o.wav'); if (d.length < 500) throw new Error('empty');
+      var d = smooth(m.FS.readFile('o.wav')); if (d.length < 500) throw new Error('empty');
       var url = URL.createObjectURL(new Blob([d], { type: 'audio/wav' })); cache[key] = url; cacheKeys.push(key);
       if (cacheKeys.length > 40) { var old = cacheKeys.shift(); try { URL.revokeObjectURL(cache[old]); } catch (e) { } delete cache[old]; }
       return url;
