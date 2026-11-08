@@ -357,3 +357,7 @@ html[data-night] .tk.new{background:rgba(255,180,0,.28)}html[data-night] .tk.lea
 html[data-night] .rd-out,html[data-night] .story,html[data-night] .vs-line,html[data-night] .ph-t{line-height:2.1;letter-spacing:.01em}
 html[data-night]:not([data-theme=dark]) body::after{display:none}
 #app>.seg{max-width:560px;margin:4px 0 14px}#app>.seg button{flex:0 1 auto;padding-inline:16px}
+.vq{display:inline-block;padding:1px 8px;border-radius:999px;border:2px solid var(--edge);font-size:12px;font-weight:700}
+.vq-nat{background:#cdeedb;color:#0b3d22;border-color:#0b3d22}.vq-dev{background:var(--feat)}
+.vq-basic,.vq-none{background:#ffe3d6;color:#6b1d0a;border-color:#6b1d0a}
+.vq-help{margin:8px 0}
