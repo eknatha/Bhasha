@@ -16,10 +16,11 @@
     return ready;
   }
   // natural-sounding voices score higher; robotic, novelty and compact voices score lower
-  var GOOD = /natural|neural|online|premium|enhanced|wavenet|siri|google|samantha|ava\b|allison|susan|serena|karen|moira|tessa|daniel|oliver|jenny|aria|guy|libby|sonia|ryan|neerja|prabhat|heera|ravi/i,
-    BAD = /compact|espeak|zarvox|fred|albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|junior|kathy|organ|ralph|trinoids|whisper|wobble|superstar|pipe|agnes|princess|vicki|bruce/i;
+  var GOOD = /natural|neural|online|premium|enhanced|wavenet|siri|google|samantha|ava\b|allison|susan|serena|karen|moira|tessa|daniel|oliver|jenny|aria|guy|libby|sonia|ryan|neerja|prabhat|heera|ravi|swara|madhur|shruti|mohan|gagan|sapna|pallavi|valluvar|sobhana|midhun|tanishaa|bashkar|aarohi|manohar|dhwani|niranjan|sunhi|injoon|nanami|keita|hemkala|sagar|lekha|geeta|soumya|veena|rishi|yuna|kyoko|otoya|monica|paulina|jorge|diego|elvira|alvaro|katja|conrad|amala|denise|henri|vivienne|remy/i,
+    NATURAL = /natural|neural|online|premium|enhanced|wavenet|multilingual/i,
+    BAD = /compact|espeak|desktop|zarvox|fred|albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|junior|kathy|organ|ralph|trinoids|whisper|wobble|superstar|pipe|agnes|princess|vicki|bruce/i;
   function quality(v, pre) {
-    var n = v.name || '', q = 0; if (GOOD.test(n)) q += 3; if (/natural|neural|online|premium|enhanced|wavenet/i.test(n)) q += 2; if (BAD.test(n)) q -= 6;
+    var n = v.name || '', q = 0; if (GOOD.test(n)) q += 3; if (/natural|neural|online|premium|enhanced|wavenet/i.test(n)) q += 2; if (BAD.test(n)) q -= 6; if (v.localService === false && /google/i.test(n)) q += 0.5;
     if (pre === 'en' && /^en[-_](us|gb|in|au)$/i.test(v.lang || '')) q += 0.3;
     return q;
   }
@@ -37,6 +38,12 @@
   };
   // speed: a language's own speed, unless a caller asks for a fixed slow speed
   U.rateFor = function (lang) { var r = set.rates && set.rates[lang]; return r > 0 ? r : set.rate; };
+  // what kind of voice a language will get: natural, an ordinary device voice, the basic offline voice (robotic), or none
+  U.voiceKind = function (lang) {
+    load(); var v = U.voiceFor(lang);
+    if (v) return { kind: NATURAL.test(v.name || '') || (v.localService === false && /google/i.test(v.name || '')) ? 'nat' : 'dev', name: v.name };
+    return { kind: set.ov === 'no' ? 'none' : 'basic', name: null };
+  };
   U.voicesFor = function (lang) { load(); var pre = B.bcp(lang).toLowerCase().split(/[-_]/)[0]; return voices.filter(function (v) { return (v.lang || '').toLowerCase().split(/[-_]/)[0] === pre; }); };
   // ---- offline engine
   var ESP = { en: 'en-us', zh: 'cmn', pt: 'pt-pt', no: 'nb', iw: 'he' };
@@ -64,6 +71,9 @@
       var n = len >> 1, x = new Float32Array(n), i, mean = 0;
       for (i = 0; i < n; i++) { x[i] = dv.getInt16(off + i * 2, true); mean += x[i]; }
       mean /= Math.max(1, n); for (i = 0; i < n; i++) x[i] -= mean;
+      var a = 1 - Math.exp(-2 * Math.PI * 4200 / rate), y = 0, pk = 1;   // soften the harsh buzz above about 4 kHz
+      for (i = 0; i < n; i++) { y += a * (x[i] - y); x[i] = y; if (Math.abs(y) > pk) pk = Math.abs(y); }
+      var gain = Math.min(3, 24000 / pk); for (i = 0; i < n; i++) x[i] *= gain;   // even loudness
       var end = n; while (end > 0 && Math.abs(x[end - 1]) < 60) end--;   // trim trailing near-silence
       var fade = Math.min(Math.round(rate * 0.03), end >> 1), tail = Math.round(rate * 0.12), total = end + tail;
       for (i = 0; i < fade; i++) { x[i] *= i / fade; x[end - 1 - i] *= i / fade; }
@@ -79,7 +89,7 @@
     var wpm = Math.max(80, Math.min(350, Math.round(175 * (rate || set.rate)))), key = lang + '|' + wpm + '|' + text;
     if (cache[key]) return Promise.resolve(cache[key]);
     return ensureEngine().then(function (E) {
-      return E.factory({ arguments: ['-v', espCode(lang), '-s', String(wpm), '-w', 'o.wav', ' ' + text], print: function () { }, printErr: function () { }, instantiateWasm: function (imports, ok) { WebAssembly.instantiate(E.mod, imports).then(function (i) { ok(i, E.mod); }); return {}; } });
+      return E.factory({ arguments: ['-v', espCode(lang), '-s', String(wpm), '-g', '2', '-w', 'o.wav', ' ' + text], print: function () { }, printErr: function () { }, instantiateWasm: function (imports, ok) { WebAssembly.instantiate(E.mod, imports).then(function (i) { ok(i, E.mod); }); return {}; } });
     }).then(function (m) {
       var d = smooth(m.FS.readFile('o.wav')); if (d.length < 500) throw new Error('empty');
       var url = URL.createObjectURL(new Blob([d], { type: 'audio/wav' })); cache[key] = url; cacheKeys.push(key);
@@ -157,7 +167,7 @@
     function paint() {
       load(); rows.textContent = '';
       B.LEARN.forEach(function (l) {
-        var v = U.voiceFor(l), st = v ? t('vcDevice') + ': ' + v.name : (engine ? t('vcOffline') : (set.ov === 'no' ? t('vcNone') : t('vcOfflineAvail')));
+        var v = U.voiceFor(l), vk = U.voiceKind(l), st = v ? t('vcDevice') + ': ' + v.name : (engine ? t('vcOffline') : (set.ov === 'no' ? t('vcNone') : t('vcOfflineAvail')));
         var phr = (B.PHRASES.filter(function (p) { return p.id === 'hello'; })[0] || {})[l] || 'Hello';
         var vs = U.voicesFor(l), vsel = null, rsel = null;
         if (vs.length) {
@@ -168,12 +178,12 @@
         rsel = h('select', { id: 'vc-r-' + l, 'aria-label': t('vcSpeed') + ': ' + U.langName(l) }, [h('option', { value: '', text: t('vcDefault') })].concat(['0.6', '0.75', '0.9', '1', '1.15'].map(function (x) { return h('option', { value: x, text: x + '×' }); })));
         rsel.value = set.rates && set.rates[l] ? String(set.rates[l]) : '';
         rsel.addEventListener('change', function () { if (rsel.value) set.rates[l] = +rsel.value; else delete set.rates[l]; U.saveSet(); });
-        rows.appendChild(h('div', { class: 'vc-row' }, [h('div', { class: 'vc-l' }, [h('b', { text: U.langNative(l) }), h('span', { text: ' ' + U.langName(l) })]), h('div', { class: 'vc-s', text: st }), vsel ? h('label', { class: 'vc-c', for: 'vc-v-' + l }, [h('span', { text: t('vcVoice') }), vsel]) : null, h('label', { class: 'vc-c', for: 'vc-r-' + l }, [h('span', { text: t('vcSpeed') }), rsel]), h('button', { type: 'button', class: 'abtn', text: '🔊 ' + t('vcTest'), onclick: function () { U.speak(phr, l, function () { paint(); }); } })]));
+        rows.appendChild(h('div', { class: 'vc-row' }, [h('div', { class: 'vc-l' }, [h('b', { text: U.langNative(l) }), h('span', { text: ' ' + U.langName(l) })]), h('div', { class: 'vc-s' }, [h('span', { class: 'vq vq-' + vk.kind, text: t('vq_' + vk.kind) }), ' ' + st]), vsel ? h('label', { class: 'vc-c', for: 'vc-v-' + l }, [h('span', { text: t('vcVoice') }), vsel]) : null, h('label', { class: 'vc-c', for: 'vc-r-' + l }, [h('span', { text: t('vcSpeed') }), rsel]), h('button', { type: 'button', class: 'abtn', text: '🔊 ' + t('vcTest'), onclick: function () { U.speak(phr, l, function () { paint(); }); } })]));
       });
     }
     var seg = h('div', { class: 'seg', role: 'group', 'aria-label': t('ovLabel') });
     [['ask', t('ovAsk')], ['yes', t('on')], ['no', t('off')]].forEach(function (o) { seg.appendChild(h('button', { type: 'button', 'aria-pressed': String(set.ov === o[0]), text: o[1], onclick: function () { set.ov = o[0]; U.saveSet(); [].forEach.call(seg.children, function (b, i) { b.setAttribute('aria-pressed', String(['ask', 'yes', 'no'][i] === set.ov)); }); paint(); } })); });
-    box.appendChild(h('div', { class: 'pw' }, [h('div', { class: 'pw-head' }, [h('h2', { text: t('voiceCheck') }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('close'), text: '✕', onclick: function () { box.remove(); } })]), h('p', { class: 'note', text: t('vcLede') }), rows, h('label', { text: t('ovLabel') }), seg, h('p', { class: 'note', text: t('ovNote') })]));
+    box.appendChild(h('div', { class: 'pw' }, [h('div', { class: 'pw-head' }, [h('h2', { text: t('voiceCheck') }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('close'), text: '✕', onclick: function () { box.remove(); } })]), h('p', { class: 'note', text: t('vcLede') }), h('details', { class: 'why vq-help' }, [h('summary', { text: '🎙 ' + t('vq_help_h') }), h('p', { text: t('vq_help') })]), rows, h('label', { text: t('ovLabel') }), seg, h('p', { class: 'note', text: t('ovNote') })]));
     document.body.appendChild(box); paint(); whenVoices().then(paint);
     document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { box.remove(); document.removeEventListener('keydown', esc); } });
   };

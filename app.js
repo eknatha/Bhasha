@@ -613,10 +613,11 @@
     return ready;
   }
   // natural-sounding voices score higher; robotic, novelty and compact voices score lower
-  var GOOD = /natural|neural|online|premium|enhanced|wavenet|siri|google|samantha|ava\b|allison|susan|serena|karen|moira|tessa|daniel|oliver|jenny|aria|guy|libby|sonia|ryan|neerja|prabhat|heera|ravi/i,
-    BAD = /compact|espeak|zarvox|fred|albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|junior|kathy|organ|ralph|trinoids|whisper|wobble|superstar|pipe|agnes|princess|vicki|bruce/i;
+  var GOOD = /natural|neural|online|premium|enhanced|wavenet|siri|google|samantha|ava\b|allison|susan|serena|karen|moira|tessa|daniel|oliver|jenny|aria|guy|libby|sonia|ryan|neerja|prabhat|heera|ravi|swara|madhur|shruti|mohan|gagan|sapna|pallavi|valluvar|sobhana|midhun|tanishaa|bashkar|aarohi|manohar|dhwani|niranjan|sunhi|injoon|nanami|keita|hemkala|sagar|lekha|geeta|soumya|veena|rishi|yuna|kyoko|otoya|monica|paulina|jorge|diego|elvira|alvaro|katja|conrad|amala|denise|henri|vivienne|remy/i,
+    NATURAL = /natural|neural|online|premium|enhanced|wavenet|multilingual/i,
+    BAD = /compact|espeak|desktop|zarvox|fred|albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|junior|kathy|organ|ralph|trinoids|whisper|wobble|superstar|pipe|agnes|princess|vicki|bruce/i;
   function quality(v, pre) {
-    var n = v.name || '', q = 0; if (GOOD.test(n)) q += 3; if (/natural|neural|online|premium|enhanced|wavenet/i.test(n)) q += 2; if (BAD.test(n)) q -= 6;
+    var n = v.name || '', q = 0; if (GOOD.test(n)) q += 3; if (/natural|neural|online|premium|enhanced|wavenet/i.test(n)) q += 2; if (BAD.test(n)) q -= 6; if (v.localService === false && /google/i.test(n)) q += 0.5;
     if (pre === 'en' && /^en[-_](us|gb|in|au)$/i.test(v.lang || '')) q += 0.3;
     return q;
   }
@@ -634,6 +635,12 @@
   };
   // speed: a language's own speed, unless a caller asks for a fixed slow speed
   U.rateFor = function (lang) { var r = set.rates && set.rates[lang]; return r > 0 ? r : set.rate; };
+  // what kind of voice a language will get: natural, an ordinary device voice, the basic offline voice (robotic), or none
+  U.voiceKind = function (lang) {
+    load(); var v = U.voiceFor(lang);
+    if (v) return { kind: NATURAL.test(v.name || '') || (v.localService === false && /google/i.test(v.name || '')) ? 'nat' : 'dev', name: v.name };
+    return { kind: set.ov === 'no' ? 'none' : 'basic', name: null };
+  };
   U.voicesFor = function (lang) { load(); var pre = B.bcp(lang).toLowerCase().split(/[-_]/)[0]; return voices.filter(function (v) { return (v.lang || '').toLowerCase().split(/[-_]/)[0] === pre; }); };
   // ---- offline engine
   var ESP = { en: 'en-us', zh: 'cmn', pt: 'pt-pt', no: 'nb', iw: 'he' };
@@ -661,6 +668,9 @@
       var n = len >> 1, x = new Float32Array(n), i, mean = 0;
       for (i = 0; i < n; i++) { x[i] = dv.getInt16(off + i * 2, true); mean += x[i]; }
       mean /= Math.max(1, n); for (i = 0; i < n; i++) x[i] -= mean;
+      var a = 1 - Math.exp(-2 * Math.PI * 4200 / rate), y = 0, pk = 1;   // soften the harsh buzz above about 4 kHz
+      for (i = 0; i < n; i++) { y += a * (x[i] - y); x[i] = y; if (Math.abs(y) > pk) pk = Math.abs(y); }
+      var gain = Math.min(3, 24000 / pk); for (i = 0; i < n; i++) x[i] *= gain;   // even loudness
       var end = n; while (end > 0 && Math.abs(x[end - 1]) < 60) end--;   // trim trailing near-silence
       var fade = Math.min(Math.round(rate * 0.03), end >> 1), tail = Math.round(rate * 0.12), total = end + tail;
       for (i = 0; i < fade; i++) { x[i] *= i / fade; x[end - 1 - i] *= i / fade; }
@@ -676,7 +686,7 @@
     var wpm = Math.max(80, Math.min(350, Math.round(175 * (rate || set.rate)))), key = lang + '|' + wpm + '|' + text;
     if (cache[key]) return Promise.resolve(cache[key]);
     return ensureEngine().then(function (E) {
-      return E.factory({ arguments: ['-v', espCode(lang), '-s', String(wpm), '-w', 'o.wav', ' ' + text], print: function () { }, printErr: function () { }, instantiateWasm: function (imports, ok) { WebAssembly.instantiate(E.mod, imports).then(function (i) { ok(i, E.mod); }); return {}; } });
+      return E.factory({ arguments: ['-v', espCode(lang), '-s', String(wpm), '-g', '2', '-w', 'o.wav', ' ' + text], print: function () { }, printErr: function () { }, instantiateWasm: function (imports, ok) { WebAssembly.instantiate(E.mod, imports).then(function (i) { ok(i, E.mod); }); return {}; } });
     }).then(function (m) {
       var d = smooth(m.FS.readFile('o.wav')); if (d.length < 500) throw new Error('empty');
       var url = URL.createObjectURL(new Blob([d], { type: 'audio/wav' })); cache[key] = url; cacheKeys.push(key);
@@ -754,7 +764,7 @@
     function paint() {
       load(); rows.textContent = '';
       B.LEARN.forEach(function (l) {
-        var v = U.voiceFor(l), st = v ? t('vcDevice') + ': ' + v.name : (engine ? t('vcOffline') : (set.ov === 'no' ? t('vcNone') : t('vcOfflineAvail')));
+        var v = U.voiceFor(l), vk = U.voiceKind(l), st = v ? t('vcDevice') + ': ' + v.name : (engine ? t('vcOffline') : (set.ov === 'no' ? t('vcNone') : t('vcOfflineAvail')));
         var phr = (B.PHRASES.filter(function (p) { return p.id === 'hello'; })[0] || {})[l] || 'Hello';
         var vs = U.voicesFor(l), vsel = null, rsel = null;
         if (vs.length) {
@@ -765,12 +775,12 @@
         rsel = h('select', { id: 'vc-r-' + l, 'aria-label': t('vcSpeed') + ': ' + U.langName(l) }, [h('option', { value: '', text: t('vcDefault') })].concat(['0.6', '0.75', '0.9', '1', '1.15'].map(function (x) { return h('option', { value: x, text: x + '×' }); })));
         rsel.value = set.rates && set.rates[l] ? String(set.rates[l]) : '';
         rsel.addEventListener('change', function () { if (rsel.value) set.rates[l] = +rsel.value; else delete set.rates[l]; U.saveSet(); });
-        rows.appendChild(h('div', { class: 'vc-row' }, [h('div', { class: 'vc-l' }, [h('b', { text: U.langNative(l) }), h('span', { text: ' ' + U.langName(l) })]), h('div', { class: 'vc-s', text: st }), vsel ? h('label', { class: 'vc-c', for: 'vc-v-' + l }, [h('span', { text: t('vcVoice') }), vsel]) : null, h('label', { class: 'vc-c', for: 'vc-r-' + l }, [h('span', { text: t('vcSpeed') }), rsel]), h('button', { type: 'button', class: 'abtn', text: '🔊 ' + t('vcTest'), onclick: function () { U.speak(phr, l, function () { paint(); }); } })]));
+        rows.appendChild(h('div', { class: 'vc-row' }, [h('div', { class: 'vc-l' }, [h('b', { text: U.langNative(l) }), h('span', { text: ' ' + U.langName(l) })]), h('div', { class: 'vc-s' }, [h('span', { class: 'vq vq-' + vk.kind, text: t('vq_' + vk.kind) }), ' ' + st]), vsel ? h('label', { class: 'vc-c', for: 'vc-v-' + l }, [h('span', { text: t('vcVoice') }), vsel]) : null, h('label', { class: 'vc-c', for: 'vc-r-' + l }, [h('span', { text: t('vcSpeed') }), rsel]), h('button', { type: 'button', class: 'abtn', text: '🔊 ' + t('vcTest'), onclick: function () { U.speak(phr, l, function () { paint(); }); } })]));
       });
     }
     var seg = h('div', { class: 'seg', role: 'group', 'aria-label': t('ovLabel') });
     [['ask', t('ovAsk')], ['yes', t('on')], ['no', t('off')]].forEach(function (o) { seg.appendChild(h('button', { type: 'button', 'aria-pressed': String(set.ov === o[0]), text: o[1], onclick: function () { set.ov = o[0]; U.saveSet(); [].forEach.call(seg.children, function (b, i) { b.setAttribute('aria-pressed', String(['ask', 'yes', 'no'][i] === set.ov)); }); paint(); } })); });
-    box.appendChild(h('div', { class: 'pw' }, [h('div', { class: 'pw-head' }, [h('h2', { text: t('voiceCheck') }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('close'), text: '✕', onclick: function () { box.remove(); } })]), h('p', { class: 'note', text: t('vcLede') }), rows, h('label', { text: t('ovLabel') }), seg, h('p', { class: 'note', text: t('ovNote') })]));
+    box.appendChild(h('div', { class: 'pw' }, [h('div', { class: 'pw-head' }, [h('h2', { text: t('voiceCheck') }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('close'), text: '✕', onclick: function () { box.remove(); } })]), h('p', { class: 'note', text: t('vcLede') }), h('details', { class: 'why vq-help' }, [h('summary', { text: '🎙 ' + t('vq_help_h') }), h('p', { text: t('vq_help') })]), rows, h('label', { text: t('ovLabel') }), seg, h('p', { class: 'note', text: t('ovNote') })]));
     document.body.appendChild(box); paint(); whenVoices().then(paint);
     document.addEventListener('keydown', function esc(e) { if (e.key === 'Escape') { box.remove(); document.removeEventListener('keydown', esc); } });
   };
@@ -1455,7 +1465,13 @@
     "songEn": "English meaning",
     "why_show": "Why this way?",
     "set_night": "Night reading",
-    "night_auto": "Auto (evening)"
+    "night_auto": "Auto (evening)",
+    "vq_nat": "Natural voice",
+    "vq_dev": "Device voice",
+    "vq_basic": "Basic offline voice (robotic)",
+    "vq_none": "No voice yet",
+    "vq_help_h": "Want a more natural voice?",
+    "vq_help": "Voices come from your browser and device, not from Bhasha. Microsoft Edge and Chrome offer free natural voices for many languages. Windows: Settings, Time and language, Speech, Add voices. Android: Settings, Text-to-speech, Google, install voice data. iPhone and Mac: Settings, Accessibility, Spoken Content, Voices, download an Enhanced or Premium voice. Then reload Bhasha and choose the voice here. Without one, Bhasha uses a basic offline voice that sounds robotic."
   };
   I.hi = {
     "skip": "सामग्री पर जाएँ",
@@ -2131,7 +2147,13 @@
     "songEn": "अंग्रेज़ी अर्थ",
     "why_show": "ऐसा क्यों?",
     "set_night": "रात में पढ़ना",
-    "night_auto": "स्वचालित (शाम)"
+    "night_auto": "स्वचालित (शाम)",
+    "vq_nat": "प्राकृतिक आवाज़",
+    "vq_dev": "डिवाइस की आवाज़",
+    "vq_basic": "बुनियादी ऑफ़लाइन आवाज़ (मशीनी)",
+    "vq_none": "अभी कोई आवाज़ नहीं",
+    "vq_help_h": "ज़्यादा प्राकृतिक आवाज़ चाहिए?",
+    "vq_help": "आवाज़ें आपके ब्राउज़र और डिवाइस से आती हैं, भाषा से नहीं। Microsoft Edge और Chrome कई भाषाओं के लिए मुफ़्त प्राकृतिक आवाज़ें देते हैं। Windows: सेटिंग, समय और भाषा, वाक्, आवाज़ें जोड़ें। Android: सेटिंग, टेक्स्ट-टू-स्पीच, Google, वॉइस डेटा इंस्टॉल करें। iPhone और Mac: सेटिंग, एक्सेसिबिलिटी, Spoken Content, Voices, Enhanced या Premium आवाज़ डाउनलोड करें। फिर Bhasha रीलोड करें और यहाँ आवाज़ चुनें। आवाज़ न हो तो Bhasha बुनियादी ऑफ़लाइन आवाज़ चलाता है, जो मशीनी लगती है।"
   };
   I.te = {
     "skip": "కంటెంట్‌కు వెళ్లండి",
@@ -2807,7 +2829,13 @@
     "songEn": "ఆంగ్ల అర్థం",
     "why_show": "ఇలా ఎందుకు?",
     "set_night": "రాత్రి చదువు",
-    "night_auto": "ఆటో (సాయంత్రం)"
+    "night_auto": "ఆటో (సాయంత్రం)",
+    "vq_nat": "సహజ స్వరం",
+    "vq_dev": "పరికర స్వరం",
+    "vq_basic": "ప్రాథమిక ఆఫ్‌లైన్ స్వరం (యంత్రంలా)",
+    "vq_none": "ఇంకా స్వరం లేదు",
+    "vq_help_h": "మరింత సహజ స్వరం కావాలా?",
+    "vq_help": "స్వరాలు మీ బ్రౌజర్, పరికరం నుండి వస్తాయి, Bhasha నుండి కాదు. Microsoft Edge, Chrome చాలా భాషలకు ఉచిత సహజ స్వరాలు ఇస్తాయి. Windows: సెట్టింగ్స్, సమయం మరియు భాష, స్పీచ్, స్వరాలు జోడించండి. Android: సెట్టింగ్స్, టెక్స్ట్-టు-స్పీచ్, Google, వాయిస్ డేటా ఇన్‌స్టాల్ చేయండి. iPhone, Mac: సెట్టింగ్స్, యాక్సెసిబిలిటీ, Spoken Content, Voices, Enhanced లేదా Premium స్వరం డౌన్‌లోడ్ చేయండి. తర్వాత Bhasha రీలోడ్ చేసి ఇక్కడ స్వరం ఎంచుకోండి. లేకపోతే Bhasha ప్రాథమిక ఆఫ్‌లైన్ స్వరం వాడుతుంది, అది యంత్రంలా వినిపిస్తుంది."
   };
   I.kn = {
     "skip": "ವಿಷಯಕ್ಕೆ ಹೋಗಿ",
@@ -3483,7 +3511,13 @@
     "songEn": "ಇಂಗ್ಲಿಷ್ ಅರ್ಥ",
     "why_show": "ಹೀಗೆ ಏಕೆ?",
     "set_night": "ರಾತ್ರಿ ಓದು",
-    "night_auto": "ಸ್ವಯಂ (ಸಂಜೆ)"
+    "night_auto": "ಸ್ವಯಂ (ಸಂಜೆ)",
+    "vq_nat": "ಸಹಜ ಧ್ವನಿ",
+    "vq_dev": "ಸಾಧನ ಧ್ವನಿ",
+    "vq_basic": "ಮೂಲ ಆಫ್‌ಲೈನ್ ಧ್ವನಿ (ಯಂತ್ರದಂತೆ)",
+    "vq_none": "ಇನ್ನೂ ಧ್ವನಿ ಇಲ್ಲ",
+    "vq_help_h": "ಹೆಚ್ಚು ಸಹಜ ಧ್ವನಿ ಬೇಕೇ?",
+    "vq_help": "ಧ್ವನಿಗಳು ನಿಮ್ಮ ಬ್ರೌಸರ್ ಮತ್ತು ಸಾಧನದಿಂದ ಬರುತ್ತವೆ, Bhasha ಅಲ್ಲ. Microsoft Edge ಮತ್ತು Chrome ಅನೇಕ ಭಾಷೆಗಳಿಗೆ ಉಚಿತ ಸಹಜ ಧ್ವನಿ ನೀಡುತ್ತವೆ. Windows: ಸೆಟ್ಟಿಂಗ್ಸ್, ಸಮಯ ಮತ್ತು ಭಾಷೆ, ಸ್ಪೀಚ್, ಧ್ವನಿ ಸೇರಿಸಿ. Android: ಸೆಟ್ಟಿಂಗ್ಸ್, ಟೆಕ್ಸ್ಟ್-ಟು-ಸ್ಪೀಚ್, Google, ವಾಯ್ಸ್ ಡೇಟಾ ಇನ್‌ಸ್ಟಾಲ್ ಮಾಡಿ. iPhone, Mac: ಸೆಟ್ಟಿಂಗ್ಸ್, ಆಕ್ಸೆಸಿಬಿಲಿಟಿ, Spoken Content, Voices, Enhanced ಅಥವಾ Premium ಧ್ವನಿ ಡೌನ್‌ಲೋಡ್ ಮಾಡಿ. ನಂತರ Bhasha ರೀಲೋಡ್ ಮಾಡಿ ಇಲ್ಲಿ ಧ್ವನಿ ಆರಿಸಿ. ಇಲ್ಲದಿದ್ದರೆ Bhasha ಮೂಲ ಆಫ್‌ಲೈನ್ ಧ್ವನಿ ಬಳಸುತ್ತದೆ, ಅದು ಯಂತ್ರದಂತೆ ಕೇಳುತ್ತದೆ."
   };
   I.ta = {
     "skip": "உள்ளடக்கத்துக்குச் செல்லவும்",
@@ -4159,7 +4193,13 @@
     "songEn": "ஆங்கில அர்த்தம்",
     "why_show": "ஏன் இப்படி?",
     "set_night": "இரவு வாசிப்பு",
-    "night_auto": "தானியங்கி (மாலை)"
+    "night_auto": "தானியங்கி (மாலை)",
+    "vq_nat": "இயல்பான குரல்",
+    "vq_dev": "சாதனக் குரல்",
+    "vq_basic": "அடிப்படை ஆஃப்லைன் குரல் (இயந்திரம் போல்)",
+    "vq_none": "இன்னும் குரல் இல்லை",
+    "vq_help_h": "இன்னும் இயல்பான குரல் வேண்டுமா?",
+    "vq_help": "குரல்கள் உங்கள் உலாவி, சாதனத்திலிருந்து வருகின்றன, Bhasha-விலிருந்து அல்ல. Microsoft Edge, Chrome பல மொழிகளுக்கு இலவச இயல்பான குரல்களைத் தருகின்றன. Windows: அமைப்புகள், நேரம் மற்றும் மொழி, பேச்சு, குரல்களைச் சேர்க்கவும். Android: அமைப்புகள், Text-to-speech, Google, குரல் தரவை நிறுவவும். iPhone, Mac: அமைப்புகள், அணுகல்தன்மை, Spoken Content, Voices, Enhanced அல்லது Premium குரலைப் பதிவிறக்கவும். பின்னர் Bhasha-வை மீண்டும் ஏற்றி இங்கே குரலைத் தேர்ந்தெடுங்கள். இல்லையெனில் Bhasha அடிப்படை ஆஃப்லைன் குரலைப் பயன்படுத்தும், அது இயந்திரம் போல் ஒலிக்கும்."
   };
   I.ml = {
     "skip": "ഉള്ളടക്കത്തിലേക്ക് പോകുക",
@@ -4835,7 +4875,13 @@
     "songEn": "ഇംഗ്ലീഷ് അർത്ഥം",
     "why_show": "എന്തുകൊണ്ട് ഇങ്ങനെ?",
     "set_night": "രാത്രി വായന",
-    "night_auto": "ഓട്ടോ (വൈകുന്നേരം)"
+    "night_auto": "ഓട്ടോ (വൈകുന്നേരം)",
+    "vq_nat": "സ്വാഭാവിക ശബ്ദം",
+    "vq_dev": "ഉപകരണ ശബ്ദം",
+    "vq_basic": "അടിസ്ഥാന ഓഫ്‌ലൈൻ ശബ്ദം (യന്ത്രം പോലെ)",
+    "vq_none": "ഇതുവരെ ശബ്ദമില്ല",
+    "vq_help_h": "കൂടുതൽ സ്വാഭാവിക ശബ്ദം വേണോ?",
+    "vq_help": "ശബ്ദങ്ങൾ നിങ്ങളുടെ ബ്രൗസറിൽ നിന്നും ഉപകരണത്തിൽ നിന്നുമാണ്, Bhasha-യിൽ നിന്നല്ല. Microsoft Edge, Chrome എന്നിവ പല ഭാഷകൾക്കും സൗജന്യ സ്വാഭാവിക ശബ്ദങ്ങൾ നൽകുന്നു. Windows: ക്രമീകരണങ്ങൾ, സമയവും ഭാഷയും, സ്പീച്ച്, ശബ്ദങ്ങൾ ചേർക്കുക. Android: ക്രമീകരണങ്ങൾ, Text-to-speech, Google, വോയ്സ് ഡാറ്റ ഇൻസ്റ്റാൾ ചെയ്യുക. iPhone, Mac: ക്രമീകരണങ്ങൾ, Accessibility, Spoken Content, Voices, Enhanced അല്ലെങ്കിൽ Premium ശബ്ദം ഡൗൺലോഡ് ചെയ്യുക. തുടർന്ന് Bhasha റീലോഡ് ചെയ്ത് ഇവിടെ ശബ്ദം തിരഞ്ഞെടുക്കുക. ഇല്ലെങ്കിൽ Bhasha അടിസ്ഥാന ഓഫ്‌ലൈൻ ശബ്ദം ഉപയോഗിക്കും, അത് യന്ത്രം പോലെ തോന്നും."
   };
   I.bn = {
     "skip": "মূল বিষয়ে যান",
@@ -5511,7 +5557,13 @@
     "songEn": "ইংরেজি অর্থ",
     "why_show": "কেন এভাবে?",
     "set_night": "রাতের পড়া",
-    "night_auto": "স্বয়ংক্রিয় (সন্ধ্যা)"
+    "night_auto": "স্বয়ংক্রিয় (সন্ধ্যা)",
+    "vq_nat": "স্বাভাবিক কণ্ঠ",
+    "vq_dev": "ডিভাইসের কণ্ঠ",
+    "vq_basic": "মৌলিক অফলাইন কণ্ঠ (যান্ত্রিক)",
+    "vq_none": "এখনো কণ্ঠ নেই",
+    "vq_help_h": "আরও স্বাভাবিক কণ্ঠ চান?",
+    "vq_help": "কণ্ঠ আসে আপনার ব্রাউজার ও ডিভাইস থেকে, Bhasha থেকে নয়। Microsoft Edge ও Chrome অনেক ভাষার জন্য বিনামূল্যে স্বাভাবিক কণ্ঠ দেয়। Windows: সেটিংস, সময় ও ভাষা, স্পিচ, কণ্ঠ যোগ করুন। Android: সেটিংস, Text-to-speech, Google, ভয়েস ডেটা ইনস্টল করুন। iPhone ও Mac: সেটিংস, Accessibility, Spoken Content, Voices, Enhanced বা Premium কণ্ঠ ডাউনলোড করুন। তারপর Bhasha রিলোড করে এখানে কণ্ঠ বেছে নিন। না থাকলে Bhasha মৌলিক অফলাইন কণ্ঠ ব্যবহার করে, যা যান্ত্রিক শোনায়।"
   };
   I.mr = {
     "skip": "मुख्य मजकुराकडे जा",
@@ -6187,7 +6239,13 @@
     "songEn": "इंग्रजी अर्थ",
     "why_show": "असे का?",
     "set_night": "रात्रीचे वाचन",
-    "night_auto": "आपोआप (संध्याकाळ)"
+    "night_auto": "आपोआप (संध्याकाळ)",
+    "vq_nat": "नैसर्गिक आवाज",
+    "vq_dev": "डिव्हाइस आवाज",
+    "vq_basic": "मूलभूत ऑफलाइन आवाज (यांत्रिक)",
+    "vq_none": "अजून आवाज नाही",
+    "vq_help_h": "अधिक नैसर्गिक आवाज हवा आहे का?",
+    "vq_help": "आवाज तुमच्या ब्राउझर आणि डिव्हाइसमधून येतात, Bhasha मधून नाही. Microsoft Edge आणि Chrome अनेक भाषांसाठी मोफत नैसर्गिक आवाज देतात. Windows: सेटिंग्ज, वेळ आणि भाषा, स्पीच, आवाज जोडा. Android: सेटिंग्ज, Text-to-speech, Google, व्हॉइस डेटा इन्स्टॉल करा. iPhone आणि Mac: सेटिंग्ज, Accessibility, Spoken Content, Voices, Enhanced किंवा Premium आवाज डाउनलोड करा. मग Bhasha रीलोड करून येथे आवाज निवडा. नसल्यास Bhasha मूलभूत ऑफलाइन आवाज वापरते, तो यांत्रिक वाटतो."
   };
   I.ko = {
     "skip": "본문으로 건너뛰기",
@@ -6863,7 +6921,13 @@
     "songEn": "영어 뜻",
     "why_show": "왜 이렇게?",
     "set_night": "야간 읽기",
-    "night_auto": "자동(저녁)"
+    "night_auto": "자동(저녁)",
+    "vq_nat": "자연스러운 음성",
+    "vq_dev": "기기 음성",
+    "vq_basic": "기본 오프라인 음성(기계음)",
+    "vq_none": "아직 음성 없음",
+    "vq_help_h": "더 자연스러운 음성을 원하세요?",
+    "vq_help": "음성은 Bhasha가 아니라 브라우저와 기기에서 옵니다. Microsoft Edge와 Chrome은 많은 언어에 무료 자연스러운 음성을 제공합니다. Windows: 설정, 시간 및 언어, 음성, 음성 추가. Android: 설정, 텍스트 음성 변환, Google, 음성 데이터 설치. iPhone과 Mac: 설정, 손쉬운 사용, 말하기 콘텐츠, 음성, Enhanced 또는 Premium 음성 다운로드. 그런 다음 Bhasha를 새로고침하고 여기서 음성을 고르세요. 음성이 없으면 Bhasha는 기계음처럼 들리는 기본 오프라인 음성을 씁니다."
   };
   I.es = {
     "skip": "Saltar al contenido",
@@ -7539,7 +7603,13 @@
     "songEn": "Significado en inglés",
     "why_show": "¿Por qué así?",
     "set_night": "Lectura nocturna",
-    "night_auto": "Auto (tarde)"
+    "night_auto": "Auto (tarde)",
+    "vq_nat": "Voz natural",
+    "vq_dev": "Voz del dispositivo",
+    "vq_basic": "Voz básica sin conexión (robótica)",
+    "vq_none": "Aún sin voz",
+    "vq_help_h": "¿Quieres una voz más natural?",
+    "vq_help": "Las voces vienen de tu navegador y dispositivo, no de Bhasha. Microsoft Edge y Chrome ofrecen voces naturales gratuitas para muchos idiomas. Windows: Configuración, Hora e idioma, Voz, Agregar voces. Android: Ajustes, Texto a voz, Google, instalar datos de voz. iPhone y Mac: Ajustes, Accesibilidad, Contenido hablado, Voces, descarga una voz Mejorada o Premium. Luego recarga Bhasha y elige la voz aquí. Sin ella, Bhasha usa una voz básica sin conexión que suena robótica."
   };
   I.de = {
     "skip": "Zum Inhalt springen",
@@ -8215,7 +8285,13 @@
     "songEn": "Englische Bedeutung",
     "why_show": "Warum so?",
     "set_night": "Nachtlesen",
-    "night_auto": "Auto (abends)"
+    "night_auto": "Auto (abends)",
+    "vq_nat": "Natürliche Stimme",
+    "vq_dev": "Gerätestimme",
+    "vq_basic": "Einfache Offline-Stimme (roboterhaft)",
+    "vq_none": "Noch keine Stimme",
+    "vq_help_h": "Möchten Sie eine natürlichere Stimme?",
+    "vq_help": "Stimmen kommen von Ihrem Browser und Gerät, nicht von Bhasha. Microsoft Edge und Chrome bieten kostenlose natürliche Stimmen für viele Sprachen. Windows: Einstellungen, Zeit und Sprache, Sprache, Stimmen hinzufügen. Android: Einstellungen, Text-zu-Sprache, Google, Sprachdaten installieren. iPhone und Mac: Einstellungen, Bedienungshilfen, Gesprochene Inhalte, Stimmen, eine erweiterte oder Premium-Stimme laden. Dann Bhasha neu laden und die Stimme hier wählen. Ohne sie nutzt Bhasha eine einfache Offline-Stimme, die roboterhaft klingt."
   };
   I.fr = {
     "skip": "Aller au contenu",
@@ -8891,7 +8967,13 @@
     "songEn": "Sens en anglais",
     "why_show": "Pourquoi ainsi ?",
     "set_night": "Lecture de nuit",
-    "night_auto": "Auto (soir)"
+    "night_auto": "Auto (soir)",
+    "vq_nat": "Voix naturelle",
+    "vq_dev": "Voix de l’appareil",
+    "vq_basic": "Voix hors ligne basique (robotique)",
+    "vq_none": "Pas encore de voix",
+    "vq_help_h": "Envie d’une voix plus naturelle ?",
+    "vq_help": "Les voix viennent de votre navigateur et de votre appareil, pas de Bhasha. Microsoft Edge et Chrome proposent des voix naturelles gratuites pour de nombreuses langues. Windows : Paramètres, Heure et langue, Voix, Ajouter des voix. Android : Paramètres, Synthèse vocale, Google, installer les données vocales. iPhone et Mac : Réglages, Accessibilité, Contenu énoncé, Voix, télécharger une voix améliorée ou Premium. Rechargez ensuite Bhasha et choisissez la voix ici. Sans voix, Bhasha utilise une voix hors ligne basique, à l’effet robotique."
   };
   I.gu = {
     "skip": "મુખ્ય સામગ્રી પર જાઓ",
@@ -9567,7 +9649,13 @@
     "songEn": "અંગ્રેજી અર્થ",
     "why_show": "આવું કેમ?",
     "set_night": "રાત્રિ વાંચન",
-    "night_auto": "ઓટો (સાંજ)"
+    "night_auto": "ઓટો (સાંજ)",
+    "vq_nat": "કુદરતી અવાજ",
+    "vq_dev": "ઉપકરણનો અવાજ",
+    "vq_basic": "મૂળભૂત ઑફલાઇન અવાજ (યાંત્રિક)",
+    "vq_none": "હજી અવાજ નથી",
+    "vq_help_h": "વધુ કુદરતી અવાજ જોઈએ છે?",
+    "vq_help": "અવાજો તમારા બ્રાઉઝર અને ઉપકરણમાંથી આવે છે, Bhasha માંથી નહીં. Microsoft Edge અને Chrome ઘણી ભાષાઓ માટે મફત કુદરતી અવાજ આપે છે. Windows: સેટિંગ્સ, સમય અને ભાષા, સ્પીચ, અવાજ ઉમેરો. Android: સેટિંગ્સ, Text-to-speech, Google, વૉઇસ ડેટા ઇન્સ્ટૉલ કરો. iPhone અને Mac: સેટિંગ્સ, Accessibility, Spoken Content, Voices, Enhanced કે Premium અવાજ ડાઉનલોડ કરો. પછી Bhasha રીલોડ કરી અહીં અવાજ પસંદ કરો. ન હોય તો Bhasha મૂળભૂત ઑફલાઇન અવાજ વાપરે છે, જે યાંત્રિક લાગે છે."
   };
   I.as = {
     "skip": "মূল বিষয়লৈ যাওক",
@@ -10243,7 +10331,13 @@
     "songEn": "ইংৰাজী অৰ্থ",
     "why_show": "এনেকৈ কিয়?",
     "set_night": "ৰাতিৰ পঢ়া",
-    "night_auto": "স্বয়ংক্ৰিয় (সন্ধিয়া)"
+    "night_auto": "স্বয়ংক্ৰিয় (সন্ধিয়া)",
+    "vq_nat": "স্বাভাৱিক কণ্ঠ",
+    "vq_dev": "ডিভাইচৰ কণ্ঠ",
+    "vq_basic": "মৌলিক অফলাইন কণ্ঠ (যান্ত্ৰিক)",
+    "vq_none": "এতিয়াও কণ্ঠ নাই",
+    "vq_help_h": "অধিক স্বাভাৱিক কণ্ঠ লাগে নে?",
+    "vq_help": "কণ্ঠ আহে আপোনাৰ ব্ৰাউজাৰ আৰু ডিভাইচৰ পৰা, Bhasha ৰ পৰা নহয়। Microsoft Edge আৰু Chrome-এ বহু ভাষাৰ বাবে বিনামূলীয়া স্বাভাৱিক কণ্ঠ দিয়ে। Windows: ছেটিংছ, সময় আৰু ভাষা, স্পীচ, কণ্ঠ যোগ কৰক। Android: ছেটিংছ, Text-to-speech, Google, ভইচ ডাটা ইনষ্টল কৰক। iPhone আৰু Mac: ছেটিংছ, Accessibility, Spoken Content, Voices, Enhanced বা Premium কণ্ঠ ডাউনলোড কৰক। তাৰ পিছত Bhasha ৰিলোড কৰি ইয়াত কণ্ঠ বাছক। নাথাকিলে Bhasha-এ মৌলিক অফলাইন কণ্ঠ ব্যৱহাৰ কৰে, যি যান্ত্ৰিক শুনা যায়।"
   };
 })(window.B = window.B || {});
 

@@ -116,3 +116,10 @@ English, Odia, Nepali and Japanese as learning languages (17 in all); 40 more ph
 - **Numbers and money** (`/numbers/`): listen-and-pick drills for numbers (up to 100,000), money (₹, ₩, ¥, €, $), clock times and dates (weekday, day, month). Numbers are read by the device voice or the offline voice.
 - All new text for Odia, Nepali, Japanese and the other new strings are drafts for native review.
 - Tests: `node tests/learn2.js`.
+
+## Voice quality
+- **Why voices can sound robotic:** Bhasha speaks with the voices on your browser and device. Where a device has none for a language, Bhasha falls back to a small offline voice (eSpeak NG) that is clear but robotic. True natural offline voices for these languages are neural models of tens of megabytes each, which are not bundled.
+- **Better picking:** the voice chooser now recognises natural and neural voices on Edge/Windows (Online Natural), Chrome/Android (Google), and Apple (Enhanced and Premium) by name, ranks them above plain, compact, eSpeak and old Desktop voices, and prefers them for every language.
+- **Voice check** (Settings → Voice check) now shows, per language, a badge: Natural voice, Device voice, Basic offline voice (robotic) or No voice yet, plus a short guide to installing natural voices on Windows, Android, iPhone and Mac.
+- **Softer offline voice:** the fallback voice is smoothed (the harsh buzz above about 4 kHz is reduced, loudness is evened, and short word gaps are added).
+- Tests: `node tests/voice3.js`.
