@@ -361,13 +361,14 @@
     if (s.sound == null) s.sound = true;
     if (s.haptic == null) s.haptic = true;
     if (s.ambient == null) s.ambient = true;
+    if (['off', 'on', 'auto'].indexOf(s.night) < 0) s.night = 'off';
     if (!s.voices || typeof s.voices !== 'object') s.voices = {};
     if (!s.rates || typeof s.rates !== 'object') s.rates = {};
     s.kids = s.kids === true;
     s.theme = document.documentElement.getAttribute('data-theme') || 'light';
     return s;
   })();
-  U.saveSet = function () { store.set('bh-set', JSON.stringify({ ui: set.ui, focus: set.focus, scheme: set.scheme, roman: set.roman, perDay: set.perDay, rate: set.rate, ov: set.ov, sound: set.sound, haptic: set.haptic, ambient: set.ambient, voices: set.voices, rates: set.rates, kids: set.kids })); if (MAINSITE.indexOf(set.ui) >= 0) store.set('el-lang', set.ui); store.set('el-theme', set.theme); };
+  U.saveSet = function () { store.set('bh-set', JSON.stringify({ ui: set.ui, focus: set.focus, scheme: set.scheme, roman: set.roman, perDay: set.perDay, rate: set.rate, ov: set.ov, sound: set.sound, haptic: set.haptic, ambient: set.ambient, night: set.night, voices: set.voices, rates: set.rates, kids: set.kids })); if (MAINSITE.indexOf(set.ui) >= 0) store.set('el-lang', set.ui); store.set('el-theme', set.theme); };
   U.t = function (k, v) { var d = B.I18N[set.ui] || B.I18N.en, s = d[k]; if (s == null) s = B.I18N.en[k]; if (s == null) s = k; if (v) for (var x in v) s = s.split('{' + x + '}').join(v[x]); return s; };
   var t = U.t;
   U.applyTheme = function () { document.documentElement.setAttribute('data-theme', set.theme); var m = $('meta[name=theme-color]'); if (m) m.setAttribute('content', { light: '#1c1b4b', dark: '#1c1b4b', new: '#0b3d3a' }[set.theme]); };
@@ -705,8 +706,17 @@
     }).catch(function () { U.toast(t('ovFail')); fin(); });
   }
   // ---- native path with chunking and a watchdog
+  // Never hand a voice a piece that has no letters or digits in it: engines read a lone "?" or "!" aloud as "question mark".
+  var LETTER = /[\p{L}\p{N}\p{M}]/u;
+  function clean(text) {
+    return String(text == null ? '' : text).replace(/[\u200B\u2060\uFEFF]/g, '').replace(/[\p{Extended_Pictographic}\uFE0F]/gu, ' ').replace(/\s+/g, ' ').trim();
+  }
+  U.speakable = clean;
   function chunks(text, lang) {
-    var out = [], cur = ''; B.sentences(text, lang).forEach(function (s) { if ((cur + s).length > 180 && cur) { out.push(cur); cur = s; } else cur += s; }); if (cur.trim()) out.push(cur); return out.length ? out : [text];
+    var out = [], cur = '', segs = B.sentences(text, lang), rest = [];
+    segs.forEach(function (s) { if (LETTER.test(s)) rest.push(s); else if (rest.length) rest[rest.length - 1] += s; });   // punctuation-only pieces join the sentence before
+    rest.forEach(function (s) { if ((cur + s).length > 180 && cur) { out.push(cur); cur = s; } else cur += s; }); if (cur.trim()) out.push(cur);
+    return out.length ? out : [text];
   }
   function nativeSpeak(v, text, lang, onend, rate, my) {
     var parts = chunks(text, lang), i = 0;
@@ -723,7 +733,8 @@
     next();
   }
   U.speak = function (text, lang, onend, rate, fixed) {
-    if (!text) { if (onend) onend(); return false; }
+    text = clean(text);
+    if (!text || !LETTER.test(text)) { if (onend) onend(); return false; }
     var my = ++tok; if (audioEl) { try { audioEl.pause(); } catch (e) { } }
     if (!fixed && (rate == null || rate === set.rate)) rate = U.rateFor(lang);
     if (!U.canSpeak()) { fallback(text, lang, onend, rate, my); return true; }
@@ -1419,7 +1430,32 @@
     "tour_replay": "Take the tour again",
     "tour_help": "Guide for this page",
     "set_ambient": "Ambient background",
-    "tw_close": "Close"
+    "tw_close": "Close",
+    "nav_numbers": "Numbers & money",
+    "nav_tone": "Tone",
+    "nav_songs": "Songs & verses",
+    "numLede": "Listen, then pick what you heard. Numbers, money, times and dates are the hardest things to catch in a new language.",
+    "numMode_n": "Numbers",
+    "numMode_m": "Money",
+    "numMode_t": "Time",
+    "numMode_d": "Dates",
+    "numRange": "Range",
+    "numQ": "What did you hear?",
+    "numPlay": "Play",
+    "numNote": "Numbers are read by your device voice. If it has no voice for this language, the offline voice is used.",
+    "toneLede": "The same sentence changes with who you talk to. Compare the formal and the casual form side by side.",
+    "toneFormal": "Formal · respectful",
+    "toneCasual": "Casual · friends",
+    "toneNote": "Use the formal form with elders, strangers and at work. Use the casual form with friends, children and younger people. When unsure, choose formal.",
+    "songsLede": "Short verses written for learners. Tap a word to hear it, play one line, or play the whole verse.",
+    "songNote": "These verses are original and simple, written for practice. They are not traditional songs.",
+    "song_morning": "Morning",
+    "song_rain": "Rain",
+    "songPlayAll": "Play verse",
+    "songEn": "English meaning",
+    "why_show": "Why this way?",
+    "set_night": "Night reading",
+    "night_auto": "Auto (evening)"
   };
   I.hi = {
     "skip": "सामग्री पर जाएँ",
@@ -2070,7 +2106,32 @@
     "tour_replay": "दौरा फिर से देखें",
     "tour_help": "इस पेज की गाइड",
     "set_ambient": "एम्बिएंट बैकग्राउंड",
-    "tw_close": "बंद करें"
+    "tw_close": "बंद करें",
+    "nav_numbers": "संख्या और पैसे",
+    "nav_tone": "लहजा",
+    "nav_songs": "गीत और पद्य",
+    "numLede": "सुनिए, फिर चुनिए कि क्या सुना। नई भाषा में संख्या, पैसे, समय और तारीख़ पकड़ना सबसे कठिन होता है।",
+    "numMode_n": "संख्याएँ",
+    "numMode_m": "पैसे",
+    "numMode_t": "समय",
+    "numMode_d": "तारीख़ें",
+    "numRange": "सीमा",
+    "numQ": "आपने क्या सुना?",
+    "numPlay": "चलाएँ",
+    "numNote": "संख्याएँ आपके डिवाइस की आवाज़ से पढ़ी जाती हैं। इस भाषा की आवाज़ न हो तो ऑफ़लाइन आवाज़ चलती है।",
+    "toneLede": "जिससे बात करें, उसके अनुसार वाक्य बदलता है। औपचारिक और अनौपचारिक रूप साथ-साथ देखें।",
+    "toneFormal": "औपचारिक · आदर",
+    "toneCasual": "अनौपचारिक · दोस्त",
+    "toneNote": "बड़ों, अजनबियों और काम पर औपचारिक रूप बोलें। दोस्तों, बच्चों और छोटों से अनौपचारिक रूप। संदेह हो तो औपचारिक चुनें।",
+    "songsLede": "सीखने वालों के लिए लिखे छोटे पद। शब्द छूकर सुनें, एक पंक्ति चलाएँ या पूरा पद सुनें।",
+    "songNote": "ये पद मौलिक और सरल हैं, अभ्यास के लिए लिखे गए हैं। ये पारंपरिक गीत नहीं हैं।",
+    "song_morning": "सुबह",
+    "song_rain": "बारिश",
+    "songPlayAll": "पूरा पद चलाएँ",
+    "songEn": "अंग्रेज़ी अर्थ",
+    "why_show": "ऐसा क्यों?",
+    "set_night": "रात में पढ़ना",
+    "night_auto": "स्वचालित (शाम)"
   };
   I.te = {
     "skip": "కంటెంట్‌కు వెళ్లండి",
@@ -2721,7 +2782,32 @@
     "tour_replay": "టూర్‌ను మళ్లీ చూడండి",
     "tour_help": "ఈ పేజీ గైడ్",
     "set_ambient": "యాంబియంట్ నేపథ్యం",
-    "tw_close": "మూసివేయి"
+    "tw_close": "మూసివేయి",
+    "nav_numbers": "సంఖ్యలు, డబ్బు",
+    "nav_tone": "స్వరం",
+    "nav_songs": "పాటలు, పద్యాలు",
+    "numLede": "విని, మీరు విన్నది ఎంచుకోండి. కొత్త భాషలో సంఖ్యలు, డబ్బు, సమయం, తేదీలు పట్టుకోవడం చాలా కష్టం.",
+    "numMode_n": "సంఖ్యలు",
+    "numMode_m": "డబ్బు",
+    "numMode_t": "సమయం",
+    "numMode_d": "తేదీలు",
+    "numRange": "పరిధి",
+    "numQ": "మీరు ఏమి విన్నారు?",
+    "numPlay": "ప్లే చేయండి",
+    "numNote": "సంఖ్యలను మీ పరికరం స్వరం చదువుతుంది. ఈ భాషకు స్వరం లేకపోతే ఆఫ్‌లైన్ స్వరం వాడబడుతుంది.",
+    "toneLede": "మీరు ఎవరితో మాట్లాడుతున్నారో బట్టి వాక్యం మారుతుంది. గౌరవ రూపాన్ని, సాధారణ రూపాన్ని పక్కపక్కన చూడండి.",
+    "toneFormal": "గౌరవ రూపం",
+    "toneCasual": "సాధారణ రూపం",
+    "toneNote": "పెద్దలు, అపరిచితులు, పని చోట గౌరవ రూపం వాడండి. స్నేహితులు, పిల్లలు, చిన్నవారితో సాధారణ రూపం. సందేహంగా ఉంటే గౌరవ రూపమే ఎంచుకోండి.",
+    "songsLede": "నేర్చుకునేవారి కోసం రాసిన చిన్న పద్యాలు. పదాన్ని తాకి వినండి, ఒక పంక్తి లేదా మొత్తం పద్యం ప్లే చేయండి.",
+    "songNote": "ఈ పద్యాలు సొంతంగా రాసిన సరళమైనవి, సాధన కోసం. ఇవి సంప్రదాయ పాటలు కావు.",
+    "song_morning": "ఉదయం",
+    "song_rain": "వర్షం",
+    "songPlayAll": "మొత్తం పద్యం ప్లే",
+    "songEn": "ఆంగ్ల అర్థం",
+    "why_show": "ఇలా ఎందుకు?",
+    "set_night": "రాత్రి చదువు",
+    "night_auto": "ఆటో (సాయంత్రం)"
   };
   I.kn = {
     "skip": "ವಿಷಯಕ್ಕೆ ಹೋಗಿ",
@@ -3372,7 +3458,32 @@
     "tour_replay": "ಟೂರ್ ಮತ್ತೆ ನೋಡಿ",
     "tour_help": "ಈ ಪುಟದ ಮಾರ್ಗದರ್ಶಿ",
     "set_ambient": "ಆಂಬಿಯೆಂಟ್ ಹಿನ್ನೆಲೆ",
-    "tw_close": "ಮುಚ್ಚಿ"
+    "tw_close": "ಮುಚ್ಚಿ",
+    "nav_numbers": "ಸಂಖ್ಯೆ, ಹಣ",
+    "nav_tone": "ಧಾಟಿ",
+    "nav_songs": "ಹಾಡು, ಪದ್ಯ",
+    "numLede": "ಕೇಳಿ, ಕೇಳಿದ್ದನ್ನು ಆರಿಸಿ. ಹೊಸ ಭಾಷೆಯಲ್ಲಿ ಸಂಖ್ಯೆ, ಹಣ, ಸಮಯ, ದಿನಾಂಕ ಗ್ರಹಿಸುವುದು ತುಂಬಾ ಕಷ್ಟ.",
+    "numMode_n": "ಸಂಖ್ಯೆಗಳು",
+    "numMode_m": "ಹಣ",
+    "numMode_t": "ಸಮಯ",
+    "numMode_d": "ದಿನಾಂಕ",
+    "numRange": "ವ್ಯಾಪ್ತಿ",
+    "numQ": "ನೀವು ಏನು ಕೇಳಿದಿರಿ?",
+    "numPlay": "ಪ್ಲೇ ಮಾಡಿ",
+    "numNote": "ಸಂಖ್ಯೆಗಳನ್ನು ನಿಮ್ಮ ಸಾಧನದ ಧ್ವನಿ ಓದುತ್ತದೆ. ಈ ಭಾಷೆಗೆ ಧ್ವನಿ ಇಲ್ಲದಿದ್ದರೆ ಆಫ್‌ಲೈನ್ ಧ್ವನಿ ಬಳಕೆಯಾಗುತ್ತದೆ.",
+    "toneLede": "ಯಾರೊಂದಿಗೆ ಮಾತನಾಡುತ್ತೀರಿ ಎಂಬುದರ ಮೇಲೆ ವಾಕ್ಯ ಬದಲಾಗುತ್ತದೆ. ಗೌರವ ಮತ್ತು ಸಾಮಾನ್ಯ ರೂಪವನ್ನು ಪಕ್ಕಪಕ್ಕದಲ್ಲಿ ನೋಡಿ.",
+    "toneFormal": "ಗೌರವ ರೂಪ",
+    "toneCasual": "ಸಾಮಾನ್ಯ ರೂಪ",
+    "toneNote": "ಹಿರಿಯರು, ಅಪರಿಚಿತರು, ಕೆಲಸದ ಸ್ಥಳದಲ್ಲಿ ಗೌರವ ರೂಪ ಬಳಸಿ. ಸ್ನೇಹಿತರು, ಮಕ್ಕಳು, ಕಿರಿಯರೊಂದಿಗೆ ಸಾಮಾನ್ಯ ರೂಪ. ಸಂದೇಹವಿದ್ದರೆ ಗೌರವ ರೂಪವನ್ನೇ ಆರಿಸಿ.",
+    "songsLede": "ಕಲಿಯುವವರಿಗಾಗಿ ಬರೆದ ಚಿಕ್ಕ ಪದ್ಯಗಳು. ಪದವನ್ನು ಒತ್ತಿ ಕೇಳಿ, ಒಂದು ಸಾಲು ಅಥವಾ ಇಡೀ ಪದ್ಯ ಪ್ಲೇ ಮಾಡಿ.",
+    "songNote": "ಈ ಪದ್ಯಗಳು ಸ್ವಂತವಾಗಿ ಬರೆದ ಸರಳ ಪದ್ಯಗಳು, ಅಭ್ಯಾಸಕ್ಕಾಗಿ. ಇವು ಸಾಂಪ್ರದಾಯಿಕ ಹಾಡುಗಳಲ್ಲ.",
+    "song_morning": "ಬೆಳಗ್ಗೆ",
+    "song_rain": "ಮಳೆ",
+    "songPlayAll": "ಇಡೀ ಪದ್ಯ ಪ್ಲೇ",
+    "songEn": "ಇಂಗ್ಲಿಷ್ ಅರ್ಥ",
+    "why_show": "ಹೀಗೆ ಏಕೆ?",
+    "set_night": "ರಾತ್ರಿ ಓದು",
+    "night_auto": "ಸ್ವಯಂ (ಸಂಜೆ)"
   };
   I.ta = {
     "skip": "உள்ளடக்கத்துக்குச் செல்லவும்",
@@ -4023,7 +4134,32 @@
     "tour_replay": "சுற்றுப்பயணத்தை மீண்டும் பாருங்கள்",
     "tour_help": "இந்தப் பக்க வழிகாட்டி",
     "set_ambient": "சூழல் பின்னணி",
-    "tw_close": "மூடு"
+    "tw_close": "மூடு",
+    "nav_numbers": "எண்கள், பணம்",
+    "nav_tone": "தொனி",
+    "nav_songs": "பாடல்கள், கவிதை",
+    "numLede": "கேட்டு, கேட்டதைத் தேர்ந்தெடுங்கள். புதிய மொழியில் எண்கள், பணம், நேரம், தேதிகளைப் பிடிப்பது மிகவும் கடினம்.",
+    "numMode_n": "எண்கள்",
+    "numMode_m": "பணம்",
+    "numMode_t": "நேரம்",
+    "numMode_d": "தேதிகள்",
+    "numRange": "வரம்பு",
+    "numQ": "நீங்கள் என்ன கேட்டீர்கள்?",
+    "numPlay": "இயக்கு",
+    "numNote": "எண்களை உங்கள் சாதனக் குரல் படிக்கும். இந்த மொழிக்குக் குரல் இல்லையெனில் ஆஃப்லைன் குரல் பயன்படும்.",
+    "toneLede": "யாரிடம் பேசுகிறீர்கள் என்பதைப் பொறுத்து வாக்கியம் மாறும். மரியாதை, சாதாரண வடிவங்களை அருகருகே பாருங்கள்.",
+    "toneFormal": "மரியாதை வடிவம்",
+    "toneCasual": "சாதாரண வடிவம்",
+    "toneNote": "பெரியவர்கள், அந்நியர்கள், வேலையிடத்தில் மரியாதை வடிவம். நண்பர்கள், குழந்தைகள், இளையவர்களிடம் சாதாரண வடிவம். சந்தேகமெனில் மரியாதை வடிவத்தையே தேர்ந்தெடுங்கள்.",
+    "songsLede": "கற்பவர்களுக்காக எழுதிய சிறு கவிதைகள். சொல்லைத் தொட்டுக் கேளுங்கள், ஒரு வரி அல்லது முழுக் கவிதையை இயக்குங்கள்.",
+    "songNote": "இவை பயிற்சிக்காக எழுதப்பட்ட எளிய சொந்தக் கவிதைகள். இவை பாரம்பரியப் பாடல்கள் அல்ல.",
+    "song_morning": "காலை",
+    "song_rain": "மழை",
+    "songPlayAll": "முழுக் கவிதை இயக்கு",
+    "songEn": "ஆங்கில அர்த்தம்",
+    "why_show": "ஏன் இப்படி?",
+    "set_night": "இரவு வாசிப்பு",
+    "night_auto": "தானியங்கி (மாலை)"
   };
   I.ml = {
     "skip": "ഉള്ളടക്കത്തിലേക്ക് പോകുക",
@@ -4674,7 +4810,32 @@
     "tour_replay": "ടൂർ വീണ്ടും കാണൂ",
     "tour_help": "ഈ പേജിന്റെ ഗൈഡ്",
     "set_ambient": "ആംബിയന്റ് പശ്ചാത്തലം",
-    "tw_close": "അടയ്ക്കൂ"
+    "tw_close": "അടയ്ക്കൂ",
+    "nav_numbers": "സംഖ്യ, പണം",
+    "nav_tone": "ശൈലി",
+    "nav_songs": "പാട്ട്, കവിത",
+    "numLede": "കേട്ടിട്ട് കേട്ടത് തിരഞ്ഞെടുക്കൂ. പുതിയ ഭാഷയിൽ സംഖ്യ, പണം, സമയം, തീയതി പിടിച്ചെടുക്കാൻ ഏറ്റവും പ്രയാസം.",
+    "numMode_n": "സംഖ്യകൾ",
+    "numMode_m": "പണം",
+    "numMode_t": "സമയം",
+    "numMode_d": "തീയതികൾ",
+    "numRange": "പരിധി",
+    "numQ": "നിങ്ങൾ എന്ത് കേട്ടു?",
+    "numPlay": "പ്ലേ ചെയ്യുക",
+    "numNote": "സംഖ്യകൾ നിങ്ങളുടെ ഉപകരണത്തിന്റെ ശബ്ദം വായിക്കും. ഈ ഭാഷയ്ക്ക് ശബ്ദമില്ലെങ്കിൽ ഓഫ്‌ലൈൻ ശബ്ദം ഉപയോഗിക്കും.",
+    "toneLede": "ആരോടു സംസാരിക്കുന്നു എന്നതനുസരിച്ച് വാക്യം മാറും. ആദരവും സാധാരണവുമായ രൂപങ്ങൾ അടുത്തടുത്ത് കാണൂ.",
+    "toneFormal": "ആദരവ് രൂപം",
+    "toneCasual": "സാധാരണ രൂപം",
+    "toneNote": "മുതിർന്നവരോടും അപരിചിതരോടും ജോലിസ്ഥലത്തും ആദരവ് രൂപം. സുഹൃത്തുക്കളോടും കുട്ടികളോടും ചെറിയവരോടും സാധാരണ രൂപം. സംശയമുണ്ടെങ്കിൽ ആദരവ് രൂപം തിരഞ്ഞെടുക്കൂ.",
+    "songsLede": "പഠിതാക്കൾക്കായി എഴുതിയ ചെറു വരികൾ. വാക്കിൽ തൊട്ട് കേൾക്കൂ, ഒരു വരി അല്ലെങ്കിൽ മുഴുവൻ പ്ലേ ചെയ്യൂ.",
+    "songNote": "ഇവ പരിശീലനത്തിനായി എഴുതിയ ലളിതമായ സ്വന്തം വരികളാണ്. പരമ്പരാഗത പാട്ടുകളല്ല.",
+    "song_morning": "പ്രഭാതം",
+    "song_rain": "മഴ",
+    "songPlayAll": "മുഴുവൻ പ്ലേ",
+    "songEn": "ഇംഗ്ലീഷ് അർത്ഥം",
+    "why_show": "എന്തുകൊണ്ട് ഇങ്ങനെ?",
+    "set_night": "രാത്രി വായന",
+    "night_auto": "ഓട്ടോ (വൈകുന്നേരം)"
   };
   I.bn = {
     "skip": "মূল বিষয়ে যান",
@@ -5325,7 +5486,32 @@
     "tour_replay": "ট্যুরটি আবার দেখুন",
     "tour_help": "এই পাতার গাইড",
     "set_ambient": "অ্যাম্বিয়েন্ট ব্যাকগ্রাউন্ড",
-    "tw_close": "বন্ধ করুন"
+    "tw_close": "বন্ধ করুন",
+    "nav_numbers": "সংখ্যা ও টাকা",
+    "nav_tone": "সুর",
+    "nav_songs": "গান ও ছড়া",
+    "numLede": "শুনুন, তারপর যা শুনলেন তা বেছে নিন। নতুন ভাষায় সংখ্যা, টাকা, সময় ও তারিখ ধরা সবচেয়ে কঠিন।",
+    "numMode_n": "সংখ্যা",
+    "numMode_m": "টাকা",
+    "numMode_t": "সময়",
+    "numMode_d": "তারিখ",
+    "numRange": "পরিসর",
+    "numQ": "আপনি কী শুনলেন?",
+    "numPlay": "চালান",
+    "numNote": "সংখ্যা আপনার ডিভাইসের কণ্ঠ পড়ে। এই ভাষার কণ্ঠ না থাকলে অফলাইন কণ্ঠ চলে।",
+    "toneLede": "যার সঙ্গে কথা বলছেন তার ওপর বাক্য বদলায়। সম্মানসূচক ও সাধারণ রূপ পাশাপাশি দেখুন।",
+    "toneFormal": "সম্মানসূচক",
+    "toneCasual": "সাধারণ · বন্ধু",
+    "toneNote": "বড়, অচেনা মানুষ ও কাজের জায়গায় সম্মানসূচক রূপ বলুন। বন্ধু, শিশু ও ছোটদের সঙ্গে সাধারণ রূপ। সন্দেহ হলে সম্মানসূচক রূপই বেছে নিন।",
+    "songsLede": "শিক্ষার্থীদের জন্য লেখা ছোট ছড়া। শব্দ ছুঁয়ে শুনুন, এক লাইন বা পুরো ছড়া চালান।",
+    "songNote": "এই ছড়াগুলো মৌলিক ও সহজ, অনুশীলনের জন্য লেখা। এগুলো ঐতিহ্যবাহী গান নয়।",
+    "song_morning": "সকাল",
+    "song_rain": "বৃষ্টি",
+    "songPlayAll": "পুরো ছড়া চালান",
+    "songEn": "ইংরেজি অর্থ",
+    "why_show": "কেন এভাবে?",
+    "set_night": "রাতের পড়া",
+    "night_auto": "স্বয়ংক্রিয় (সন্ধ্যা)"
   };
   I.mr = {
     "skip": "मुख्य मजकुराकडे जा",
@@ -5976,7 +6162,32 @@
     "tour_replay": "दौरा पुन्हा पाहा",
     "tour_help": "या पानाची मार्गदर्शिका",
     "set_ambient": "अॅम्बियंट पार्श्वभूमी",
-    "tw_close": "बंद करा"
+    "tw_close": "बंद करा",
+    "nav_numbers": "संख्या आणि पैसे",
+    "nav_tone": "लहजा",
+    "nav_songs": "गाणी आणि कविता",
+    "numLede": "ऐका आणि काय ऐकले ते निवडा. नवीन भाषेत संख्या, पैसे, वेळ आणि तारखा पकडणे सर्वात कठीण असते.",
+    "numMode_n": "संख्या",
+    "numMode_m": "पैसे",
+    "numMode_t": "वेळ",
+    "numMode_d": "तारखा",
+    "numRange": "मर्यादा",
+    "numQ": "तुम्ही काय ऐकले?",
+    "numPlay": "चालवा",
+    "numNote": "संख्या तुमच्या डिव्हाइसचा आवाज वाचतो. या भाषेचा आवाज नसल्यास ऑफलाइन आवाज वापरला जातो.",
+    "toneLede": "कोणाशी बोलता यावर वाक्य बदलते. आदरार्थी आणि सामान्य रूप शेजारी शेजारी पाहा.",
+    "toneFormal": "आदरार्थी",
+    "toneCasual": "सामान्य · मित्र",
+    "toneNote": "मोठे, अनोळखी लोक आणि कामावर आदरार्थी रूप वापरा. मित्र, मुले आणि लहानांशी सामान्य रूप. शंका असल्यास आदरार्थी निवडा.",
+    "songsLede": "शिकणाऱ्यांसाठी लिहिलेल्या छोट्या कविता. शब्दाला स्पर्श करून ऐका, एक ओळ किंवा पूर्ण कविता चालवा.",
+    "songNote": "या कविता मूळ आणि सोप्या आहेत, सरावासाठी लिहिल्या आहेत. त्या पारंपरिक गाणी नाहीत.",
+    "song_morning": "सकाळ",
+    "song_rain": "पाऊस",
+    "songPlayAll": "पूर्ण कविता चालवा",
+    "songEn": "इंग्रजी अर्थ",
+    "why_show": "असे का?",
+    "set_night": "रात्रीचे वाचन",
+    "night_auto": "आपोआप (संध्याकाळ)"
   };
   I.ko = {
     "skip": "본문으로 건너뛰기",
@@ -6627,7 +6838,32 @@
     "tour_replay": "둘러보기 다시 보기",
     "tour_help": "이 페이지 안내",
     "set_ambient": "분위기 배경",
-    "tw_close": "닫기"
+    "tw_close": "닫기",
+    "nav_numbers": "숫자·돈",
+    "nav_tone": "말투",
+    "nav_songs": "노래·시",
+    "numLede": "듣고 들은 것을 고르세요. 새 언어에서는 숫자, 돈, 시간, 날짜를 알아듣기가 가장 어렵습니다.",
+    "numMode_n": "숫자",
+    "numMode_m": "돈",
+    "numMode_t": "시간",
+    "numMode_d": "날짜",
+    "numRange": "범위",
+    "numQ": "무엇을 들었나요?",
+    "numPlay": "재생",
+    "numNote": "숫자는 기기 음성이 읽어 줍니다. 이 언어의 음성이 없으면 오프라인 음성을 씁니다.",
+    "toneLede": "말하는 상대에 따라 문장이 달라집니다. 존댓말과 반말을 나란히 비교해 보세요.",
+    "toneFormal": "존댓말",
+    "toneCasual": "반말",
+    "toneNote": "어른, 낯선 사람, 직장에서는 존댓말을 쓰세요. 친구, 아이, 아랫사람에게는 반말을 씁니다. 망설여지면 존댓말을 고르세요.",
+    "songsLede": "학습자를 위한 짧은 시입니다. 단어를 눌러 듣거나, 한 줄 또는 전체를 재생하세요.",
+    "songNote": "이 시는 연습을 위해 새로 쓴 쉬운 글이며, 전통 노래가 아닙니다.",
+    "song_morning": "아침",
+    "song_rain": "비",
+    "songPlayAll": "전체 재생",
+    "songEn": "영어 뜻",
+    "why_show": "왜 이렇게?",
+    "set_night": "야간 읽기",
+    "night_auto": "자동(저녁)"
   };
   I.es = {
     "skip": "Saltar al contenido",
@@ -7278,7 +7514,32 @@
     "tour_replay": "Repetir el recorrido",
     "tour_help": "Guía de esta página",
     "set_ambient": "Fondo ambiental",
-    "tw_close": "Cerrar"
+    "tw_close": "Cerrar",
+    "nav_numbers": "Números y dinero",
+    "nav_tone": "Tono",
+    "nav_songs": "Canciones y versos",
+    "numLede": "Escucha y elige lo que oíste. Números, dinero, horas y fechas son lo más difícil de captar en un idioma nuevo.",
+    "numMode_n": "Números",
+    "numMode_m": "Dinero",
+    "numMode_t": "Hora",
+    "numMode_d": "Fechas",
+    "numRange": "Rango",
+    "numQ": "¿Qué oíste?",
+    "numPlay": "Reproducir",
+    "numNote": "Tu dispositivo lee los números. Si no tiene voz para este idioma, se usa la voz sin conexión.",
+    "toneLede": "La misma frase cambia según con quién hablas. Compara la forma formal y la informal.",
+    "toneFormal": "Formal · respetuoso",
+    "toneCasual": "Informal · amigos",
+    "toneNote": "Usa la forma formal con mayores, desconocidos y en el trabajo. Usa la informal con amigos, niños y gente más joven. Si dudas, elige la formal.",
+    "songsLede": "Versos cortos escritos para quien aprende. Toca una palabra para oírla, reproduce una línea o todo el verso.",
+    "songNote": "Estos versos son originales y sencillos, escritos para practicar. No son canciones tradicionales.",
+    "song_morning": "Mañana",
+    "song_rain": "Lluvia",
+    "songPlayAll": "Reproducir verso",
+    "songEn": "Significado en inglés",
+    "why_show": "¿Por qué así?",
+    "set_night": "Lectura nocturna",
+    "night_auto": "Auto (tarde)"
   };
   I.de = {
     "skip": "Zum Inhalt springen",
@@ -7929,7 +8190,32 @@
     "tour_replay": "Rundgang wiederholen",
     "tour_help": "Anleitung für diese Seite",
     "set_ambient": "Ambiente-Hintergrund",
-    "tw_close": "Schließen"
+    "tw_close": "Schließen",
+    "nav_numbers": "Zahlen & Geld",
+    "nav_tone": "Tonfall",
+    "nav_songs": "Lieder & Verse",
+    "numLede": "Hören Sie zu und wählen Sie, was Sie gehört haben. Zahlen, Geld, Uhrzeiten und Daten sind in einer neuen Sprache am schwersten zu verstehen.",
+    "numMode_n": "Zahlen",
+    "numMode_m": "Geld",
+    "numMode_t": "Uhrzeit",
+    "numMode_d": "Daten",
+    "numRange": "Bereich",
+    "numQ": "Was haben Sie gehört?",
+    "numPlay": "Abspielen",
+    "numNote": "Zahlen liest die Stimme Ihres Geräts vor. Fehlt eine Stimme für diese Sprache, wird die Offline-Stimme genutzt.",
+    "toneLede": "Derselbe Satz ändert sich je nach Gesprächspartner. Vergleichen Sie die förmliche und die lockere Form.",
+    "toneFormal": "Förmlich · respektvoll",
+    "toneCasual": "Locker · Freunde",
+    "toneNote": "Verwenden Sie die förmliche Form bei Älteren, Fremden und bei der Arbeit, die lockere bei Freunden, Kindern und Jüngeren. Im Zweifel förmlich.",
+    "songsLede": "Kurze Verse für Lernende. Tippen Sie ein Wort an, spielen Sie eine Zeile oder den ganzen Vers ab.",
+    "songNote": "Diese Verse sind eigens zum Üben geschrieben und einfach gehalten. Es sind keine traditionellen Lieder.",
+    "song_morning": "Morgen",
+    "song_rain": "Regen",
+    "songPlayAll": "Vers abspielen",
+    "songEn": "Englische Bedeutung",
+    "why_show": "Warum so?",
+    "set_night": "Nachtlesen",
+    "night_auto": "Auto (abends)"
   };
   I.fr = {
     "skip": "Aller au contenu",
@@ -8580,7 +8866,32 @@
     "tour_replay": "Refaire la visite",
     "tour_help": "Guide de cette page",
     "set_ambient": "Arrière-plan d’ambiance",
-    "tw_close": "Fermer"
+    "tw_close": "Fermer",
+    "nav_numbers": "Nombres et argent",
+    "nav_tone": "Ton",
+    "nav_songs": "Chansons et vers",
+    "numLede": "Écoutez, puis choisissez ce que vous avez entendu. Nombres, argent, heures et dates sont ce qu’il y a de plus dur à saisir dans une nouvelle langue.",
+    "numMode_n": "Nombres",
+    "numMode_m": "Argent",
+    "numMode_t": "Heure",
+    "numMode_d": "Dates",
+    "numRange": "Plage",
+    "numQ": "Qu’avez-vous entendu ?",
+    "numPlay": "Lire",
+    "numNote": "Les nombres sont lus par la voix de votre appareil. S’il n’en a pas pour cette langue, la voix hors ligne est utilisée.",
+    "toneLede": "La même phrase change selon la personne à qui l’on parle. Comparez la forme soutenue et la forme familière.",
+    "toneFormal": "Soutenu · respectueux",
+    "toneCasual": "Familier · amis",
+    "toneNote": "Utilisez la forme soutenue avec les aînés, les inconnus et au travail, la familière avec les amis, les enfants et les plus jeunes. Dans le doute, choisissez la soutenue.",
+    "songsLede": "Courts vers écrits pour les apprenants. Touchez un mot pour l’entendre, lisez une ligne ou tout le poème.",
+    "songNote": "Ces vers sont originaux et simples, écrits pour s’exercer. Ce ne sont pas des chansons traditionnelles.",
+    "song_morning": "Matin",
+    "song_rain": "Pluie",
+    "songPlayAll": "Lire le poème",
+    "songEn": "Sens en anglais",
+    "why_show": "Pourquoi ainsi ?",
+    "set_night": "Lecture de nuit",
+    "night_auto": "Auto (soir)"
   };
   I.gu = {
     "skip": "મુખ્ય સામગ્રી પર જાઓ",
@@ -9231,7 +9542,32 @@
     "tour_replay": "ટૂર ફરી જુઓ",
     "tour_help": "આ પાનાની માર્ગદર્શિકા",
     "set_ambient": "એમ્બિયન્ટ પૃષ્ઠભૂમિ",
-    "tw_close": "બંધ કરો"
+    "tw_close": "બંધ કરો",
+    "nav_numbers": "સંખ્યા અને પૈસા",
+    "nav_tone": "લહેજો",
+    "nav_songs": "ગીત અને કવિતા",
+    "numLede": "સાંભળો, પછી જે સાંભળ્યું તે પસંદ કરો. નવી ભાષામાં સંખ્યા, પૈસા, સમય અને તારીખ પકડવી સૌથી અઘરી છે.",
+    "numMode_n": "સંખ્યાઓ",
+    "numMode_m": "પૈસા",
+    "numMode_t": "સમય",
+    "numMode_d": "તારીખો",
+    "numRange": "શ્રેણી",
+    "numQ": "તમે શું સાંભળ્યું?",
+    "numPlay": "ચલાવો",
+    "numNote": "સંખ્યાઓ તમારા ઉપકરણનો અવાજ વાંચે છે. આ ભાષાનો અવાજ ન હોય તો ઑફલાઇન અવાજ વપરાય છે.",
+    "toneLede": "કોની સાથે વાત કરો છો તે પ્રમાણે વાક્ય બદલાય છે. આદરયુક્ત અને સામાન્ય રૂપ સાથે જુઓ.",
+    "toneFormal": "આદર રૂપ",
+    "toneCasual": "સામાન્ય રૂપ",
+    "toneNote": "મોટા, અજાણ્યા અને કામના સ્થળે આદર રૂપ વાપરો. મિત્રો, બાળકો અને નાનાઓ સાથે સામાન્ય રૂપ. શંકા હોય તો આદર રૂપ પસંદ કરો.",
+    "songsLede": "શીખનારાઓ માટે લખેલી ટૂંકી કવિતાઓ. શબ્દને અડીને સાંભળો, એક પંક્તિ કે આખી કવિતા ચલાવો.",
+    "songNote": "આ કવિતાઓ મૌલિક અને સરળ છે, અભ્યાસ માટે લખેલી. આ પરંપરાગત ગીતો નથી.",
+    "song_morning": "સવાર",
+    "song_rain": "વરસાદ",
+    "songPlayAll": "આખી કવિતા ચલાવો",
+    "songEn": "અંગ્રેજી અર્થ",
+    "why_show": "આવું કેમ?",
+    "set_night": "રાત્રિ વાંચન",
+    "night_auto": "ઓટો (સાંજ)"
   };
   I.as = {
     "skip": "মূল বিষয়লৈ যাওক",
@@ -9882,7 +10218,32 @@
     "tour_replay": "ভ্ৰমণ পুনৰ চাওক",
     "tour_help": "এই পৃষ্ঠাৰ গাইড",
     "set_ambient": "এম্বিয়েণ্ট পটভূমি",
-    "tw_close": "বন্ধ কৰক"
+    "tw_close": "বন্ধ কৰক",
+    "nav_numbers": "সংখ্যা আৰু টকা",
+    "nav_tone": "সুৰ",
+    "nav_songs": "গীত আৰু কবিতা",
+    "numLede": "শুনক, তাৰ পিছত যি শুনিলে সেইটো বাছক। নতুন ভাষাত সংখ্যা, টকা, সময় আৰু তাৰিখ ধৰা আটাইতকৈ টান।",
+    "numMode_n": "সংখ্যা",
+    "numMode_m": "টকা",
+    "numMode_t": "সময়",
+    "numMode_d": "তাৰিখ",
+    "numRange": "পৰিসৰ",
+    "numQ": "আপুনি কি শুনিলে?",
+    "numPlay": "বজাওক",
+    "numNote": "সংখ্যা আপোনাৰ ডিভাইচৰ কণ্ঠই পঢ়ে। এই ভাষাৰ কণ্ঠ নাথাকিলে অফলাইন কণ্ঠ ব্যৱহাৰ হয়।",
+    "toneLede": "কাৰ লগত কথা কয় তাৰ ওপৰত বাক্য সলনি হয়। সন্মানসূচক আৰু সাধাৰণ ৰূপ কাষে কাষে চাওক।",
+    "toneFormal": "সন্মানসূচক",
+    "toneCasual": "সাধাৰণ · বন্ধু",
+    "toneNote": "ডাঙৰ, অচিনাকি আৰু কামৰ ঠাইত সন্মানসূচক ৰূপ ব্যৱহাৰ কৰক। বন্ধু, ল’ৰা-ছোৱালী আৰু সৰুবোৰৰ লগত সাধাৰণ ৰূপ। সন্দেহ হ’লে সন্মানসূচকেই বাছক।",
+    "songsLede": "শিক্ষাৰ্থীৰ বাবে লিখা চুটি কবিতা। শব্দ চুই শুনক, এটা শাৰী বা গোটেইখন বজাওক।",
+    "songNote": "এই কবিতাবোৰ মৌলিক আৰু সহজ, অনুশীলনৰ বাবে লিখা। এইবোৰ পৰম্পৰাগত গীত নহয়।",
+    "song_morning": "পুৱা",
+    "song_rain": "বৰষুণ",
+    "songPlayAll": "গোটেইখন বজাওক",
+    "songEn": "ইংৰাজী অৰ্থ",
+    "why_show": "এনেকৈ কিয়?",
+    "set_night": "ৰাতিৰ পঢ়া",
+    "night_auto": "স্বয়ংক্ৰিয় (সন্ধিয়া)"
   };
 })(window.B = window.B || {});
 
@@ -10031,7 +10392,8 @@
       h('div', { class: 'tf chk' }, [colorCb, h('label', { for: 'rd-col', text: t('colorWords') })]),
       h('div', { class: 'tf chk' }, [dimCb, h('label', { for: 'rd-dim', text: t('rdDim') })]),
       h('div', { class: 'tf' }, [h('label', { for: 'rd-mode', text: t('rdMode') }), modeSel]),
-      h('div', { class: 'tf' }, [h('label', { for: 'rd-size', text: t('fontSize') }), size])
+      h('div', { class: 'tf' }, [h('label', { for: 'rd-size', text: t('fontSize') }), size]),
+      h('div', { class: 'tf' }, [U.nightButton()])
     ]);
     var actions = h('div', { class: 'acts' }, [btnRead,
       h('button', { type: 'button', class: 'abtn', text: t('sample'), onclick: function () { var l = B.INDIC.indexOf(R.lang) >= 0 ? R.lang : set.focus; R.lang = l; langSel.value = l; ta.value = B.sampleText(l); draw(); } }),
@@ -10194,7 +10556,7 @@
         U.bindWords(tgt, function () { return lang; }, function () { return txt; }, function () { });
         var row = h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, rom(txt) ? h('div', { class: 'ph-r', text: rom(txt) }) : null, h('div', { class: 'ph-n', text: U.mn(p, lang) })]),
           h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + U.mn(p, lang), text: '🔊', onclick: function () { U.speak(txt, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55); } })])]);
-        row.querySelector('.ph-a').appendChild(U.pronToggle(row, txt, lang)); list.appendChild(row);
+        row.querySelector('.ph-a').appendChild(U.pronToggle(row, txt, lang)); U.addWhy(row, id); list.appendChild(row);
       });
       box.appendChild(list);
       box.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold big', text: t('tdNext'), onclick: function () { TD.step = 'listen'; TD.i = 0; draw(); } })]));
@@ -11274,7 +11636,7 @@
         var txt = p[PH.lang], tgt = h('div', { class: 'ph-t', lang: PH.lang }); tgt.appendChild(U.renderText(txt, PH.lang, { roman: false }));
         U.bindWords(tgt, function () { return PH.lang; }, function () { return txt; }, function () { draw(); });
         var row = h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, (B.isBrahmic(txt) ? h('div', { class: 'ph-r', text: B.translit(txt, set.scheme, PH.lang) }) : null), h('div', { class: 'ph-n', text: U.mn(p, PH.lang) })]), h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, PH.lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, PH.lang, null, 0.55); } })])]);
-        row.querySelector('.ph-a').appendChild(U.pronToggle(row, txt, PH.lang));
+        row.querySelector('.ph-a').appendChild(U.pronToggle(row, txt, PH.lang)); U.addWhy(row, p.id);
         var al = B.ALTS && B.ALTS[p.id] && B.ALTS[p.id][PH.lang];
         if (al) {
           var altBox = h('div', { class: 'alts', hidden: true }), altBtn = h('button', { type: 'button', class: 'abtn alt-btn', 'aria-expanded': 'false', text: '≈ ' + t('altBtn'), onclick: function () { altBox.hidden = !altBox.hidden; altBtn.setAttribute('aria-expanded', String(!altBox.hidden)); } });
@@ -11288,6 +11650,162 @@
       });
     }
     draw();
+  };
+})(window.B);
+
+;
+/* Bhasha learning extras: why notes, tone variants, song and verse corner, month and currency words. Generated. Drafts for native review. */
+(function (B) {
+  'use strict';
+  B.WHY = {"hello": {"en": "Greetings carry respect, not just \"hello\". Many South Asian greetings are a bow or a blessing; Korean, Japanese and European greetings change with politeness and time of day.", "hi": "अभिवादन में सिर्फ़ \"हेलो\" नहीं, सम्मान भी होता है। कई दक्षिण एशियाई अभिवादन प्रणाम या आशीर्वाद होते हैं।", "te": "పలకరింపులో గౌరవం ఉంటుంది, కేవలం \"హలో\" కాదు. దక్షిణాసియా పలకరింపులు చాలావరకు నమస్కారం లేదా ఆశీర్వాదం.", "kn": "ವಂದನೆಯಲ್ಲಿ ಗೌರವವಿದೆ, ಕೇವಲ \"ಹಲೋ\" ಅಲ್ಲ. ದಕ್ಷಿಣ ಏಷ್ಯಾದ ಅನೇಕ ವಂದನೆಗಳು ನಮಸ್ಕಾರ ಅಥವಾ ಆಶೀರ್ವಾದ.", "ta": "வாழ்த்தில் மரியாதை இருக்கிறது, வெறும் \"ஹலோ\" அல்ல. பல தெற்காசிய வாழ்த்துகள் வணக்கமும் ஆசியும் ஆகும்.", "ml": "അഭിവാദനത്തിൽ ആദരവുണ്ട്, വെറും \"ഹലോ\" അല്ല. പല ദക്ഷിണേഷ്യൻ അഭിവാദനങ്ങളും നമസ്കാരമോ അനുഗ്രഹമോ ആണ്.", "bn": "অভিবাদনে সম্মান থাকে, শুধু \"হ্যালো\" নয়। অনেক দক্ষিণ এশীয় অভিবাদন প্রণাম বা আশীর্বাদ।", "mr": "अभिवादनात आदर असतो, फक्त \"हॅलो\" नाही. अनेक दक्षिण आशियाई अभिवादने नमस्कार किंवा आशीर्वाद असतात.", "ko": "인사에는 존중이 담겨 있습니다. 한국어와 일본어 인사는 공손함에 따라, 유럽어 인사는 시간대에 따라 달라집니다.", "es": "Los saludos llevan respeto, no solo «hola». En el sur de Asia suelen ser una reverencia o una bendición; en español, francés y alemán cambian según la hora y la formalidad.", "de": "Begrüßungen tragen Respekt in sich, nicht nur „Hallo“. In Südasien sind sie oft Verbeugung oder Segen; im Deutschen ändern sie sich mit Tageszeit und Förmlichkeit.", "fr": "Les salutations portent du respect, pas seulement « bonjour ». En Asie du Sud, ce sont souvent une révérence ou une bénédiction ; en français elles varient selon l’heure et le registre.", "gu": "અભિવાદનમાં સન્માન હોય છે, ફક્ત \"હેલો\" નહીં. ઘણા દક્ષિણ એશિયાઈ અભિવાદન નમસ્કાર કે આશીર્વાદ હોય છે.", "as": "অভিবাদনত সন্মান থাকে, কেৱল \"হেল্ল’\" নহয়। বহু দক্ষিণ এছিয়ান অভিবাদন প্ৰণাম বা আশীৰ্বাদ।"}, "how": {"en": "\"How are you?\" is usually a greeting, not a real question. A short \"fine, and you?\" is expected. Use the respectful \"you\" with elders.", "hi": "\"आप कैसे हैं?\" अक्सर अभिवादन होता है, सवाल नहीं। \"ठीक हूँ, आप?\" काफ़ी है। बड़ों से आदरसूचक \"आप\" कहें।", "te": "\"ఎలా ఉన్నారు?\" సాధారణంగా పలకరింపు, నిజమైన ప్రశ్న కాదు. \"బాగున్నాను, మీరు?\" చాలు. పెద్దలతో గౌరవ \"మీరు\" వాడండి.", "kn": "\"ಹೇಗಿದ್ದೀರಿ?\" ಸಾಮಾನ್ಯವಾಗಿ ವಂದನೆ, ನಿಜವಾದ ಪ್ರಶ್ನೆಯಲ್ಲ. \"ಚೆನ್ನಾಗಿದ್ದೇನೆ, ನೀವು?\" ಸಾಕು. ಹಿರಿಯರೊಂದಿಗೆ ಗೌರವದ \"ನೀವು\" ಬಳಸಿ.", "ta": "\"எப்படி இருக்கிறீர்கள்?\" பொதுவாக வாழ்த்து, உண்மையான கேள்வி அல்ல. \"நலம், நீங்கள்?\" போதும். பெரியவர்களிடம் மரியாதையான \"நீங்கள்\" சொல்லுங்கள்.", "ml": "\"സുഖമാണോ?\" സാധാരണയായി അഭിവാദനമാണ്, യഥാർഥ ചോദ്യമല്ല. \"സുഖം, നിങ്ങൾക്കോ?\" മതി. മുതിർന്നവരോട് ആദരവുള്ള \"നിങ്ങൾ\" ഉപയോഗിക്കൂ.", "bn": "\"কেমন আছেন?\" সাধারণত অভিবাদন, সত্যিকারের প্রশ্ন নয়। \"ভালো, আপনি?\" যথেষ্ট। বড়দের সঙ্গে সম্মানের \"আপনি\" বলুন।", "mr": "\"कसे आहात?\" हे सहसा अभिवादन असते, खरा प्रश्न नाही. \"बरा आहे, तुम्ही?\" पुरे. मोठ्यांशी आदरार्थी \"तुम्ही\" वापरा.", "ko": "\"어떻게 지내세요?\"는 대개 인사말이지 진짜 질문이 아닙니다. \"잘 지내요, 당신은요?\" 정도면 충분합니다. 어른께는 존댓말을 쓰세요.", "es": "«¿Cómo estás?» suele ser un saludo, no una pregunta real. Basta con «bien, ¿y tú?». Con mayores usa «usted».", "de": "„Wie geht’s?“ ist meist eine Begrüßung, keine echte Frage. „Gut, und Ihnen?“ genügt. Bei Älteren „Sie“ verwenden.", "fr": "« Comment ça va ? » est souvent une salutation, pas une vraie question. « Bien, et vous ? » suffit. Avec les aînés, dites « vous ».", "gu": "\"કેમ છો?\" સામાન્ય રીતે અભિવાદન છે, સાચો પ્રશ્ન નહીં. \"મજામાં, તમે?\" પૂરતું છે. મોટા સાથે આદરયુક્ત \"તમે\" વાપરો.", "as": "\"কেনে আছে?\" সাধাৰণতে অভিবাদন, সঁচা প্ৰশ্ন নহয়। \"ভালে আছোঁ, আপুনি?\" যথেষ্ট। ডাঙৰৰ লগত সন্মানৰ \"আপুনি\" ব্যৱহাৰ কৰক।"}, "thanks": {"en": "Thanks are said less often between close family and friends; warmth is shown by actions. With shopkeepers, strangers and elders, say it clearly.", "hi": "करीबी परिवार और दोस्तों में धन्यवाद कम कहा जाता है; अपनापन कामों से दिखता है। दुकानदारों, अजनबियों और बड़ों से साफ़ कहें।", "te": "దగ్గరి కుటుంబం, స్నేహితుల మధ్య ధన్యవాదాలు తక్కువగా చెబుతారు; ఆప్యాయత పనుల్లో కనిపిస్తుంది. దుకాణదారులు, అపరిచితులు, పెద్దలకు స్పష్టంగా చెప్పండి.", "kn": "ಹತ್ತಿರದ ಕುಟುಂಬ, ಸ್ನೇಹಿತರ ನಡುವೆ ಧನ್ಯವಾದ ಕಡಿಮೆ; ಪ್ರೀತಿ ಕೆಲಸಗಳಲ್ಲಿ ಕಾಣುತ್ತದೆ. ಅಂಗಡಿಯವರು, ಅಪರಿಚಿತರು, ಹಿರಿಯರಿಗೆ ಸ್ಪಷ್ಟವಾಗಿ ಹೇಳಿ.", "ta": "நெருங்கிய குடும்பம், நண்பர்களிடையே நன்றி குறைவாகச் சொல்லப்படும்; அன்பு செயல்களில் தெரியும். கடைக்காரர்கள், அந்நியர்கள், பெரியவர்களிடம் தெளிவாகச் சொல்லுங்கள்.", "ml": "അടുത്ത കുടുംബത്തിലും കൂട്ടുകാർക്കിടയിലും നന്ദി കുറച്ചേ പറയാറുള്ളൂ; സ്നേഹം പ്രവൃത്തിയിൽ കാണാം. കടക്കാർ, അപരിചിതർ, മുതിർന്നവർ എന്നിവരോട് വ്യക്തമായി പറയൂ.", "bn": "ঘনিষ্ঠ পরিবার ও বন্ধুদের মধ্যে ধন্যবাদ কম বলা হয়; ভালোবাসা কাজে দেখা যায়। দোকানদার, অচেনা ও বড়দের স্পষ্ট করে বলুন।", "mr": "जवळच्या कुटुंबात आणि मित्रांत धन्यवाद कमी म्हटले जाते; प्रेम कृतीत दिसते. दुकानदार, अनोळखी आणि मोठ्यांना स्पष्ट सांगा.", "ko": "가까운 가족이나 친구 사이에서는 감사 표현을 덜 하고 행동으로 마음을 보이기도 합니다. 가게 주인, 낯선 사람, 어른께는 분명히 말하세요.", "es": "Entre familia y amigos cercanos se dan menos las gracias; el cariño se muestra con hechos. Con tenderos, desconocidos y mayores, dilo con claridad.", "de": "Unter engen Freunden und in der Familie bedankt man sich oft weniger; Zuneigung zeigt sich im Tun. Bei Verkäufern, Fremden und Älteren sagen Sie es deutlich.", "fr": "Entre proches, on remercie parfois moins ; l’affection se montre par des actes. Avec les commerçants, les inconnus et les aînés, dites-le clairement.", "gu": "નજીકના પરિવાર અને મિત્રો વચ્ચે આભાર ઓછો કહેવાય છે; પ્રેમ કામથી દેખાય છે. દુકાનદાર, અજાણ્યા અને મોટા સાથે સ્પષ્ટ કહો.", "as": "ঘনিষ্ঠ পৰিয়াল আৰু বন্ধুৰ মাজত ধন্যবাদ কম কোৱা হয়; মৰম কামত দেখা যায়। দোকানী, অচিনাকি আৰু ডাঙৰৰ লগত স্পষ্টকৈ কওক।"}, "welcome": {"en": "Replies to \"thank you\" differ: some languages have no exact \"you're welcome\" and say \"no need to thank\" or just smile. Learn the local habit.", "hi": "\"धन्यवाद\" के जवाब अलग-अलग होते हैं: कुछ भाषाओं में \"स्वागत है\" जैसा सटीक शब्द नहीं, \"कोई बात नहीं\" कहते हैं या बस मुस्कुराते हैं।", "te": "\"ధన్యవాదాలు\"కి జవాబులు వేర్వేరు: కొన్ని భాషల్లో \"మీకు స్వాగతం\" లాంటి ఖచ్చితమైన మాట ఉండదు; \"పర్వాలేదు\" అంటారు లేదా నవ్వుతారు.", "kn": "\"ಧನ್ಯವಾದ\"ಕ್ಕೆ ಉತ್ತರಗಳು ಬೇರೆ ಬೇರೆ: ಕೆಲವು ಭಾಷೆಗಳಲ್ಲಿ ನಿಖರ ಪದವಿಲ್ಲ; \"ಪರವಾಗಿಲ್ಲ\" ಎನ್ನುತ್ತಾರೆ ಅಥವಾ ನಗುತ್ತಾರೆ.", "ta": "\"நன்றி\"க்குப் பதில்கள் வேறுபடும்: சில மொழிகளில் சரியான சொல் இல்லை; \"பரவாயில்லை\" என்பார்கள் அல்லது புன்னகைப்பார்கள்.", "ml": "\"നന്ദി\"ക്കുള്ള മറുപടികൾ വ്യത്യസ്തമാണ്: ചില ഭാഷകളിൽ കൃത്യമായ വാക്കില്ല; \"സാരമില്ല\" എന്നോ ഒരു ചിരിയോ മതി.", "bn": "\"ধন্যবাদ\"-এর উত্তর ভিন্ন: কিছু ভাষায় সঠিক শব্দ নেই; \"ঠিক আছে\" বলে বা হাসে।", "mr": "\"धन्यवाद\"ला उत्तरे वेगळी असतात: काही भाषांत नेमका शब्द नसतो; \"ठीक आहे\" म्हणतात किंवा हसतात.", "ko": "\"감사합니다\"에 대한 대답은 언어마다 다릅니다. 딱 맞는 표현이 없어 \"괜찮아요\"라고 하거나 미소로 답하기도 합니다.", "es": "Las respuestas a «gracias» varían: algunos idiomas no tienen un «de nada» exacto y dicen «no hay de qué» o sonríen. Aprende la costumbre local.", "de": "Antworten auf „Danke“ unterscheiden sich: Manche Sprachen haben kein genaues „Bitte“ und sagen „kein Problem“ oder lächeln. Lernen Sie den lokalen Brauch.", "fr": "Les réponses à « merci » varient : certaines langues n’ont pas de « de rien » exact et disent « pas de souci » ou sourient. Apprenez l’usage local.", "gu": "\"આભાર\"ના જવાબ અલગ હોય છે: કેટલીક ભાષામાં ચોક્કસ શબ્દ નથી; \"વાંધો નહીં\" કહે છે અથવા હસે છે.", "as": "\"ধন্যবাদ\"ৰ উত্তৰ বেলেগ: কিছুমান ভাষাত সঠিক শব্দ নাই; \"একো নাই\" কয় বা হাঁহে।"}, "please": {"en": "Many languages build politeness into the verb ending or the word for \"you\" instead of a separate word for \"please\". Copy the endings people use with you.", "hi": "कई भाषाओं में \"कृपया\" के अलग शब्द की जगह क्रिया के रूप या \"आप\" में विनम्रता होती है। लोग जो रूप आपसे बोलते हैं, उन्हें अपनाएँ।", "te": "చాలా భాషల్లో \"దయచేసి\" అనే వేరే పదం కాకుండా క్రియా రూపం లేదా \"మీరు\"లో మర్యాద ఉంటుంది. మీతో వారు వాడే రూపాలను అనుసరించండి.", "kn": "ಅನೇಕ ಭಾಷೆಗಳಲ್ಲಿ \"ದಯವಿಟ್ಟು\" ಎಂಬ ಪ್ರತ್ಯೇಕ ಪದವಿಲ್ಲದೆ ಕ್ರಿಯಾರೂಪ ಅಥವಾ \"ನೀವು\"ನಲ್ಲಿ ವಿನಯ ಇರುತ್ತದೆ. ಅವರು ನಿಮ್ಮೊಂದಿಗೆ ಬಳಸುವ ರೂಪಗಳನ್ನು ಅನುಸರಿಸಿ.", "ta": "பல மொழிகளில் \"தயவுசெய்து\" என்ற தனிச்சொல் இல்லாமல் வினை முடிவு அல்லது \"நீங்கள்\" வடிவில் மரியாதை இருக்கும். அவர்கள் உங்களிடம் பயன்படுத்தும் வடிவங்களைப் பின்பற்றுங்கள்.", "ml": "പല ഭാഷകളിലും \"ദയവായി\" എന്ന പ്രത്യേക വാക്കിനു പകരം ക്രിയാരൂപത്തിലോ \"നിങ്ങൾ\" എന്നതിലോ ആണ് വിനയം. അവർ നിങ്ങളോട് ഉപയോഗിക്കുന്ന രൂപങ്ങൾ പിന്തുടരൂ.", "bn": "অনেক ভাষায় \"দয়া করে\"-র আলাদা শব্দ নেই; ক্রিয়ার রূপ বা \"আপনি\"-তে বিনয় থাকে। লোকে আপনাকে যে রূপ বলে সেটি অনুসরণ করুন।", "mr": "अनेक भाषांत \"कृपया\" हा वेगळा शब्द नसतो; क्रियापदाच्या रूपात किंवा \"तुम्ही\" मध्ये नम्रता असते. लोक तुमच्याशी जी रूपे वापरतात ती अनुसरा.", "ko": "많은 언어에서 \"please\"라는 별도 단어 대신 동사 어미나 \"당신\" 표현에 공손함이 들어 있습니다. 상대가 쓰는 어미를 따라 해 보세요.", "es": "En muchos idiomas la cortesía va en la terminación del verbo o en el «tú/usted», no en una palabra aparte para «por favor». Copia las formas que usan contigo.", "de": "In vielen Sprachen steckt die Höflichkeit in der Verbendung oder im „Sie“, nicht in einem eigenen Wort für „bitte“. Übernehmen Sie die Formen, die man Ihnen gegenüber benutzt.", "fr": "Dans beaucoup de langues, la politesse est dans la terminaison du verbe ou le « vous », pas dans un mot pour « s’il vous plaît ». Imitez les formes qu’on emploie avec vous.", "gu": "ઘણી ભાષાઓમાં \"કૃપા કરીને\" માટે અલગ શબ્દ નથી; ક્રિયાપદના રૂપમાં કે \"તમે\"માં નમ્રતા હોય છે. લોકો તમારી સાથે જે રૂપ વાપરે તે અપનાવો.", "as": "বহু ভাষাত \"অনুগ্ৰহ কৰি\"ৰ বেলেগ শব্দ নাথাকে; ক্ৰিয়াৰ ৰূপ বা \"আপুনি\"ত বিনয় থাকে। মানুহে আপোনাৰ লগত যি ৰূপ কয় সেয়া অনুসৰণ কৰক।"}, "sorry": {"en": "Two ideas: \"excuse me\" (to get attention or pass) and \"sorry\" (an apology). Using the right one matters more than the exact word.", "hi": "दो भाव हैं: \"सुनिए/माफ़ कीजिए\" (ध्यान खींचना या रास्ता माँगना) और \"क्षमा करें\" (माफ़ी)। सही भाव चुनना शब्द से ज़्यादा ज़रूरी है।", "te": "రెండు భావాలు: \"క్షమించండి\" (దృష్టి కోసం లేదా దారి కోసం), \"సారీ\" (క్షమాపణ). సరైన భావం ఎంచుకోవడం పదం కంటే ముఖ్యం.", "kn": "ಎರಡು ಭಾವಗಳು: \"ಕ್ಷಮಿಸಿ\" (ಗಮನ ಸೆಳೆಯಲು ಅಥವಾ ದಾರಿ ಕೇಳಲು), \"ಕ್ಷಮೆ\" (ಪಶ್ಚಾತ್ತಾಪ). ಸರಿಯಾದ ಭಾವ ಆರಿಸುವುದು ಪದಕ್ಕಿಂತ ಮುಖ್ಯ.", "ta": "இரு பொருள்கள்: \"மன்னிக்கவும்\" (கவனம் ஈர்க்க/வழி கேட்க), \"வருந்துகிறேன்\" (மன்னிப்பு). சரியான பொருளைத் தேர்வது சொல்லை விட முக்கியம்.", "ml": "രണ്ട് ഭാവങ്ങൾ: \"ക്ഷമിക്കണം\" (ശ്രദ്ധ നേടാനോ വഴി ചോദിക്കാനോ), \"ഖേദിക്കുന്നു\" (ക്ഷമാപണം). ശരിയായ ഭാവം തിരഞ്ഞെടുക്കുന്നതാണ് വാക്കിനെക്കാൾ പ്രധാനം.", "bn": "দুটি ভাব: \"মাফ করবেন\" (মনোযোগ বা পথ চাইতে) এবং \"দুঃখিত\" (ক্ষমা চাওয়া)। শব্দের চেয়ে সঠিক ভাব বেছে নেওয়া জরুরি।", "mr": "दोन भाव: \"माफ करा\" (लक्ष वेधण्यासाठी किंवा वाट मागण्यासाठी) आणि \"क्षमस्व\" (माफी). शब्दापेक्षा योग्य भाव निवडणे महत्त्वाचे.", "ko": "두 가지 뜻이 있습니다. \"실례합니다\"(주의를 끌거나 지나갈 때)와 \"죄송합니다\"(사과). 정확한 단어보다 알맞은 쪽을 쓰는 게 중요합니다.", "es": "Hay dos ideas: «perdón» para llamar la atención o pasar, y «lo siento» para disculparse. Elegir bien importa más que la palabra exacta.", "de": "Es gibt zwei Ideen: „Entschuldigung“ (um Aufmerksamkeit zu bekommen oder vorbeizugehen) und „Es tut mir leid“ (Bedauern). Die richtige Wahl zählt mehr als das genaue Wort.", "fr": "Il y a deux idées : « excusez-moi » (attirer l’attention, passer) et « désolé » (s’excuser). Bien choisir compte plus que le mot exact.", "gu": "બે ભાવ છે: \"માફ કરજો\" (ધ્યાન ખેંચવા કે રસ્તો માગવા) અને \"દિલગીર છું\" (માફી). સાચો ભાવ પસંદ કરવો શબ્દ કરતાં વધુ મહત્વનું છે.", "as": "দুটা ভাব: \"ক্ষমা কৰিব\" (মনোযোগ বা বাট খুজিবলৈ) আৰু \"দুঃখিত\" (ক্ষমা বিচৰা)। শব্দতকৈ সঠিক ভাব বাছনি কৰাটো গুৰুত্বপূৰ্ণ।"}, "excuse": {"en": "Say it before asking a stranger a question. Starting this way makes everything after it sound polite.", "hi": "अजनबी से कुछ पूछने से पहले यह कहें। इससे आगे की बात विनम्र लगती है।", "te": "అపరిచితుడిని ఏదైనా అడిగే ముందు ఇది చెప్పండి. ఇలా మొదలుపెడితే తర్వాత మాటలన్నీ మర్యాదగా వినిపిస్తాయి.", "kn": "ಅಪರಿಚಿತರನ್ನು ಏನಾದರೂ ಕೇಳುವ ಮೊದಲು ಇದನ್ನು ಹೇಳಿ. ಹೀಗೆ ಆರಂಭಿಸಿದರೆ ನಂತರದ ಮಾತು ವಿನಯದಿಂದ ಕೇಳುತ್ತದೆ.", "ta": "அந்நியரிடம் ஏதாவது கேட்கும் முன் இதைச் சொல்லுங்கள். இப்படித் தொடங்கினால் பின்வருவது மரியாதையாகக் கேட்கும்.", "ml": "അപരിചിതരോട് എന്തെങ്കിലും ചോദിക്കും മുമ്പ് ഇത് പറയൂ. ഇങ്ങനെ തുടങ്ങിയാൽ പിന്നീടുള്ളത് വിനയത്തോടെ തോന്നും.", "bn": "অচেনা কাউকে কিছু জিজ্ঞেস করার আগে এটি বলুন। এভাবে শুরু করলে পরের কথা ভদ্র শোনায়।", "mr": "अनोळखी व्यक्तीला काही विचारण्यापूर्वी हे म्हणा. असे सुरू केल्यास पुढचे सर्व नम्र वाटते.", "ko": "낯선 사람에게 묻기 전에 먼저 말하세요. 이렇게 시작하면 뒤의 말이 모두 공손하게 들립니다.", "es": "Dilo antes de preguntar algo a un desconocido. Empezar así hace que todo lo demás suene educado.", "de": "Sagen Sie es, bevor Sie einen Fremden etwas fragen. So klingt alles Weitere höflich.", "fr": "Dites-le avant de poser une question à un inconnu. Commencer ainsi rend tout le reste poli.", "gu": "અજાણ્યાને કંઈ પૂછતાં પહેલાં આ કહો. આમ શરૂ કરવાથી આગળની વાત નમ્ર લાગે છે.", "as": "অচিনাকি কাৰোবাক সুধিবলৈ আগতে এইটো কওক। এনেকৈ আৰম্ভ কৰিলে পিছৰ কথা ভদ্ৰ শুনা যায়।"}, "name-q": {"en": "Many languages have a polite and a casual \"your\". Use the polite one with new people; the casual one is for friends and children. When unsure, choose polite.", "hi": "कई भाषाओं में \"आपका\" और \"तेरा/तुम्हारा\" जैसे रूप होते हैं। नए लोगों से आदरसूचक रूप, दोस्तों और बच्चों से सामान्य रूप। संदेह हो तो आदरसूचक चुनें।", "te": "చాలా భాషల్లో \"మీ\", \"నీ\" వంటి గౌరవ, సాధారణ రూపాలు ఉంటాయి. కొత్తవారితో గౌరవ రూపం, స్నేహితులు పిల్లలతో సాధారణ రూపం. సందేహంగా ఉంటే గౌరవ రూపం.", "kn": "ಅನೇಕ ಭಾಷೆಗಳಲ್ಲಿ \"ನಿಮ್ಮ\", \"ನಿನ್ನ\" ಎಂಬ ಗೌರವ ಮತ್ತು ಸಾಮಾನ್ಯ ರೂಪಗಳಿವೆ. ಹೊಸಬರೊಂದಿಗೆ ಗೌರವ ರೂಪ, ಸ್ನೇಹಿತರು ಮಕ್ಕಳೊಂದಿಗೆ ಸಾಮಾನ್ಯ ರೂಪ. ಸಂದೇಹವಿದ್ದರೆ ಗೌರವ ರೂಪ.", "ta": "பல மொழிகளில் \"உங்கள்\", \"உன்\" போன்ற மரியாதை, சாதாரண வடிவங்கள் உண்டு. புதியவர்களிடம் மரியாதை வடிவம், நண்பர்கள் குழந்தைகளிடம் சாதாரண வடிவம். சந்தேகமெனில் மரியாதை வடிவம்.", "ml": "പല ഭാഷകളിലും \"നിങ്ങളുടെ\", \"നിന്റെ\" പോലെ ആദരവുള്ളതും സാധാരണവുമായ രൂപങ്ങളുണ്ട്. പുതിയവരോട് ആദരവ് രൂപം, കൂട്ടുകാരോടും കുട്ടികളോടും സാധാരണ രൂപം. സംശയമുണ്ടെങ്കിൽ ആദരവ് രൂപം.", "bn": "অনেক ভাষায় \"আপনার\", \"তোমার\" ধরনের সম্মানসূচক ও সাধারণ রূপ আছে। নতুন মানুষের সঙ্গে সম্মানসূচক, বন্ধু ও শিশুদের সঙ্গে সাধারণ রূপ। সন্দেহ হলে সম্মানসূচক।", "mr": "अनेक भाषांत \"आपले\", \"तुझे\" असे आदरार्थी आणि सामान्य रूप असते. नव्या लोकांशी आदरार्थी, मित्र आणि मुलांशी सामान्य रूप. शंका असल्यास आदरार्थी.", "ko": "많은 언어에는 존대와 친근한 \"당신의/너의\"가 따로 있습니다. 처음 만난 사람에게는 존대, 친구와 아이에게는 친근한 말을 씁니다. 망설여지면 존대를 쓰세요.", "es": "Muchos idiomas tienen un «su» formal y un «tu» informal. Usa el formal con gente nueva y el informal con amigos y niños. Si dudas, el formal.", "de": "Viele Sprachen unterscheiden ein höfliches „Ihr“ und ein lockeres „dein“. Höflich bei neuen Bekanntschaften, locker bei Freunden und Kindern. Im Zweifel höflich.", "fr": "Beaucoup de langues distinguent un « votre » poli et un « ton » familier. Poli avec les inconnus, familier avec les amis et les enfants. Dans le doute, poli.", "gu": "ઘણી ભાષામાં \"આપનું\", \"તારું\" જેવાં આદર અને સામાન્ય રૂપ હોય છે. નવા લોકો સાથે આદર રૂપ, મિત્રો અને બાળકો સાથે સામાન્ય રૂપ. શંકા હોય તો આદર રૂપ.", "as": "বহু ভাষাত \"আপোনাৰ\", \"তোমাৰ\" ধৰণৰ সন্মানসূচক আৰু সাধাৰণ ৰূপ থাকে। নতুন মানুহৰ লগত সন্মানসূচক, বন্ধু আৰু ল’ৰা-ছোৱালীৰ লগত সাধাৰণ। সন্দেহ হ’লে সন্মানসূচক।"}, "from-q": {"en": "\"Where are you from?\" is a friendly opener. The answer is often a village or town as well as a country, so be ready with both.", "hi": "\"आप कहाँ से हैं?\" दोस्ताना शुरुआत है। जवाब में देश के साथ अक्सर गाँव या शहर भी बताया जाता है, दोनों तैयार रखें।", "te": "\"మీరు ఎక్కడి నుండి?\" స్నేహపూర్వక ప్రారంభం. జవాబులో దేశంతో పాటు ఊరు లేదా పట్టణం కూడా చెబుతారు; రెండూ సిద్ధంగా ఉంచుకోండి.", "kn": "\"ನೀವು ಎಲ್ಲಿಂದ?\" ಸ್ನೇಹಪೂರ್ಣ ಆರಂಭ. ಉತ್ತರದಲ್ಲಿ ದೇಶದ ಜೊತೆ ಊರು ಅಥವಾ ಪಟ್ಟಣವನ್ನೂ ಹೇಳುತ್ತಾರೆ; ಎರಡನ್ನೂ ಸಿದ್ಧವಾಗಿಟ್ಟುಕೊಳ್ಳಿ.", "ta": "\"நீங்கள் எங்கிருந்து?\" நட்பான தொடக்கம். பதிலில் நாட்டோடு ஊர் அல்லது நகரத்தையும் சொல்வார்கள்; இரண்டையும் தயாராக வைத்திருங்கள்.", "ml": "\"നിങ്ങൾ എവിടെ നിന്നാണ്?\" സൗഹൃദപരമായ തുടക്കം. ഉത്തരത്തിൽ രാജ്യത്തോടൊപ്പം ഗ്രാമമോ പട്ടണമോ കൂടി പറയും; രണ്ടും തയ്യാറാക്കൂ.", "bn": "\"আপনি কোথা থেকে?\" বন্ধুত্বপূর্ণ শুরু। উত্তরে দেশের সঙ্গে গ্রাম বা শহরও বলা হয়; দুটোই তৈরি রাখুন।", "mr": "\"तुम्ही कुठले?\" ही मैत्रीपूर्ण सुरुवात आहे. उत्तरात देशासोबत गाव किंवा शहरही सांगतात; दोन्ही तयार ठेवा.", "ko": "\"어디에서 오셨어요?\"는 친근한 대화의 시작입니다. 나라뿐 아니라 마을이나 도시도 함께 답하는 경우가 많으니 둘 다 준비하세요.", "es": "«¿De dónde eres?» es una forma amable de empezar. Se responde con el país y a menudo con el pueblo o la ciudad; ten ambos listos.", "de": "„Woher kommen Sie?“ ist ein freundlicher Einstieg. Man nennt oft Dorf oder Stadt und das Land; halten Sie beides bereit.", "fr": "« D’où venez-vous ? » est une entrée en matière amicale. On répond souvent par le pays et la ville ou le village ; préparez les deux.", "gu": "\"તમે ક્યાંથી?\" મૈત્રીપૂર્ણ શરૂઆત છે. જવાબમાં દેશ સાથે ગામ કે શહેર પણ કહેવાય છે; બંને તૈયાર રાખો.", "as": "\"আপুনি ক’ৰ পৰা?\" বন্ধুত্বপূৰ্ণ আৰম্ভণি। উত্তৰত দেশৰ লগতে গাঁও বা চহৰো কোৱা হয়; দুয়োটা সাজু ৰাখক।"}, "how-old": {"en": "Asking age is normal and friendly in many cultures, but in some it is polite only between peers. Be ready to answer when asked.", "hi": "कई संस्कृतियों में उम्र पूछना सामान्य और मित्रवत है, पर कुछ में यह केवल बराबर वालों से ठीक माना जाता है। पूछे जाने पर जवाब तैयार रखें।", "te": "చాలా సంస్కృతుల్లో వయసు అడగడం సహజం, స్నేహపూర్వకం; కొన్నింటిలో సమవయస్కుల మధ్యే మర్యాద. అడిగితే చెప్పడానికి సిద్ధంగా ఉండండి.", "kn": "ಅನೇಕ ಸಂಸ್ಕೃತಿಗಳಲ್ಲಿ ವಯಸ್ಸು ಕೇಳುವುದು ಸಹಜ ಮತ್ತು ಸ್ನೇಹಪೂರ್ಣ; ಕೆಲವೆಡೆ ಸಮವಯಸ್ಕರ ನಡುವೆ ಮಾತ್ರ ಸರಿ. ಕೇಳಿದಾಗ ಉತ್ತರಿಸಲು ಸಿದ್ಧರಿರಿ.", "ta": "பல பண்பாடுகளில் வயதைக் கேட்பது இயல்பும் நட்பும்; சிலவற்றில் சம வயதினரிடையே மட்டுமே முறை. கேட்டால் சொல்லத் தயாராக இருங்கள்.", "ml": "പല സംസ്കാരങ്ങളിലും പ്രായം ചോദിക്കുന്നത് സ്വാഭാവികവും സൗഹൃദവുമാണ്; ചിലയിടത്ത് സമപ്രായക്കാർക്കിടയിൽ മാത്രം. ചോദിച്ചാൽ പറയാൻ തയ്യാറാകൂ.", "bn": "অনেক সংস্কৃতিতে বয়স জিজ্ঞেস করা স্বাভাবিক ও বন্ধুত্বপূর্ণ; কিছুতে শুধু সমবয়সীদের মধ্যে ভদ্র। জিজ্ঞেস করলে উত্তর দিতে প্রস্তুত থাকুন।", "mr": "अनेक संस्कृतींत वय विचारणे सहज आणि मैत्रीपूर्ण असते, काहींत फक्त समवयस्कांमध्ये योग्य. विचारल्यास उत्तर देण्यास तयार राहा.", "ko": "많은 문화에서 나이를 묻는 것은 자연스럽고 친근하지만, 또래끼리만 괜찮다고 여기는 곳도 있습니다. 질문을 받으면 답할 준비를 하세요.", "es": "En muchas culturas preguntar la edad es normal y amable; en otras solo se hace entre iguales. Ten lista la respuesta.", "de": "In vielen Kulturen ist die Frage nach dem Alter normal und freundlich, in anderen nur unter Gleichaltrigen höflich. Seien Sie auf die Gegenfrage vorbereitet.", "fr": "Dans beaucoup de cultures, demander l’âge est normal et amical ; dans d’autres, seulement entre pairs. Soyez prêt à répondre.", "gu": "ઘણી સંસ્કૃતિઓમાં ઉંમર પૂછવી સામાન્ય અને મૈત્રીપૂર્ણ છે; કેટલાકમાં ફક્ત સમવયસ્ક વચ્ચે. પૂછે તો જવાબ તૈયાર રાખો.", "as": "বহু সংস্কৃতিত বয়স সোধা স্বাভাৱিক আৰু বন্ধুত্বপূৰ্ণ; কিছুমানত কেৱল সমবয়সীৰ মাজত ভদ্ৰ। সুধিলে উত্তৰ দিবলৈ সাজু থাকক।"}, "bye": {"en": "Many languages have no single \"goodbye\": people say \"I will go and come back\" or \"see you again\". It avoids a sense of finality.", "hi": "कई भाषाओं में एक \"अलविदा\" नहीं होता: लोग \"फिर मिलेंगे\" या \"जाकर आता हूँ\" कहते हैं। इससे अंतिम विदाई का भाव नहीं आता।", "te": "చాలా భాషల్లో ఒకే \"వీడ్కోలు\" ఉండదు: \"వెళ్ళొస్తాను\", \"మళ్ళీ కలుద్దాం\" అంటారు. దీనివల్ల శాశ్వత వీడ్కోలు భావన రాదు.", "kn": "ಅನೇಕ ಭಾಷೆಗಳಲ್ಲಿ ಒಂದೇ \"ವಿದಾಯ\" ಇಲ್ಲ: \"ಹೋಗಿ ಬರುತ್ತೇನೆ\", \"ಮತ್ತೆ ಸಿಗೋಣ\" ಎನ್ನುತ್ತಾರೆ. ಇದರಿಂದ ಶಾಶ್ವತ ವಿದಾಯದ ಭಾವ ಬರುವುದಿಲ್ಲ.", "ta": "பல மொழிகளில் ஒரே \"பிரியாவிடை\" இல்லை: \"போய்வருகிறேன்\", \"மீண்டும் சந்திப்போம்\" என்பார்கள். இது நிரந்தரப் பிரிவு உணர்வைத் தவிர்க்கும்.", "ml": "പല ഭാഷകളിലും ഒറ്റ \"വിട\" ഇല്ല: \"പോയി വരാം\", \"വീണ്ടും കാണാം\" എന്ന് പറയും. ഇത് ശാശ്വത വേർപാടിന്റെ തോന്നൽ ഒഴിവാക്കും.", "bn": "অনেক ভাষায় একটিমাত্র \"বিদায়\" নেই: \"যাই, আবার আসব\", \"আবার দেখা হবে\" বলে। এতে চিরবিদায়ের ভাব আসে না।", "mr": "अनेक भाषांत एकच \"निरोप\" नसतो: \"जाऊन येतो\", \"पुन्हा भेटू\" म्हणतात. त्यामुळे कायमच्या निरोपाची भावना येत नाही.", "ko": "많은 언어에는 하나뿐인 \"안녕\"이 없습니다. \"다녀올게요\", \"또 만나요\"처럼 말해 영원한 이별의 느낌을 피합니다.", "es": "Muchos idiomas no tienen un único «adiós»: se dice «hasta luego» o «nos vemos». Así se evita la idea de despedida definitiva.", "de": "Viele Sprachen haben kein einziges „Auf Wiedersehen“: man sagt „bis bald“ oder „ich komme gleich wieder“. So klingt es nicht endgültig.", "fr": "Beaucoup de langues n’ont pas un seul « au revoir » : on dit « à bientôt » ou « je reviens ». Cela évite l’idée d’un adieu définitif.", "gu": "ઘણી ભાષામાં એક જ \"આવજો\" નથી: \"જઈને આવું છું\", \"ફરી મળીશું\" કહે છે. તેથી કાયમી વિદાયનો ભાવ નથી આવતો.", "as": "বহু ভাষাত এটাই \"বিদায়\" নাই: \"গৈ আহোঁ\", \"আকৌ লগ পাম\" কয়। ইয়াৰ ফলত চিৰবিদায়ৰ ভাব নাহে।"}, "come-in": {"en": "Invitations to come in or sit are warm and often repeated. Accepting after one polite refusal is normal.", "hi": "अंदर आने या बैठने का निमंत्रण आत्मीय होता है और अक्सर दोहराया जाता है। एक बार विनम्रता से मना करके फिर मान लेना सामान्य है।", "te": "లోపలికి రమ్మనడం, కూర్చోమనడం ఆప్యాయతకు సూచన, తరచూ మళ్ళీ చెబుతారు. ఒకసారి మర్యాదగా వద్దని తర్వాత అంగీకరించడం సహజం.", "kn": "ಒಳಗೆ ಬನ್ನಿ, ಕುಳಿತುಕೊಳ್ಳಿ ಎಂಬ ಆಹ್ವಾನ ಆತ್ಮೀಯ, ಮತ್ತೆ ಮತ್ತೆ ಹೇಳುತ್ತಾರೆ. ಒಮ್ಮೆ ವಿನಯದಿಂದ ಬೇಡವೆಂದು ನಂತರ ಒಪ್ಪುವುದು ಸಹಜ.", "ta": "உள்ளே வாருங்கள், உட்காருங்கள் என்ற அழைப்பு அன்பானது, அடிக்கடி மீண்டும் சொல்லப்படும். ஒருமுறை மரியாதையாக மறுத்து பிறகு ஏற்பது இயல்பு.", "ml": "അകത്തേക്ക് വരൂ, ഇരിക്കൂ എന്ന ക്ഷണം ഊഷ്മളമാണ്, ആവർത്തിക്കാറുണ്ട്. ഒരുതവണ വിനയത്തോടെ വേണ്ടെന്ന് പറഞ്ഞശേഷം സ്വീകരിക്കുന്നത് സാധാരണമാണ്.", "bn": "ভেতরে আসুন, বসুন ধরনের আমন্ত্রণ আন্তরিক এবং প্রায়ই পুনরাবৃত্ত হয়। একবার ভদ্রভাবে না বলে পরে রাজি হওয়া স্বাভাবিক।", "mr": "आत या, बसा असे आमंत्रण आपुलकीचे असते आणि अनेकदा पुन्हा केले जाते. एकदा नम्रपणे नाही म्हणून नंतर मान्य करणे सामान्य आहे.", "ko": "들어오라거나 앉으라는 권유는 따뜻한 표현이며 자주 되풀이됩니다. 한 번 사양한 뒤 받아들이는 것도 흔한 예의입니다.", "es": "Las invitaciones a pasar o sentarse son cálidas y suelen repetirse. Aceptar tras un primer rechazo cortés es normal.", "de": "Einladungen hereinzukommen oder sich zu setzen sind herzlich und werden oft wiederholt. Nach einem höflichen Ablehnen anzunehmen ist normal.", "fr": "Les invitations à entrer ou à s’asseoir sont chaleureuses et souvent répétées. Accepter après un premier refus poli est normal.", "gu": "અંદર આવો, બેસો જેવું આમંત્રણ આત્મીય હોય છે અને ઘણીવાર પુનરાવર્તિત થાય છે. એક વાર નમ્રતાથી ના પાડી પછી સ્વીકારવું સામાન્ય છે.", "as": "ভিতৰলৈ আহক, বহক ধৰণৰ নিমন্ত্ৰণ আন্তৰিক আৰু প্ৰায়ে পুনৰাবৃত্ত হয়। এবাৰ ভদ্ৰভাৱে নাই বুলি পিছত মানি লোৱা স্বাভাৱিক।"}, "sit": {"en": "Offering a seat is a sign of respect to a guest or elder. The host may insist even if you decline once.", "hi": "बैठने को कहना मेहमान या बड़े के प्रति सम्मान है। एक बार मना करने पर भी मेज़बान आग्रह कर सकता है।", "te": "కూర్చోమని చెప్పడం అతిథికి, పెద్దలకు గౌరవ సూచన. ఒకసారి వద్దన్నా ఆతిథేయులు బలవంతం చేయవచ్చు.", "kn": "ಕುಳಿತುಕೊಳ್ಳಿ ಎನ್ನುವುದು ಅತಿಥಿ ಅಥವಾ ಹಿರಿಯರಿಗೆ ಗೌರವ. ಒಮ್ಮೆ ಬೇಡವೆಂದರೂ ಆತಿಥೇಯರು ಒತ್ತಾಯಿಸಬಹುದು.", "ta": "உட்காரச் சொல்வது விருந்தினர், பெரியவர்களுக்கான மரியாதை. ஒருமுறை மறுத்தாலும் வீட்டார் வற்புறுத்தலாம்.", "ml": "ഇരിക്കാൻ പറയുന്നത് അതിഥിക്കോ മുതിർന്നവർക്കോ ഉള്ള ആദരവാണ്. ഒരുതവണ വേണ്ടെന്ന് പറഞ്ഞാലും ആതിഥേയർ നിർബന്ധിച്ചേക്കാം.", "bn": "বসতে বলা অতিথি বা বড়দের প্রতি সম্মান। একবার না করলেও আয়োজক জোর করতে পারেন।", "mr": "बसायला सांगणे हा पाहुण्याचा किंवा मोठ्यांचा सन्मान आहे. एकदा नाही म्हटले तरी यजमान आग्रह करू शकतात.", "ko": "자리를 권하는 것은 손님이나 어른에 대한 존중입니다. 한 번 사양해도 집주인이 거듭 권할 수 있습니다.", "es": "Ofrecer asiento es una muestra de respeto al invitado o al mayor. El anfitrión puede insistir aunque rechaces una vez.", "de": "Einen Sitzplatz anzubieten ist ein Zeichen von Respekt gegenüber Gast oder Älteren. Der Gastgeber kann nachlegen, auch wenn Sie einmal ablehnen.", "fr": "Proposer un siège est une marque de respect envers l’invité ou l’aîné. L’hôte peut insister même après un premier refus.", "gu": "બેસવાનું કહેવું મહેમાન કે મોટા પ્રત્યે આદર છે. એકવાર ના પાડો તો પણ યજમાન આગ્રહ કરી શકે.", "as": "বহিবলৈ কোৱা অতিথি বা ডাঙৰৰ প্ৰতি সন্মান। এবাৰ নাই বুলিলেও গৃহস্থই জোৰ কৰিব পাৰে।"}, "no-thanks": {"en": "A flat \"no\" can sound abrupt. Add \"thank you\" and decline gently; a host may offer two or three times.", "hi": "सीधा \"नहीं\" रूखा लग सकता है। \"धन्यवाद\" जोड़कर नरमी से मना करें; मेज़बान दो-तीन बार आग्रह कर सकता है।", "te": "ఉత్త \"వద్దు\" కటువుగా వినిపిస్తుంది. \"ధన్యవాదాలు\" కలిపి మృదువుగా తిరస్కరించండి; ఆతిథేయులు రెండు మూడుసార్లు అడగవచ్చు.", "kn": "ಬರೀ \"ಬೇಡ\" ಒರಟಾಗಿ ಕೇಳಬಹುದು. \"ಧನ್ಯವಾದ\" ಸೇರಿಸಿ ಮೃದುವಾಗಿ ನಿರಾಕರಿಸಿ; ಆತಿಥೇಯರು ಎರಡು ಮೂರು ಬಾರಿ ಕೇಳಬಹುದು.", "ta": "வெறும் \"வேண்டாம்\" கடுமையாகத் தோன்றலாம். \"நன்றி\" சேர்த்து மென்மையாக மறுங்கள்; வீட்டார் இரண்டு மூன்று முறை கேட்கலாம்.", "ml": "വെറും \"വേണ്ട\" പരുഷമായി തോന്നാം. \"നന്ദി\" ചേർത്ത് മൃദുവായി നിരസിക്കൂ; ആതിഥേയർ രണ്ടോ മൂന്നോ തവണ ചോദിച്ചേക്കാം.", "bn": "শুধু \"না\" রূঢ় শোনাতে পারে। \"ধন্যবাদ\" যোগ করে নরমভাবে মানা করুন; আয়োজক দু-তিনবার সাধতে পারেন।", "mr": "नुसते \"नको\" कठोर वाटू शकते. \"धन्यवाद\" जोडून नम्रपणे नकार द्या; यजमान दोन-तीनदा आग्रह करू शकतात.", "ko": "딱 잘라 \"아니요\"라고 하면 퉁명스럽게 들릴 수 있습니다. \"감사합니다\"를 붙여 부드럽게 사양하세요. 주인이 두세 번 권할 수도 있습니다.", "es": "Un «no» seco puede sonar brusco. Añade «gracias» y rechaza con suavidad; el anfitrión puede ofrecer dos o tres veces.", "de": "Ein knappes „Nein“ klingt schroff. Fügen Sie „danke“ hinzu und lehnen Sie sanft ab; Gastgeber bieten oft zwei- oder dreimal an.", "fr": "Un « non » sec peut sembler brusque. Ajoutez « merci » et refusez avec douceur ; l’hôte peut proposer deux ou trois fois.", "gu": "માત્ર \"ના\" કઠોર લાગી શકે. \"આભાર\" ઉમેરી નમ્રતાથી ના પાડો; યજમાન બે-ત્રણ વાર આગ્રહ કરી શકે.", "as": "কেৱল \"নালাগে\" কঠোৰ শুনা যায়। \"ধন্যবাদ\" যোগ কৰি নম্ৰভাৱে নাকচ কৰক; গৃহস্থই দুই-তিনিবাৰ সাধিব পাৰে।"}, "yes-please": {"en": "Accepting food or drink when offered is polite. Refusing once and then accepting on the second offer is also common.", "hi": "दिए जाने पर खाना या पेय स्वीकार करना विनम्रता है। पहली बार मना करके दूसरी बार मान लेना भी आम है।", "te": "ఇచ్చినప్పుడు ఆహారం, పానీయం స్వీకరించడం మర్యాద. మొదటిసారి వద్దని, రెండోసారి అంగీకరించడం కూడా సహజమే.", "kn": "ಕೊಟ್ಟಾಗ ಆಹಾರ, ಪಾನೀಯ ಸ್ವೀಕರಿಸುವುದು ವಿನಯ. ಮೊದಲು ಬೇಡವೆಂದು ಎರಡನೇ ಬಾರಿಗೆ ಒಪ್ಪುವುದೂ ಸಹಜ.", "ta": "கொடுக்கும்போது உணவு, பானம் ஏற்பது மரியாதை. முதலில் மறுத்து இரண்டாவது முறை ஏற்பதும் வழக்கமே.", "ml": "നൽകുമ്പോൾ ഭക്ഷണമോ പാനീയമോ സ്വീകരിക്കുന്നത് മര്യാദയാണ്. ആദ്യം വേണ്ടെന്ന് പറഞ്ഞ് രണ്ടാമത്തെ തവണ സ്വീകരിക്കുന്നതും സാധാരണം.", "bn": "দিলে খাবার বা পানীয় নেওয়া ভদ্রতা। প্রথমবার না বলে দ্বিতীয়বার নেওয়াও স্বাভাবিক।", "mr": "दिल्यावर खाणे किंवा पेय स्वीकारणे नम्रता आहे. पहिल्यांदा नाही म्हणून दुसऱ्यांदा स्वीकारणेही सामान्य आहे.", "ko": "권하는 음식이나 음료를 받는 것은 예의입니다. 처음에는 사양하고 두 번째 권유에 받는 것도 흔합니다.", "es": "Aceptar comida o bebida cuando te la ofrecen es cortés. Rechazar una vez y aceptar a la segunda oferta también es común.", "de": "Angebotenes Essen oder Trinken anzunehmen ist höflich. Beim ersten Mal ablehnen und beim zweiten Angebot annehmen ist ebenfalls üblich.", "fr": "Accepter un plat ou une boisson offerts est poli. Refuser une fois puis accepter à la deuxième proposition est aussi courant.", "gu": "આપે ત્યારે ખાવાનું કે પીણું સ્વીકારવું નમ્રતા છે. પહેલીવાર ના પાડી બીજીવાર સ્વીકારવું પણ સામાન્ય છે.", "as": "দিলে খাদ্য বা পানীয় লোৱা ভদ্ৰতা। প্ৰথমবাৰ নাই বুলি দ্বিতীয়বাৰ লোৱাও সাধাৰণ।"}, "thank-invite": {"en": "After being invited home, thank the host for the invitation and the food. A short, sincere line goes a long way.", "hi": "घर बुलाए जाने पर निमंत्रण और भोजन के लिए मेज़बान को धन्यवाद दें। छोटी सच्ची बात बहुत असर करती है।", "te": "ఇంటికి పిలిచినప్పుడు ఆహ్వానానికి, భోజనానికి ఆతిథేయులకు ధన్యవాదాలు చెప్పండి. చిన్న నిజాయితీ మాట చాలా విలువైనది.", "kn": "ಮನೆಗೆ ಕರೆದಾಗ ಆಹ್ವಾನ ಮತ್ತು ಊಟಕ್ಕಾಗಿ ಆತಿಥೇಯರಿಗೆ ಧನ್ಯವಾದ ಹೇಳಿ. ಚಿಕ್ಕ ನಿಜವಾದ ಮಾತು ತುಂಬಾ ಮುಖ್ಯ.", "ta": "வீட்டுக்கு அழைத்தால் அழைப்புக்கும் உணவுக்கும் வீட்டாருக்கு நன்றி சொல்லுங்கள். சிறிய உண்மையான சொல் பெரிய மதிப்புடையது.", "ml": "വീട്ടിലേക്ക് ക്ഷണിച്ചാൽ ക്ഷണത്തിനും ഭക്ഷണത്തിനും ആതിഥേയരോട് നന്ദി പറയൂ. ചെറിയ ആത്മാർഥമായ വാക്ക് വലിയ വിലയുള്ളതാണ്.", "bn": "বাড়িতে ডাকলে আমন্ত্রণ ও খাবারের জন্য আয়োজককে ধন্যবাদ দিন। ছোট আন্তরিক কথাই অনেক।", "mr": "घरी बोलावल्यावर आमंत्रण आणि जेवणाबद्दल यजमानांचे आभार माना. छोटे प्रामाणिक वाक्य खूप काही सांगते.", "ko": "집에 초대받으면 초대와 식사에 대해 주인에게 감사를 전하세요. 짧고 진심 어린 한마디면 충분합니다.", "es": "Tras una invitación a casa, agradece al anfitrión la invitación y la comida. Una frase breve y sincera vale mucho.", "de": "Nach einer Einladung nach Hause danken Sie dem Gastgeber für Einladung und Essen. Ein kurzer, ehrlicher Satz wirkt viel.", "fr": "Après une invitation, remerciez l’hôte pour l’invitation et le repas. Une phrase courte et sincère compte beaucoup.", "gu": "ઘરે બોલાવ્યા પછી આમંત્રણ અને ભોજન માટે યજમાનનો આભાર માનો. ટૂંકું સાચું વાક્ય ઘણું કહી જાય છે.", "as": "ঘৰলৈ মাতিলে নিমন্ত্ৰণ আৰু খাদ্যৰ বাবে গৃহস্থক ধন্যবাদ দিয়ক। চুটি আন্তৰিক কথাই বহুত।"}, "come-dinner": {"en": "Inviting someone for a meal is a sign of friendship. If you are invited, bring a small gift such as sweets or fruit.", "hi": "खाने पर बुलाना दोस्ती की निशानी है। आपको बुलाया जाए तो मिठाई या फल जैसा छोटा उपहार ले जाएँ।", "te": "భోజనానికి పిలవడం స్నేహానికి చిహ్నం. మిమ్మల్ని పిలిస్తే స్వీట్లు లేదా పండ్ల వంటి చిన్న బహుమతి తీసుకెళ్ళండి.", "kn": "ಊಟಕ್ಕೆ ಕರೆಯುವುದು ಸ್ನೇಹದ ಸಂಕೇತ. ನಿಮ್ಮನ್ನು ಕರೆದರೆ ಸಿಹಿ ಅಥವಾ ಹಣ್ಣಿನಂತಹ ಚಿಕ್ಕ ಉಡುಗೊರೆ ತನ್ನಿ.", "ta": "உணவுக்கு அழைப்பது நட்பின் அடையாளம். உங்களை அழைத்தால் இனிப்பு அல்லது பழம் போன்ற சிறு பரிசு கொண்டு செல்லுங்கள்.", "ml": "ഭക്ഷണത്തിനു ക്ഷണിക്കുന്നത് സൗഹൃദത്തിന്റെ അടയാളമാണ്. ക്ഷണിച്ചാൽ മധുരമോ പഴമോ പോലുള്ള ചെറിയ സമ്മാനം കൊണ്ടുപോകൂ.", "bn": "খাবারে ডাকা বন্ধুত্বের চিহ্ন। আপনাকে ডাকলে মিষ্টি বা ফলের মতো ছোট উপহার নিয়ে যান।", "mr": "जेवायला बोलावणे ही मैत्रीची खूण आहे. तुम्हाला बोलावल्यास मिठाई किंवा फळे असे छोटे भेटवस्तू घेऊन जा.", "ko": "식사에 초대하는 것은 우정의 표시입니다. 초대받으면 과자나 과일 같은 작은 선물을 가져가세요.", "es": "Invitar a comer es señal de amistad. Si te invitan, lleva un pequeño regalo, como dulces o fruta.", "de": "Eine Einladung zum Essen ist ein Zeichen von Freundschaft. Bringen Sie ein kleines Geschenk mit, etwa Süßes oder Obst.", "fr": "Inviter à un repas est un signe d’amitié. Si l’on vous invite, apportez un petit cadeau, comme des douceurs ou des fruits.", "gu": "જમવા બોલાવવું મિત્રતાની નિશાની છે. તમને બોલાવે તો મીઠાઈ કે ફળ જેવી નાની ભેટ લઈ જાઓ.", "as": "খোৱাত মতা বন্ধুত্বৰ চিন। আপোনাক মাতিলে মিঠাই বা ফলৰ দৰে সৰু উপহাৰ লৈ যাওক।"}, "eat-q": {"en": "A host often asks this and expects a simple answer. \"Anything is fine\" is polite, but naming one thing helps the host.", "hi": "मेज़बान अक्सर यह पूछता है और सरल जवाब चाहता है। \"कुछ भी चलेगा\" विनम्र है, पर एक चीज़ बताने से मेज़बान को आसानी होती है।", "te": "ఆతిథేయులు తరచూ ఇది అడుగుతారు, సరళమైన జవాబు ఆశిస్తారు. \"ఏదైనా పర్వాలేదు\" మర్యాదే, కానీ ఒకటి చెబితే వారికి సులభం.", "kn": "ಆತಿಥೇಯರು ಇದನ್ನು ಆಗಾಗ ಕೇಳುತ್ತಾರೆ, ಸರಳ ಉತ್ತರ ಬಯಸುತ್ತಾರೆ. \"ಏನಾದರೂ ಸರಿ\" ವಿನಯ, ಆದರೆ ಒಂದನ್ನು ಹೇಳಿದರೆ ಅವರಿಗೆ ಸುಲಭ.", "ta": "விருந்தோம்புபவர்கள் இதை அடிக்கடி கேட்பார்கள், எளிய பதிலை எதிர்பார்ப்பார்கள். \"எதுவும் சரி\" மரியாதையே, ஆனால் ஒன்றைச் சொன்னால் அவர்களுக்கு எளிது.", "ml": "ആതിഥേയർ ഇത് പതിവായി ചോദിക്കും, ലളിതമായ ഉത്തരം പ്രതീക്ഷിക്കും. \"എന്തായാലും മതി\" മര്യാദയാണ്, പക്ഷേ ഒന്ന് പറഞ്ഞാൽ അവർക്ക് എളുപ്പമാകും.", "bn": "আয়োজক প্রায়ই এটি জিজ্ঞেস করেন এবং সহজ উত্তর আশা করেন। \"যা হোক\" ভদ্র, কিন্তু একটি নাম বললে সুবিধা হয়।", "mr": "यजमान हे अनेकदा विचारतात आणि सोपे उत्तर अपेक्षित असते. \"काहीही चालेल\" नम्र आहे, पण एखादी गोष्ट सांगितल्यास सोय होते.", "ko": "주인은 이렇게 자주 묻고 간단한 대답을 기대합니다. \"아무거나 괜찮아요\"도 공손하지만, 하나를 말해 주면 도움이 됩니다.", "es": "El anfitrión suele preguntarlo y espera una respuesta sencilla. «Lo que sea» es cortés, pero nombrar algo le ayuda.", "de": "Gastgeber fragen das oft und erwarten eine einfache Antwort. „Alles ist recht“ ist höflich, aber etwas Konkretes hilft.", "fr": "L’hôte le demande souvent et attend une réponse simple. « Tout me va » est poli, mais nommer un plat l’aide.", "gu": "યજમાન ઘણીવાર આ પૂછે છે અને સરળ જવાબ ઇચ્છે છે. \"કંઈ પણ ચાલશે\" નમ્ર છે, પણ એક વસ્તુ કહો તો સરળતા રહે.", "as": "গৃহস্থই প্ৰায়ে এইটো সোধে আৰু সহজ উত্তৰ আশা কৰে। \"যিকোনো চলিব\" ভদ্ৰ, কিন্তু এটা কলে সুবিধা হয়।"}, "repeat": {"en": "Asking someone to repeat or speak slowly is welcome. Native speakers respect learners who ask rather than guess.", "hi": "दोहराने या धीरे बोलने को कहना स्वागतयोग्य है। मातृभाषी अनुमान लगाने वालों से ज़्यादा पूछने वाले सीखने वालों का सम्मान करते हैं।", "te": "మళ్ళీ చెప్పమని లేదా నెమ్మదిగా మాట్లాడమని అడగడం మంచిదే. ఊహించేవారి కంటే అడిగి నేర్చుకునేవారిని మాతృభాష మాట్లాడేవారు గౌరవిస్తారు.", "kn": "ಮತ್ತೆ ಹೇಳಿ ಅಥವಾ ನಿಧಾನವಾಗಿ ಮಾತನಾಡಿ ಎಂದು ಕೇಳುವುದು ಸ್ವಾಗತಾರ್ಹ. ಊಹಿಸುವವರಿಗಿಂತ ಕೇಳಿ ಕಲಿಯುವವರನ್ನು ಮಾತೃಭಾಷಿಕರು ಗೌರವಿಸುತ್ತಾರೆ.", "ta": "மீண்டும் சொல்லச் சொல்வதும் மெதுவாகப் பேசச் சொல்வதும் வரவேற்கத்தக்கது. ஊகிப்பவர்களை விடக் கேட்டுக் கற்பவர்களை தாய்மொழியினர் மதிக்கிறார்கள்.", "ml": "ആവർത്തിക്കാനോ പതുക്കെ സംസാരിക്കാനോ ആവശ്യപ്പെടുന്നത് സ്വാഗതാർഹമാണ്. ഊഹിക്കുന്നവരേക്കാൾ ചോദിച്ചു പഠിക്കുന്നവരെ മാതൃഭാഷക്കാർ ബഹുമാനിക്കും.", "bn": "আবার বলতে বা ধীরে বলতে বলা স্বাগত। অনুমান না করে জিজ্ঞেস করা শিক্ষার্থীকে মাতৃভাষীরা সম্মান করেন।", "mr": "पुन्हा सांगायला किंवा हळू बोलायला सांगणे स्वागतार्ह आहे. अंदाज लावणाऱ्यांपेक्षा विचारून शिकणाऱ्यांचा मातृभाषिक आदर करतात.", "ko": "다시 말해 달라거나 천천히 말해 달라고 하는 것은 환영받습니다. 원어민은 추측하기보다 물어보는 학습자를 존중합니다.", "es": "Pedir que repitan o hablen despacio es bienvenido. Los hablantes nativos respetan a quien pregunta en vez de adivinar.", "de": "Nachzufragen oder um langsameres Sprechen zu bitten ist willkommen. Muttersprachler respektieren Lernende, die fragen statt zu raten.", "fr": "Demander de répéter ou de parler lentement est bienvenu. Les natifs respectent ceux qui demandent plutôt que de deviner.", "gu": "ફરી કહેવા કે ધીમે બોલવા કહેવું આવકાર્ય છે. અનુમાન કરતાં પૂછીને શીખનારનું માતૃભાષીઓ સન્માન કરે છે.", "as": "আকৌ কবলৈ বা লাহে লাহে ক’বলৈ কোৱা স্বাগত। অনুমান নকৰি সোধা শিকাৰুক মাতৃভাষীয়ে সন্মান কৰে।"}, "how-say": {"en": "A great first phrase to learn: it lets you pick up a new word from anyone, anywhere, in the language you are practising.", "hi": "सबसे पहले सीखने लायक वाक्य: इससे आप किसी से भी, कहीं भी, अपनी सीखी जा रही भाषा में नया शब्द सीख सकते हैं।", "te": "మొదట నేర్చుకోవాల్సిన గొప్ప వాక్యం: దీంతో ఎవరి నుంచైనా, ఎక్కడైనా, మీరు నేర్చుకుంటున్న భాషలో కొత్త పదం నేర్చుకోవచ్చు.", "kn": "ಮೊದಲು ಕಲಿಯಬೇಕಾದ ಅತ್ಯುತ್ತಮ ವಾಕ್ಯ: ಇದರಿಂದ ಯಾರಿಂದಲೂ, ಎಲ್ಲಿಯೂ, ನೀವು ಕಲಿಯುತ್ತಿರುವ ಭಾಷೆಯಲ್ಲಿ ಹೊಸ ಪದ ಕಲಿಯಬಹುದು.", "ta": "முதலில் கற்க வேண்டிய சிறந்த வாக்கியம்: இதனால் யாரிடமிருந்தும், எங்கும், நீங்கள் கற்கும் மொழியில் புதிய சொல்லைப் பெறலாம்.", "ml": "ആദ്യം പഠിക്കേണ്ട മികച്ച വാക്യം: ഇതിലൂടെ ആരിൽ നിന്നും എവിടെയും നിങ്ങൾ പഠിക്കുന്ന ഭാഷയിൽ പുതിയ വാക്ക് പഠിക്കാം.", "bn": "প্রথমে শেখার সেরা বাক্য: এর মাধ্যমে যে কারও কাছ থেকে, যেখানে খুশি, আপনার শেখা ভাষায় নতুন শব্দ শেখা যায়।", "mr": "सर्वात आधी शिकण्यासारखे उत्तम वाक्य: यामुळे कोणाकडूनही, कुठेही, तुम्ही शिकत असलेल्या भाषेत नवा शब्द शिकता येतो.", "ko": "가장 먼저 배우면 좋은 문장입니다. 누구에게서든 어디서든 배우는 언어의 새 단어를 익힐 수 있습니다.", "es": "Una gran frase para aprender primero: te permite aprender una palabra nueva de cualquiera, en cualquier lugar, en el idioma que practicas.", "de": "Ein toller erster Satz: Damit lernen Sie von jedem und überall ein neues Wort in der Sprache, die Sie üben.", "fr": "Une excellente première phrase : elle permet d’apprendre un mot nouveau auprès de n’importe qui, partout, dans la langue que vous pratiquez.", "gu": "સૌ પ્રથમ શીખવા જેવું ઉત્તમ વાક્ય: તેનાથી કોઈ પાસેથી, ક્યાંય પણ, તમે શીખતા હોવ તે ભાષામાં નવો શબ્દ શીખી શકો છો.", "as": "প্ৰথমে শিকিবলগীয়া উত্তম বাক্য: ইয়াৰ দ্বাৰা যিকোনোৰ পৰা, য’তে নাথাকক, আপুনি শিকি থকা ভাষাত নতুন শব্দ শিকিব পাৰি।"}, "mon": {"en": "Days of the week in many Indian languages are named for the sun, moon and planets, much as Monday is \"moon day\" in English.", "hi": "कई भारतीय भाषाओं में सप्ताह के दिनों के नाम सूर्य, चंद्र और ग्रहों पर हैं, जैसे अंग्रेज़ी में Monday \"चंद्र दिवस\" है।", "te": "చాలా భారతీయ భాషల్లో వారాల పేర్లు సూర్యుడు, చంద్రుడు, గ్రహాల పేర్లమీద ఉంటాయి; ఇంగ్లీషులో Monday \"చంద్ర దినం\" లాగే.", "kn": "ಅನೇಕ ಭಾರತೀಯ ಭಾಷೆಗಳಲ್ಲಿ ವಾರದ ದಿನಗಳು ಸೂರ್ಯ, ಚಂದ್ರ, ಗ್ರಹಗಳ ಹೆಸರಿನಲ್ಲಿವೆ; ಇಂಗ್ಲಿಷ್‌ನ Monday \"ಚಂದ್ರ ದಿನ\"ದಂತೆ.", "ta": "பல இந்திய மொழிகளில் கிழமைப் பெயர்கள் சூரியன், சந்திரன், கோள்களின் பெயரால் உள்ளன; ஆங்கிலத்தில் Monday \"நிலவு நாள்\" போல.", "ml": "പല ഇന്ത്യൻ ഭാഷകളിലും ആഴ്ചദിവസങ്ങൾ സൂര്യൻ, ചന്ദ്രൻ, ഗ്രഹങ്ങൾ എന്നിവയുടെ പേരിലാണ്; ഇംഗ്ലീഷിലെ Monday \"ചന്ദ്രദിനം\" പോലെ.", "bn": "অনেক ভারতীয় ভাষায় সপ্তাহের দিনের নাম সূর্য, চন্দ্র ও গ্রহের নামে; ইংরেজিতে Monday যেমন \"চন্দ্র দিন\"।", "mr": "अनेक भारतीय भाषांत आठवड्याचे वार सूर्य, चंद्र आणि ग्रहांवरून आहेत; इंग्रजीत Monday हा \"चंद्र दिवस\" असतो तसेच.", "ko": "많은 인도 언어에서 요일 이름은 해, 달, 행성에서 왔습니다. 영어의 Monday가 \"달의 날\"인 것과 비슷합니다.", "es": "En muchos idiomas de la India los días de la semana llevan nombres del sol, la luna y los planetas, como el lunes, «día de la luna».", "de": "In vielen indischen Sprachen sind die Wochentage nach Sonne, Mond und Planeten benannt, ähnlich wie der Montag der „Tag des Mondes“ ist.", "fr": "Dans beaucoup de langues indiennes, les jours portent le nom du soleil, de la lune et des planètes, comme lundi, « jour de la lune ».", "gu": "ઘણી ભારતીય ભાષાઓમાં વારના નામ સૂર્ય, ચંદ્ર અને ગ્રહો પરથી છે; અંગ્રેજીમાં Monday \"ચંદ્ર દિવસ\" છે તેમ.", "as": "বহু ভাৰতীয় ভাষাত সপ্তাহৰ দিনৰ নাম সূৰ্য, চন্দ্ৰ আৰু গ্ৰহৰ নামত; ইংৰাজীত Monday যেনেকৈ \"চন্দ্ৰ দিন\"।"}};
+  B.TONE = { order: ["how", "name", "from", "live", "sit", "help"], titles: {"how": "How are you?", "name": "What is your name?", "from": "Where are you from?", "live": "Where do you live?", "sit": "Please sit down.", "help": "Can you help me?"}, rows: {"how": {"te": ["మీరు ఎలా ఉన్నారు?", "నువ్వు ఎలా ఉన్నావు?"], "hi": ["आप कैसे हैं?", "तुम कैसे हो?"], "kn": ["ನೀವು ಹೇಗಿದ್ದೀರಿ?", "ನೀನು ಹೇಗಿದ್ದೀಯ?"], "ta": ["நீங்கள் எப்படி இருக்கிறீர்கள்?", "நீ எப்படி இருக்கிறாய்?"], "ml": ["താങ്കൾക്ക് സുഖമാണോ?", "നിനക്ക് സുഖമാണോ?"], "bn": ["আপনি কেমন আছেন?", "তুমি কেমন আছ?"], "mr": ["तुम्ही कसे आहात?", "तू कसा आहेस?"], "gu": ["તમે કેમ છો?", "તું કેમ છે?"], "as": ["আপুনি কেনে আছে?", "তুমি কেনে আছা?"], "ko": ["어떻게 지내세요?", "잘 지내?"], "es": ["¿Cómo está usted?", "¿Cómo estás?"], "de": ["Wie geht es Ihnen?", "Wie geht’s dir?"], "fr": ["Comment allez-vous ?", "Comment ça va ?"], "en": ["How do you do?", "How’s it going?"], "or": ["ଆପଣ କେମିତି ଅଛନ୍ତି?", "ତୁମେ କେମିତି ଅଛ?"], "ne": ["तपाईं कस्तो हुनुहुन्छ?", "तिमी कस्तो छौ?"], "ja": ["お元気ですか?", "元気?"]}, "name": {"te": ["మీ పేరు ఏమిటి?", "నీ పేరు ఏమిటి?"], "hi": ["आपका नाम क्या है?", "तुम्हारा नाम क्या है?"], "kn": ["ನಿಮ್ಮ ಹೆಸರೇನು?", "ನಿನ್ನ ಹೆಸರೇನು?"], "ta": ["உங்கள் பெயர் என்ன?", "உன் பெயர் என்ன?"], "ml": ["നിങ്ങളുടെ പേര് എന്താണ്?", "നിന്റെ പേര് എന്താണ്?"], "bn": ["আপনার নাম কী?", "তোমার নাম কী?"], "mr": ["तुमचे नाव काय आहे?", "तुझे नाव काय?"], "gu": ["તમારું નામ શું છે?", "તારું નામ શું છે?"], "as": ["আপোনাৰ নাম কি?", "তোমাৰ নাম কি?"], "ko": ["성함이 어떻게 되세요?", "이름이 뭐야?"], "es": ["¿Cómo se llama usted?", "¿Cómo te llamas?"], "de": ["Wie heißen Sie?", "Wie heißt du?"], "fr": ["Comment vous appelez-vous ?", "Comment tu t’appelles ?"], "en": ["May I ask your name, please?", "What’s your name?"], "or": ["ଆପଣଙ୍କ ନାମ କ'ଣ?", "ତୁମ ନାମ କ'ଣ?"], "ne": ["तपाईंको नाम के हो?", "तिम्रो नाम के हो?"], "ja": ["お名前は何ですか?", "名前は?"]}, "from": {"te": ["మీరు ఎక్కడి నుండి వచ్చారు?", "నువ్వు ఎక్కడి నుండి వచ్చావు?"], "hi": ["आप कहाँ से हैं?", "तुम कहाँ से हो?"], "kn": ["ನೀವು ಎಲ್ಲಿಂದ ಬಂದಿದ್ದೀರಿ?", "ನೀನು ಎಲ್ಲಿಂದ ಬಂದೆ?"], "ta": ["நீங்கள் எங்கிருந்து வருகிறீர்கள்?", "நீ எங்கிருந்து வருகிறாய்?"], "ml": ["നിങ്ങൾ എവിടെ നിന്നാണ്?", "നീ എവിടെ നിന്നാണ്?"], "bn": ["আপনি কোথা থেকে এসেছেন?", "তুমি কোথা থেকে এসেছ?"], "mr": ["तुम्ही कुठून आलात?", "तू कुठून आलास?"], "gu": ["તમે ક્યાંથી આવ્યા છો?", "તું ક્યાંથી આવ્યો?"], "as": ["আপুনি ক’ৰ পৰা আহিছে?", "তুমি ক’ৰ পৰা আহিছা?"], "ko": ["어디에서 오셨어요?", "어디서 왔어?"], "es": ["¿De dónde es usted?", "¿De dónde eres?"], "de": ["Woher kommen Sie?", "Woher kommst du?"], "fr": ["D’où venez-vous ?", "Tu viens d’où ?"], "en": ["Where are you from, if I may ask?", "Where are you from?"], "or": ["ଆପଣ କେଉଁଠାରୁ ଆସିଛନ୍ତି?", "ତୁମେ କେଉଁଠୁ ଆସିଛ?"], "ne": ["तपाईं कहाँबाट आउनुभएको हो?", "तिमी कहाँबाट आएको?"], "ja": ["どちらからこられましたか?", "どこからきたの?"]}, "live": {"te": ["మీరు ఎక్కడ ఉంటారు?", "నువ్వు ఎక్కడ ఉంటావు?"], "hi": ["आप कहाँ रहते हैं?", "तुम कहाँ रहते हो?"], "kn": ["ನೀವು ಎಲ್ಲಿ ವಾಸಿಸುತ್ತೀರಿ?", "ನೀನು ಎಲ್ಲಿ ಇರುತ್ತೀಯ?"], "ta": ["நீங்கள் எங்கே வசிக்கிறீர்கள்?", "நீ எங்கே இருக்கிறாய்?"], "ml": ["നിങ്ങൾ എവിടെയാണ് താമസിക്കുന്നത്?", "നീ എവിടെയാണ് താമസിക്കുന്നത്?"], "bn": ["আপনি কোথায় থাকেন?", "তুমি কোথায় থাকো?"], "mr": ["तुम्ही कुठे राहता?", "तू कुठे राहतोस?"], "gu": ["તમે ક્યાં રહો છો?", "તું ક્યાં રહે છે?"], "as": ["আপুনি ক’ত থাকে?", "তুমি ক’ত থাকা?"], "ko": ["어디에 사세요?", "어디 살아?"], "es": ["¿Dónde vive usted?", "¿Dónde vives?"], "de": ["Wo wohnen Sie?", "Wo wohnst du?"], "fr": ["Où habitez-vous ?", "Tu habites où ?"], "en": ["Where do you live, if you don’t mind?", "Where do you live?"], "or": ["ଆପଣ କେଉଁଠି ରୁହନ୍ତି?", "ତୁମେ କେଉଁଠି ରୁହ?"], "ne": ["तपाईं कहाँ बस्नुहुन्छ?", "तिमी कहाँ बस्छौ?"], "ja": ["どちらにおすまいですか?", "どこにすんでるの?"]}, "sit": {"te": ["దయచేసి కూర్చోండి.", "కూర్చో."], "hi": ["कृपया बैठिए।", "बैठो।"], "kn": ["ದಯವಿಟ್ಟು ಕುಳಿತುಕೊಳ್ಳಿ.", "ಕೂತ್ಕೊ."], "ta": ["தயவுசெய்து உட்காருங்கள்.", "உட்காரு."], "ml": ["ദയവായി ഇരിക്കൂ.", "ഇരിക്ക്."], "bn": ["দয়া করে বসুন।", "বসো।"], "mr": ["कृपया बसा.", "बस."], "gu": ["કૃપા કરીને બેસો.", "બેસ."], "as": ["অনুগ্ৰহ কৰি বহক।", "বহা।"], "ko": ["앉으세요.", "앉아."], "es": ["Siéntese, por favor.", "Siéntate."], "de": ["Bitte setzen Sie sich.", "Setz dich."], "fr": ["Asseyez-vous, s’il vous plaît.", "Assieds-toi."], "en": ["Please, have a seat.", "Sit down."], "or": ["ଦୟାକରି ବସନ୍ତୁ।", "ବସ।"], "ne": ["कृपया बस्नुहोस्।", "बस।"], "ja": ["どうぞお座りください。", "座って。"]}, "help": {"te": ["మీరు నాకు సహాయం చేయగలరా?", "నువ్వు నాకు సహాయం చేస్తావా?"], "hi": ["क्या आप मेरी मदद कर सकते हैं?", "क्या तुम मेरी मदद करोगे?"], "kn": ["ನೀವು ನನಗೆ ಸಹಾಯ ಮಾಡಬಹುದೇ?", "ನೀನು ನನಗೆ ಸಹಾಯ ಮಾಡುತ್ತೀಯಾ?"], "ta": ["நீங்கள் எனக்கு உதவ முடியுமா?", "நீ எனக்கு உதவுவாயா?"], "ml": ["താങ്കൾക്ക് എന്നെ സഹായിക്കാമോ?", "നീ എന്നെ സഹായിക്കുമോ?"], "bn": ["আপনি কি আমাকে সাহায্য করতে পারবেন?", "তুমি কি আমাকে সাহায্য করবে?"], "mr": ["तुम्ही माझी मदत करू शकाल का?", "तू माझी मदत करशील का?"], "gu": ["શું તમે મને મદદ કરી શકો?", "તું મને મદદ કરીશ?"], "as": ["আপুনি মোক সহায় কৰিব পাৰিবনে?", "তুমি মোক সহায় কৰিবানে?"], "ko": ["저를 도와주실 수 있나요?", "나 좀 도와줄래?"], "es": ["¿Podría ayudarme, por favor?", "¿Me ayudas?"], "de": ["Könnten Sie mir bitte helfen?", "Kannst du mir helfen?"], "fr": ["Pourriez-vous m’aider, s’il vous plaît ?", "Tu peux m’aider ?"], "en": ["Could you possibly help me?", "Can you help me out?"], "or": ["ଆପଣ ମୋତେ ସାହାଯ୍ୟ କରିପାରିବେ କି?", "ତୁମେ ମୋତେ ସାହାଯ୍ୟ କରିବ କି?"], "ne": ["तपाईं मलाई मद्दत गर्न सक्नुहुन्छ?", "तिमी मलाई मद्दत गर्छौ?"], "ja": ["手伝っていただけますか?", "手伝ってくれる?"]}} };
+  B.SONGS = { themes: ["morning", "rain"], en: {"morning": ["The sun is up, the day begins.", "Birds are singing, the breeze is soft.", "I wash my face and smile at the sky.", "Today I will learn something new."], "rain": ["Dark clouds come and the rain falls.", "Small drops dance on the roof.", "The children laugh and run outside.", "The earth smells sweet and the world turns green."]}, text: {"te": {"morning": ["సూర్యుడు వచ్చాడు, రోజు మొదలైంది.", "పక్షులు పాడుతున్నాయి, గాలి మెల్లగా వీస్తోంది.", "ముఖం కడుక్కుని ఆకాశాన్ని చూసి నవ్వుతాను.", "ఈ రోజు కొత్తగా ఏదో నేర్చుకుంటాను."], "rain": ["నల్ల మేఘాలు వచ్చాయి, వాన కురుస్తోంది.", "చిన్న చినుకులు పైకప్పుపై నాట్యం చేస్తున్నాయి.", "పిల్లలు నవ్వుతూ బయట పరుగెడుతున్నారు.", "మట్టి తీయగా వాసన వస్తోంది, లోకం పచ్చగా మారింది."]}, "hi": {"morning": ["सूरज निकल आया, दिन शुरू हुआ।", "पक्षी गा रहे हैं, हवा धीमी है।", "मैं मुँह धोता हूँ और आसमान को देखकर मुस्कुराता हूँ।", "आज मैं कुछ नया सीखूँगा।"], "rain": ["काले बादल आए, बारिश गिरने लगी।", "छोटी बूँदें छत पर नाच रही हैं।", "बच्चे हँसते हुए बाहर दौड़ रहे हैं।", "मिट्टी महक रही है, दुनिया हरी हो गई।"]}, "kn": {"morning": ["ಸೂರ್ಯ ಉದಯಿಸಿದ, ದಿನ ಆರಂಭವಾಯಿತು.", "ಹಕ್ಕಿಗಳು ಹಾಡುತ್ತಿವೆ, ಗಾಳಿ ಮೃದುವಾಗಿದೆ.", "ಮುಖ ತೊಳೆದು ಆಕಾಶ ನೋಡಿ ನಗುತ್ತೇನೆ.", "ಇಂದು ನಾನು ಹೊಸದೊಂದು ಕಲಿಯುತ್ತೇನೆ."], "rain": ["ಕಪ್ಪು ಮೋಡ ಬಂದಿತು, ಮಳೆ ಸುರಿಯಿತು.", "ಸಣ್ಣ ಹನಿಗಳು ಮಾಡಿನ ಮೇಲೆ ಕುಣಿಯುತ್ತಿವೆ.", "ಮಕ್ಕಳು ನಗುತ್ತಾ ಹೊರಗೆ ಓಡುತ್ತಿದ್ದಾರೆ.", "ಮಣ್ಣು ಸುಗಂಧ ಬೀರುತ್ತಿದೆ, ಜಗತ್ತು ಹಸಿರಾಗಿದೆ."]}, "ta": {"morning": ["சூரியன் உதித்தான், நாள் தொடங்கியது.", "பறவைகள் பாடுகின்றன, காற்று மென்மையாக வீசுகிறது.", "முகம் கழுவி வானத்தைப் பார்த்துச் சிரிக்கிறேன்.", "இன்று நான் புதிதாக ஏதாவது கற்பேன்."], "rain": ["கருமேகம் வந்தது, மழை பெய்கிறது.", "சிறு துளிகள் கூரையில் நடனமாடுகின்றன.", "குழந்தைகள் சிரித்துக்கொண்டே வெளியே ஓடுகிறார்கள்.", "மண் மணக்கிறது, உலகம் பசுமையாகிறது."]}, "ml": {"morning": ["സൂര്യൻ ഉദിച്ചു, ദിവസം തുടങ്ങി.", "പക്ഷികൾ പാടുന്നു, കാറ്റ് മൃദുവാണ്.", "മുഖം കഴുകി ആകാശത്തെ നോക്കി ഞാൻ ചിരിക്കുന്നു.", "ഇന്ന് ഞാൻ പുതിയതൊന്ന് പഠിക്കും."], "rain": ["കാർമേഘം വന്നു, മഴ പെയ്യുന്നു.", "ചെറിയ തുള്ളികൾ മേൽക്കൂരയിൽ നൃത്തം ചെയ്യുന്നു.", "കുട്ടികൾ ചിരിച്ചുകൊണ്ട് പുറത്തേക്ക് ഓടുന്നു.", "മണ്ണ് മണക്കുന്നു, ലോകം പച്ചയായി."]}, "bn": {"morning": ["সূর্য উঠেছে, দিন শুরু হলো।", "পাখিরা গাইছে, বাতাস নরম।", "মুখ ধুয়ে আকাশের দিকে তাকিয়ে হাসি।", "আজ আমি নতুন কিছু শিখব।"], "rain": ["কালো মেঘ এল, বৃষ্টি পড়ছে।", "ছোট ফোঁটারা ছাদে নাচছে।", "শিশুরা হাসতে হাসতে বাইরে দৌড়াচ্ছে।", "মাটি সুগন্ধ ছড়াচ্ছে, পৃথিবী সবুজ হলো।"]}, "mr": {"morning": ["सूर्य उगवला, दिवस सुरू झाला.", "पक्षी गात आहेत, वारा हळुवार आहे.", "तोंड धुऊन आकाशाकडे पाहून हसतो.", "आज मी काहीतरी नवीन शिकेन."], "rain": ["काळे ढग आले, पाऊस पडू लागला.", "छोटे थेंब छपरावर नाचत आहेत.", "मुले हसत हसत बाहेर धावत आहेत.", "माती दरवळते आहे, जग हिरवे झाले."]}, "gu": {"morning": ["સૂર્ય ઊગ્યો, દિવસ શરૂ થયો.", "પક્ષીઓ ગાય છે, પવન ધીમો છે.", "મોં ધોઈને આકાશ તરફ જોઈ હસું છું.", "આજે હું કંઈક નવું શીખીશ."], "rain": ["કાળાં વાદળ આવ્યાં, વરસાદ પડે છે.", "નાનાં ટીપાં છત પર નાચે છે.", "બાળકો હસતાં હસતાં બહાર દોડે છે.", "માટી મહેકે છે, દુનિયા લીલી થઈ."]}, "as": {"morning": ["সূৰ্য উঠিল, দিন আৰম্ভ হ’ল।", "চৰাইবোৰে গান গাইছে, বতাহ ধীৰ।", "মুখ ধুই আকাশলৈ চাই হাঁহো।", "আজি মই নতুন কিবা শিকিম।"], "rain": ["ক’লা ডাৱৰ আহিল, বৰষুণ দিলে।", "সৰু ফোঁটাবোৰে চালত নাচিছে।", "ল’ৰা-ছোৱালীবোৰে হাঁহি হাঁহি বাহিৰলৈ দৌৰিছে।", "মাটিয়ে সুবাস ছটিয়াইছে, পৃথিৱী সেউজীয়া হ’ল।"]}, "ko": {"morning": ["해가 떴어요, 하루가 시작돼요.", "새들이 노래하고 바람은 부드러워요.", "세수하고 하늘을 보며 웃어요.", "오늘은 새로운 것을 배울 거예요."], "rain": ["먹구름이 오고 비가 내려요.", "작은 빗방울이 지붕 위에서 춤춰요.", "아이들이 웃으며 밖으로 뛰어가요.", "흙냄새가 달콤하고 세상이 푸르러져요."]}, "es": {"morning": ["Sale el sol, empieza el día.", "Los pájaros cantan, la brisa es suave.", "Me lavo la cara y sonrío al cielo.", "Hoy aprenderé algo nuevo."], "rain": ["Vienen nubes oscuras y cae la lluvia.", "Gotitas bailan sobre el tejado.", "Los niños ríen y corren afuera.", "La tierra huele dulce y el mundo se vuelve verde."]}, "de": {"morning": ["Die Sonne ist aufgegangen, der Tag beginnt.", "Vögel singen, der Wind ist sanft.", "Ich wasche mein Gesicht und lächle den Himmel an.", "Heute lerne ich etwas Neues."], "rain": ["Dunkle Wolken kommen und der Regen fällt.", "Kleine Tropfen tanzen auf dem Dach.", "Die Kinder lachen und rennen nach draußen.", "Die Erde duftet süß und die Welt wird grün."]}, "fr": {"morning": ["Le soleil se lève, la journée commence.", "Les oiseaux chantent, la brise est douce.", "Je me lave le visage et je souris au ciel.", "Aujourd’hui, j’apprendrai quelque chose de nouveau."], "rain": ["Des nuages sombres arrivent et la pluie tombe.", "De petites gouttes dansent sur le toit.", "Les enfants rient et courent dehors.", "La terre sent bon et le monde devient vert."]}, "en": {"morning": ["The sun is up, the day begins.", "Birds are singing, the breeze is soft.", "I wash my face and smile at the sky.", "Today I will learn something new."], "rain": ["Dark clouds come and the rain falls.", "Small drops dance on the roof.", "The children laugh and run outside.", "The earth smells sweet and the world turns green."]}, "or": {"morning": ["ସୂର୍ଯ୍ୟ ଉଠିଲା, ଦିନ ଆରମ୍ଭ ହେଲା।", "ପକ୍ଷୀମାନେ ଗାଉଛନ୍ତି, ପବନ ମୃଦୁ।", "ମୁହଁ ଧୋଇ ଆକାଶକୁ ଚାହିଁ ହସେ।", "ଆଜି ମୁଁ କିଛି ନୂଆ ଶିଖିବି।"], "rain": ["କଳା ମେଘ ଆସିଲା, ବର୍ଷା ପଡ଼ୁଛି।", "ଛୋଟ ବୁନ୍ଦା ଛାତ ଉପରେ ନାଚୁଛି।", "ପିଲାମାନେ ହସି ହସି ବାହାରକୁ ଦୌଡ଼ୁଛନ୍ତି।", "ମାଟି ସୁବାସ ଦେଉଛି, ଦୁନିଆ ସବୁଜ ହେଲା।"]}, "ne": {"morning": ["सूर्य उदायो, दिन सुरु भयो।", "चराहरू गाइरहेका छन्, हावा मन्द छ।", "अनुहार धोएर आकाशतिर हेरी म मुस्कुराउँछु।", "आज म केही नयाँ सिक्नेछु।"], "rain": ["कालो बादल आयो, पानी पर्न थाल्यो।", "साना थोपा छानामा नाचिरहेका छन्।", "केटाकेटीहरू हाँस्दै बाहिर दौडिरहेका छन्।", "माटो गमक्क बास्ना आउँछ, संसार हरियो भयो।"]}, "ja": {"morning": ["たいようがのぼって、あたらしいいちにちがはじまります。", "とりがうたって、かぜがやさしくふきます。", "かおをあらって、そらにほほえみます。", "きょうはあたらしいことをまなびます。"], "rain": ["くろいくもがきて、あめがふってきます。", "ちいさなしずくがやねでおどります。", "こどもたちはわらってそとへはしります。", "つちがいいにおいで、せかいがみどりになります。"]}} };
+  B.MONTHS = {"te": ["జనవరి", "ఫిబ్రవరి", "మార్చి", "ఏప్రిల్", "మే", "జూన్", "జూలై", "ఆగస్టు", "సెప్టెంబర్", "అక్టోబర్", "నవంబర్", "డిసెంబర్"], "hi": ["जनवरी", "फ़रवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्तूबर", "नवंबर", "दिसंबर"], "kn": ["ಜನವರಿ", "ಫೆಬ್ರವರಿ", "ಮಾರ್ಚ್", "ಏಪ್ರಿಲ್", "ಮೇ", "ಜೂನ್", "ಜುಲೈ", "ಆಗಸ್ಟ್", "ಸೆಪ್ಟೆಂಬರ್", "ಅಕ್ಟೋಬರ್", "ನವೆಂಬರ್", "ಡಿಸೆಂಬರ್"], "ta": ["ஜனவரி", "பிப்ரவரி", "மார்ச்", "ஏப்ரல்", "மே", "ஜூன்", "ஜூலை", "ஆகஸ்ட்", "செப்டம்பர்", "அக்டோபர்", "நவம்பர்", "டிசம்பர்"], "ml": ["ജനുവരി", "ഫെബ്രുവരി", "മാർച്ച്", "ഏപ്രിൽ", "മേയ്", "ജൂൺ", "ജൂലൈ", "ഓഗസ്റ്റ്", "സെപ്റ്റംബർ", "ഒക്ടോബർ", "നവംബർ", "ഡിസംബർ"], "bn": ["জানুয়ারি", "ফেব্রুয়ারি", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্টেম্বর", "অক্টোবর", "নভেম্বর", "ডিসেম্বর"], "mr": ["जानेवारी", "फेब्रुवारी", "मार्च", "एप्रिल", "मे", "जून", "जुलै", "ऑगस्ट", "सप्टेंबर", "ऑक्टोबर", "नोव्हेंबर", "डिसेंबर"], "gu": ["જાન્યુઆરી", "ફેબ્રુઆરી", "માર્ચ", "એપ્રિલ", "મે", "જૂન", "જુલાઈ", "ઑગસ્ટ", "સપ્ટેમ્બર", "ઑક્ટોબર", "નવેમ્બર", "ડિસેમ્બર"], "as": ["জানুৱাৰী", "ফেব্ৰুৱাৰী", "মাৰ্চ", "এপ্ৰিল", "মে’", "জুন", "জুলাই", "আগষ্ট", "চেপ্টেম্বৰ", "অক্টোবৰ", "নৱেম্বৰ", "ডিচেম্বৰ"], "ko": ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"], "es": ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"], "de": ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"], "fr": ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"], "en": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"], "or": ["ଜାନୁଆରୀ", "ଫେବୃଆରୀ", "ମାର୍ଚ୍ଚ", "ଏପ୍ରିଲ", "ମେ", "ଜୁନ", "ଜୁଲାଇ", "ଅଗଷ୍ଟ", "ସେପ୍ଟେମ୍ବର", "ଅକ୍ଟୋବର", "ନଭେମ୍ବର", "ଡିସେମ୍ବର"], "ne": ["जनवरी", "फेब्रुअरी", "मार्च", "अप्रिल", "मे", "जुन", "जुलाई", "अगस्ट", "सेप्टेम्बर", "अक्टोबर", "नोभेम्बर", "डिसेम्बर"], "ja": ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"]};
+  B.CUR = {"te": ["₹", "రూపాయలు"], "hi": ["₹", "रुपये"], "kn": ["₹", "ರೂಪಾಯಿ"], "ta": ["₹", "ரூபாய்"], "ml": ["₹", "രൂപ"], "bn": ["₹", "টাকা"], "mr": ["₹", "रुपये"], "gu": ["₹", "રૂપિયા"], "as": ["₹", "টকা"], "or": ["₹", "ଟଙ୍କା"], "ne": ["रू", "रुपैयाँ"], "ko": ["₩", "원"], "ja": ["¥", "円"], "es": ["€", "euros"], "de": ["€", "Euro"], "fr": ["€", "euros"], "en": ["$", "dollars"]};
+})(window.B);
+
+;
+/* Numbers, money, time and dates drills; Tone variants; Songs and verses; "Why this way?" notes; night reading. */
+(function (B) {
+  'use strict';
+  var U = B.ui, h = U.h, t = U.t, set = U.set;
+  B.views = B.views || {};
+  function ri(a, b) { return a + Math.floor(Math.random() * (b - a + 1)); }
+  function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
+  function rom(txt, lang) { return (B.isBrahmic(txt) || lang === 'ja' || lang === 'ko') ? B.translit(txt, set.scheme, lang) : ''; }
+  function langSel(id, lang, fn) {
+    var s = h('select', { id: id, 'aria-label': t('language') }, B.LEARN.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); s.value = lang;
+    s.addEventListener('change', function () { fn(s.value); });
+    return h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: id, text: t('language') }), s])]);
+  }
+  function line(txt, lang) { // tappable target text with romanization
+    var d = h('div', { class: 'ph-t', lang: lang }); d.appendChild(U.renderText(txt, lang, { roman: false }));
+    U.bindWords(d, function () { return lang; }, function () { return txt; }, function () { });
+    var r = rom(txt, lang), w = h('div', { class: 'ph-main' }, [d]); if (r) w.appendChild(h('div', { class: 'ph-r', text: r })); return w;
+  }
+  function spk(txt, lang, label) { return h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + (label || txt), text: '🔊', onclick: function () { U.speak(txt, lang, null, set.rate); } }); }
+
+  // ---------- "Why this way?" under a phrase
+  U.addWhy = function (row, id) {
+    var w = B.WHY && B.WHY[id]; if (!w) return;
+    var main = row.querySelector('.ph-main'); if (!main) return;
+    main.appendChild(h('details', { class: 'why' }, [h('summary', { text: '💡 ' + t('why_show') }), h('p', { lang: set.ui, text: w[set.ui] || w.en })]));
+  };
+
+  // ---------- Night reading: off, on, or automatic in the evening
+  U.applyNight = function () {
+    var m = set.night || 'off', hr = new Date().getHours(), on = m === 'on' || (m === 'auto' && (hr >= 19 || hr < 6));
+    if (on) document.documentElement.setAttribute('data-night', '1'); else document.documentElement.removeAttribute('data-night');
+  };
+  U.nightButton = function () {
+    var b = h('button', { type: 'button', class: 'abtn', 'aria-pressed': String(!!document.documentElement.getAttribute('data-night')), text: '🌙 ' + t('set_night') });
+    b.addEventListener('click', function () { var on = !document.documentElement.getAttribute('data-night'); set.night = on ? 'on' : 'off'; U.saveSet(); U.applyNight(); b.setAttribute('aria-pressed', String(on)); });
+    return b;
+  };
+
+  // ---------- Numbers, money, time, dates
+  var NR = { lang: null, mode: 'n', range: 100, score: 0, n: 0, streak: 0, last: '' };
+  var DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'], DAYEN = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], MONEN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function dayWord(i, lang) { var p = B.PHRASES.filter(function (x) { return x.id === DAYS[i]; })[0]; return p ? p[lang] : DAYEN[i]; }
+  function make(mode, lang, range) { // returns { say, show, say2 } for one item
+    var cur = B.CUR[lang] || ['$', 'dollars'], v, c;
+    if (mode === 'n') { v = ri(range > 20 ? 1 : 0, range); return { key: 'n' + v, say: String(v), show: String(v) }; }
+    if (mode === 'm') { var step = range <= 100 ? 5 : range <= 1000 ? 10 : 50; v = Math.max(step, Math.round(ri(1, range) / step) * step); c = lang === 'ko' || lang === 'ja' ? String(v) + cur[1] : v + ' ' + cur[1]; return { key: 'm' + v, say: c, show: cur[0] + v }; }
+    if (mode === 't') { var hh = ri(1, 12), mm = pick([0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]), s = hh + ':' + (mm < 10 ? '0' : '') + mm; return { key: 't' + s, say: s, show: s }; }
+    var d = ri(0, 6), dd = ri(1, 28), mo = ri(0, 11); return { key: 'd' + d + '-' + dd + '-' + mo, say: dayWord(d, lang) + ' ' + dd + ' ' + B.MONTHS[lang][mo], show: DAYEN[d] + ' ' + dd + ' ' + MONEN[mo], parts: [d, dd, mo] };
+  }
+  function distract(item, mode, lang, range) {
+    var out = {}, tries = 0; out[item.show] = 1; var list = [];
+    while (list.length < 2 && tries++ < 60) {
+      var o = make(mode, lang, range);
+      if (mode === 'n' && Math.random() < 0.7) { var v = +item.show, cand = [v + 1, v - 1, v + 10, v - 10, v * 10, Math.floor(v / 10), +String(v).split('').reverse().join('')].filter(function (x) { return x >= 0 && x <= Math.max(range, 20) && x !== v; }); if (cand.length) { var x = pick(cand); o = { show: String(x), say: String(x) }; } }
+      if (mode === 'm' && Math.random() < 0.6) { var m = +item.show.replace(/[^\d]/g, ''), c2 = [m * 10, Math.max(5, m / 10), m + 10, m + 50, m - 10].filter(function (z) { return z > 0 && z !== m; }); if (c2.length) { var z = Math.round(pick(c2)); o = { show: (B.CUR[lang] || ['$'])[0] + z, say: '' }; } }
+      if (mode === 't' && Math.random() < 0.6) { var p = item.show.split(':'); o = { show: (Math.random() < 0.5 ? ((+p[0]) % 12 + 1) + ':' + p[1] : p[0] + ':' + (p[1] === '30' ? '00' : '30')), say: '' }; }
+      if (mode === 'd' && Math.random() < 0.6) { var q = item.parts.slice(), k = ri(0, 2); q[k] = k === 0 ? (q[0] + 1) % 7 : k === 1 ? q[1] % 28 + 1 : (q[2] + 1) % 12; o = { show: DAYEN[q[0]] + ' ' + q[1] + ' ' + MONEN[q[2]], say: '' }; }
+      if (!out[o.show]) { out[o.show] = 1; list.push(o.show); }
+    }
+    return list;
+  }
+  B.views.numbers = function (app) {
+    app.textContent = ''; U.stopSpeak(); NR.lang = NR.lang || set.focus; var lang = NR.lang;
+    app.appendChild(h('h1', { text: t('nav_numbers') })); app.appendChild(h('p', { class: 'lede', text: t('numLede') }));
+    app.appendChild(langSel('nm-lang', lang, function (v) { NR.lang = v; NR.score = NR.n = NR.streak = 0; B.views.numbers(app); }));
+    var seg = h('div', { class: 'seg', role: 'group', 'aria-label': t('numRange') });
+    [['n', 'numMode_n'], ['m', 'numMode_m'], ['t', 'numMode_t'], ['d', 'numMode_d']].forEach(function (m) { seg.appendChild(h('button', { type: 'button', class: 'abtn', 'data-m': m[0], 'aria-pressed': String(NR.mode === m[0]), text: t(m[1]), onclick: function () { NR.mode = m[0]; NR.score = NR.n = NR.streak = 0; B.views.numbers(app); } })); });
+    app.appendChild(seg);
+    if (NR.mode === 'n' || NR.mode === 'm') {
+      var rs = h('select', { id: 'nm-range', 'aria-label': t('numRange') }, [20, 100, 1000, 10000, 100000].map(function (x) { return h('option', { value: x, text: '≤ ' + x }); })); rs.value = NR.range;
+      rs.addEventListener('change', function () { NR.range = +rs.value; round(); });
+      app.appendChild(h('div', { class: 'tools' }, [h('div', { class: 'tf' }, [h('label', { for: 'nm-range', text: t('numRange') }), rs])]));
+    }
+    var box = h('section', { class: 'panel pairs', id: 'nm-box' }); app.appendChild(box);
+    app.appendChild(h('p', { class: 'note', text: t('numNote') }));
+    function round() {
+      var item, guard = 0; do { item = make(NR.mode, lang, NR.range); } while (item.key === NR.last && guard++ < 20); NR.last = item.key;
+      var opts = distract(item, NR.mode, lang, NR.range).concat([item.show]).sort(function () { return Math.random() - 0.5; }), done = false;
+      box.textContent = '';
+      box.appendChild(h('div', { class: 'pa-score' }, [h('span', { class: 'chip', text: t('pairsScore', { a: NR.score, n: NR.n }) }), h('span', { class: 'chip', text: t('pairsStreak', { n: NR.streak }) })]));
+      box.appendChild(h('h2', { text: t('numQ') }));
+      box.appendChild(h('div', { class: 'acts' }, [h('button', { type: 'button', class: 'abtn gold big', id: 'nm-play', text: '🔊 ' + t('numPlay'), onclick: function () { U.speak(item.say, lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow'), text: '🐢', onclick: function () { U.speak(item.say, lang, null, 0.55); } })]));
+      var res = h('p', { class: 'qz-res', 'aria-live': 'polite' }), nextBtn = h('button', { type: 'button', class: 'abtn gold', id: 'nm-next', hidden: true, text: t('next'), onclick: round }), wrap = h('div', { class: 'pa-opts' });
+      opts.forEach(function (o) {
+        wrap.appendChild(h('button', { type: 'button', class: 'abtn pa-opt nm-opt', 'data-v': o, onclick: function (ev) {
+          if (done) return; done = true; NR.n++; var ok = o === item.show;
+          if (ok) { NR.score++; NR.streak++; if (B.fx) B.fx.good(); } else { NR.streak = 0; if (B.fx) B.fx.bad(); }
+          ev.currentTarget.classList.add(ok ? 'right' : 'wrong'); [].forEach.call(wrap.children, function (b) { if (b.getAttribute('data-v') === item.show) b.classList.add('right'); });
+          res.textContent = ok ? t('correct') : t('wrongIs', { a: item.show });
+          box.appendChild(h('div', { class: 'pa-mean' }, [h('div', null, [h('span', { lang: lang, class: 'pa-w', text: item.say }), h('span', { class: 'pa-r', text: rom(item.say, lang) }), spk(item.say, lang)])]));
+          box.querySelector('.pa-score').firstChild.textContent = t('pairsScore', { a: NR.score, n: NR.n }); box.querySelector('.pa-score').lastChild.textContent = t('pairsStreak', { n: NR.streak });
+          if (U.logReview) U.logReview(); nextBtn.hidden = false; nextBtn.focus();
+        } }, [h('span', { class: 'pa-w', text: o })]));
+      });
+      box.appendChild(wrap); box.appendChild(res); box.appendChild(h('div', { class: 'acts' }, [nextBtn]));
+      setTimeout(function () { if (box.isConnected && !done) U.speak(item.say, lang, null, set.rate); }, 250);
+    }
+    round();
+  };
+
+  // ---------- Tone variants
+  var TN = { lang: null };
+  B.views.tone = function (app) {
+    app.textContent = ''; U.stopSpeak(); TN.lang = TN.lang || set.focus; var lang = TN.lang;
+    app.appendChild(h('h1', { text: t('nav_tone') })); app.appendChild(h('p', { class: 'lede', text: t('toneLede') }));
+    app.appendChild(langSel('tn-lang', lang, function (v) { TN.lang = v; B.views.tone(app); }));
+    var grid = h('div', { class: 'tone-list' });
+    B.TONE.order.forEach(function (id) {
+      var pair = B.TONE.rows[id][lang]; if (!pair) return;
+      var col = function (label, txt, cls) { return h('div', { class: 'tone-col ' + cls }, [h('div', { class: 'tone-h', text: label }), line(txt, lang), h('div', { class: 'ph-a' }, [spk(txt, lang), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + txt, text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55); } })])]); };
+      grid.appendChild(h('article', { class: 'panel tone-card' }, [h('h2', { class: 'tone-t', text: B.TONE.titles[id] }), h('div', { class: 'tone-cols' }, [col(t('toneFormal'), pair[0], 'f'), col(t('toneCasual'), pair[1], 'c')])]));
+    });
+    app.appendChild(grid); app.appendChild(h('p', { class: 'note', text: t('toneNote') }));
+  };
+
+  // ---------- Songs and verses
+  var SG = { lang: null, theme: 'morning', playing: false };
+  B.views.songs = function (app) {
+    app.textContent = ''; U.stopSpeak(); SG.playing = false; SG.lang = SG.lang || set.focus; var lang = SG.lang, S = B.SONGS;
+    app.appendChild(h('h1', { text: t('nav_songs') })); app.appendChild(h('p', { class: 'lede', text: t('songsLede') }));
+    app.appendChild(langSel('sg-lang', lang, function (v) { SG.lang = v; B.views.songs(app); }));
+    var tabs = h('div', { class: 'seg', role: 'group', 'aria-label': t('nav_songs') });
+    S.themes.forEach(function (k) { tabs.appendChild(h('button', { type: 'button', class: 'abtn', 'aria-pressed': String(SG.theme === k), text: t('song_' + k), onclick: function () { SG.theme = k; B.views.songs(app); } })); });
+    app.appendChild(tabs);
+    var lines = (S.text[lang] || {})[SG.theme] || [], en = S.en[SG.theme], box = h('section', { class: 'panel verse' }), rows = [];
+    var showEn = h('input', { type: 'checkbox', id: 'sg-en' }); showEn.checked = lang !== 'en';
+    var playAll = h('button', { type: 'button', class: 'abtn gold', id: 'sg-all', text: '▶ ' + t('songPlayAll') });
+    function mark(i) { rows.forEach(function (r, k) { r.classList.toggle('playing', k === i); }); }
+    function stop() { SG.playing = false; U.stopSpeak(); mark(-1); playAll.textContent = '▶ ' + t('songPlayAll'); }
+    playAll.addEventListener('click', function () {
+      if (SG.playing) return stop(); SG.playing = true; playAll.textContent = '■ ' + t('songPlayAll');
+      (function next(i) { if (!SG.playing || i >= lines.length) { stop(); return; } mark(i); U.speak(lines[i], lang, function () { setTimeout(function () { next(i + 1); }, 250); }, set.rate); })(0);
+    });
+    box.appendChild(h('div', { class: 'acts' }, [playAll, h('div', { class: 'tf chk' }, [showEn, h('label', { for: 'sg-en', text: t('songEn') })])]));
+    lines.forEach(function (txt, i) {
+      var meaning = h('div', { class: 'ph-n', text: en[i] }); meaning.hidden = !showEn.checked;
+      var row = h('div', { class: 'ph vs-line' }, [h('div', { class: 'ph-main' }, [line(txt, lang).firstChild, rom(txt, lang) ? h('div', { class: 'ph-r', text: rom(txt, lang) }) : null, meaning]), h('div', { class: 'ph-a' }, [spk(txt, lang), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow'), text: '🐢', onclick: function () { U.speak(txt, lang, null, 0.55); } })])]);
+      rows.push(row); box.appendChild(row);
+    });
+    showEn.addEventListener('change', function () { [].forEach.call(box.querySelectorAll('.ph-n'), function (n) { n.hidden = !showEn.checked; }); });
+    app.appendChild(box); app.appendChild(h('p', { class: 'note', text: t('songNote') }));
   };
 })(window.B);
 
@@ -11525,8 +12043,8 @@
   var U = B.ui, h = U.h, t = U.t, set = U.set, $ = U.$;
   var ORIGIN = 'https://eknathalabs.com', MARK = 'M29.2 23.2V35.5Q29.2 37.5 28.4 38.4Q27.6 39.4 26.1 39.4Q25 39.4 23.8 38.7Q22.6 38.1 21.6 37Q20.7 36 20 34.8Q19.4 33.6 19.4 32.5Q19.4 31.2 20.1 30.4Q20.9 29.6 22.9 29.6L23 29.7V23.2H18V18.2H46V23.2H41.9V45.8H35.7V23.2Z';
   B.MARK = MARK; B.base = '/';
-  var ROUTES = { '': 'home', today: 'today', talk: 'talk', kids: 'kids', proverbs: 'proverbs', twisters: 'twisters', privacy: 'privacy', read: 'read', say: 'say', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases', stories: 'stories', write: 'write', pairs: 'pairs', manage: 'manage' };
-  var NAV = [['today', '📅'], ['say', '🗣'], ['talk', '💬'], ['watch', '🎬'], ['read', '📖'], ['words', '🗂'], ['review', '🧠'], ['manage', '⚙'], ['stories', '📖'], ['write', '✍'], ['pairs', '👂'], ['scripts', 'अ'], ['phrases', '📚']];
+  var ROUTES = { '': 'home', today: 'today', talk: 'talk', kids: 'kids', proverbs: 'proverbs', twisters: 'twisters', privacy: 'privacy', read: 'read', say: 'say', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases', stories: 'stories', write: 'write', pairs: 'pairs', manage: 'manage', numbers: 'numbers', tone: 'tone', songs: 'songs' };
+  var NAV = [['today', '📅'], ['say', '🗣'], ['talk', '💬'], ['watch', '🎬'], ['read', '📖'], ['words', '🗂'], ['review', '🧠'], ['manage', '⚙'], ['stories', '📖'], ['write', '✍'], ['pairs', '👂'], ['scripts', 'अ'], ['phrases', '📚'], ['numbers', '🔢'], ['tone', '🎭'], ['songs', '🎵']];
   var KIDNAV = [['kids', '🧒'], ['today', '📅'], ['talk', '💬'], ['phrases', '📚']];
   var app;
   function mark() { var NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg'), p = document.createElementNS(NS, 'path'); s.setAttribute('viewBox', '14 14 36 36'); s.setAttribute('width', '22'); s.setAttribute('height', '22'); s.setAttribute('aria-hidden', 'true'); p.setAttribute('d', MARK); p.setAttribute('fill', 'currentColor'); s.appendChild(p); return s; }
@@ -11555,6 +12073,7 @@
     seg(t('kdMode'), [['1', t('on')], ['0', t('off')]], set.kids ? '1' : '0', function (v) { set.kids = v === '1'; U.saveSet(); U.applyKids(); buildChrome(); route(); });
     seg(t('setSound'), [['1', t('on')], ['0', t('off')]], set.sound ? '1' : '0', function (v) { set.sound = v === '1'; U.saveSet(); if (set.sound && B.fx) B.fx.good(); });
     seg(t('setHaptic'), [['1', t('on')], ['0', t('off')]], set.haptic ? '1' : '0', function (v) { set.haptic = v === '1'; U.saveSet(); if (set.haptic && B.fx) B.fx.tap(); });
+    seg(t('set_night'), [['off', t('off')], ['on', t('on')], ['auto', t('night_auto')]], set.night, function (v) { set.night = v; U.saveSet(); U.applyNight(); });
     seg(t('set_ambient'), [['1', t('on')], ['0', t('off')]], set.ambient !== false ? '1' : '0', function (v) { set.ambient = v === '1'; U.saveSet(); if (B.motion) B.motion.ambient(); });
     panel.appendChild(h('button', { type: 'button', class: 'abtn', style: 'margin-top:12px;margin-right:8px', text: '🧭 ' + t('tour_replay'), onclick: function () { close(false); B.tour.start(); } }));
     panel.appendChild(h('button', { type: 'button', class: 'abtn', style: 'margin-top:12px', text: '🔊 ' + t('voiceCheck'), onclick: function () { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); U.openVoiceCheck(); } }));
@@ -11582,7 +12101,7 @@
   }
 
   function init() {
-    app = $('#app'); U.applyTheme(); U.applyLang(); U.applyKids(); buildChrome();
+    app = $('#app'); U.applyTheme(); U.applyNight(); U.applyLang(); U.applyKids(); buildChrome();
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a[data-nav]'); if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); U.go(a.getAttribute('href')); });
     window.addEventListener('popstate', route);
     route();
