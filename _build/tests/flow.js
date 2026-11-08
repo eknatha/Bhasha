@@ -2,7 +2,7 @@ const {chromium}=require('playwright');const fs=require('fs');
 const BASE=process.env.BASE||'http://localhost:8766';let fails=0;
 function ok(c,m){if(!c){fails++;console.log('FAIL',m);}else console.log('ok  ',m);}
 function wav(path,sec){const sr=8000,n=sr*sec,buf=Buffer.alloc(44+n*2);buf.write('RIFF',0);buf.writeUInt32LE(36+n*2,4);buf.write('WAVEfmt ',8);buf.writeUInt32LE(16,16);buf.writeUInt16LE(1,20);buf.writeUInt16LE(1,22);buf.writeUInt32LE(sr,24);buf.writeUInt32LE(sr*2,28);buf.writeUInt16LE(2,32);buf.writeUInt16LE(16,34);buf.write('data',36);buf.writeUInt32LE(n*2,40);for(let i=0;i<n;i++)buf.writeInt16LE(Math.round(Math.sin(i*0.2)*3000),44+i*2);fs.writeFileSync(path,buf);}
-(async()=>{const b=await chromium.launch(),ctx=await b.newContext({viewport:{width:1100,height:900},permissions:[]}),p=await ctx.newPage();
+(async()=>{const b=await chromium.launch(),ctx=await b.newContext({viewport:{width:1100,height:900},permissions:[]});await ctx.addInitScript(()=>{try{localStorage.setItem('bh-tour','1');localStorage.setItem('bh-tours','{"read":1,"review":1,"write":1}')}catch(e){}});const p=await ctx.newPage();
 const errs=[];p.on('pageerror',e=>errs.push(e.message));p.on('console',m=>{if(m.type()==='error')errs.push(m.text());});
 // ---- Read
 await p.goto(BASE+'/read/');await p.click('text=Load sample');await p.waitForTimeout(300);
@@ -41,7 +41,7 @@ ok((await p.textContent('.say-out')).includes('Ich heiße Ravi'),'say: name temp
 await p.selectOption('#sy-to','mr');await p.fill('#sy-text','Where is the hospital near the station');await p.click('text=Translate and speak');await p.waitForTimeout(300);
 ok(await p.isVisible('.note:not([hidden])')&&(await p.textContent('.say-out')).length>0||true,'say: unknown sentence falls back (no translator in this browser)');
 // ---- Say it with a mock on-device translator
-const ctx2=await b.newContext({viewport:{width:1100,height:900}});await ctx2.addInitScript(()=>{self.Translator={availability:async()=>'available',create:async(o)=>({translate:async t=>'['+o.targetLanguage+'] '+t})};});
+const ctx2=await b.newContext({viewport:{width:1100,height:900}});await ctx2.addInitScript(()=>{try{localStorage.setItem('bh-tour','1')}catch(e){}self.Translator={availability:async()=>'available',create:async(o)=>({translate:async t=>'['+o.targetLanguage+'] '+t})};});
 const p2=await ctx2.newPage();await p2.goto(BASE+'/say/');await p2.selectOption('#sy-to','bn');await p2.fill('#sy-text','The library closes early on Sundays');await p2.click('text=Translate and speak');await p2.waitForTimeout(500);
 ok((await p2.textContent('.say-out')).includes('[bn] The library closes early on Sundays'),'say: on-device translator used when present');
 ok((await p2.textContent('.say-out')).includes('Translated on your device'),'say: result labelled as on-device');

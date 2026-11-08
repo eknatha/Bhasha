@@ -1,6 +1,6 @@
 // Native voice matching + consent prompt + voice-check dialog
 const {chromium}=require('playwright');
-(async()=>{const b=await chromium.launch(),p=await (await b.newContext()).newPage();let fails=0;const ck=(c,m)=>{if(!c)fails++;console.log(c?'ok  ':'FAIL',m)};
+(async()=>{const b=await chromium.launch(),c0=await b.newContext();await c0.addInitScript(()=>{try{localStorage.setItem('bh-tour','1')}catch(e){}});const p=await c0.newPage();let fails=0;const ck=(c,m)=>{if(!c)fails++;console.log(c?'ok  ':'FAIL',m)};
 const errs=[];p.on('pageerror',e=>errs.push(e.message));
 await p.addInitScript(()=>{
  const tags=['bn-BD','mr_IN','ko_KR','es-MX','de-AT','te-IN','hi-IN','kn-IN','ta-IN','ml-IN','gu-IN','as_IN','fr-CA'];

@@ -360,13 +360,14 @@
     if (['ask', 'yes', 'no'].indexOf(s.ov) < 0) s.ov = 'ask';
     if (s.sound == null) s.sound = true;
     if (s.haptic == null) s.haptic = true;
+    if (s.ambient == null) s.ambient = true;
     if (!s.voices || typeof s.voices !== 'object') s.voices = {};
     if (!s.rates || typeof s.rates !== 'object') s.rates = {};
     s.kids = s.kids === true;
     s.theme = document.documentElement.getAttribute('data-theme') || 'light';
     return s;
   })();
-  U.saveSet = function () { store.set('bh-set', JSON.stringify({ ui: set.ui, focus: set.focus, scheme: set.scheme, roman: set.roman, perDay: set.perDay, rate: set.rate, ov: set.ov, sound: set.sound, haptic: set.haptic, voices: set.voices, rates: set.rates, kids: set.kids })); if (MAINSITE.indexOf(set.ui) >= 0) store.set('el-lang', set.ui); store.set('el-theme', set.theme); };
+  U.saveSet = function () { store.set('bh-set', JSON.stringify({ ui: set.ui, focus: set.focus, scheme: set.scheme, roman: set.roman, perDay: set.perDay, rate: set.rate, ov: set.ov, sound: set.sound, haptic: set.haptic, ambient: set.ambient, voices: set.voices, rates: set.rates, kids: set.kids })); if (MAINSITE.indexOf(set.ui) >= 0) store.set('el-lang', set.ui); store.set('el-theme', set.theme); };
   U.t = function (k, v) { var d = B.I18N[set.ui] || B.I18N.en, s = d[k]; if (s == null) s = B.I18N.en[k]; if (s == null) s = k; if (v) for (var x in v) s = s.split('{' + x + '}').join(v[x]); return s; };
   var t = U.t;
   U.applyTheme = function () { document.documentElement.setAttribute('data-theme', set.theme); var m = $('meta[name=theme-color]'); if (m) m.setAttribute('content', { light: '#1c1b4b', dark: '#1c1b4b', new: '#0b3d3a' }[set.theme]); };
@@ -1384,7 +1385,41 @@
     "d_delivery-visit": "A delivery",
     "d_host-guest": "Welcoming a guest",
     "d_landlord": "Talking to the landlord",
-    "d_hot-day": "A hot day"
+    "d_hot-day": "A hot day",
+    "tw_h1": "Welcome to Bhasha",
+    "tw_priv": "Free, private and works offline. Nothing leaves your device.",
+    "tw_pick": "Which language are you learning?",
+    "tw_goal": "How many new words a day?",
+    "tw_goalHint": "You can change this any time in Settings.",
+    "tw_first": "Where would you like to start?",
+    "tw_o_today": "Today's lesson",
+    "tw_o_read": "Read a text",
+    "tw_o_watch": "Watch a video",
+    "tw_o_talk": "Practise talking",
+    "tw_next": "Next",
+    "tw_back": "Back",
+    "tw_skip": "Skip",
+    "tw_done": "Done",
+    "tw_of": "{n} of {m}",
+    "tw_show": "Show me around",
+    "tw_later": "Maybe later",
+    "ts1": "A short daily lesson: new phrases, a listening quiz and a recall round.",
+    "ts2": "Type an English sentence and hear it in your language, with letters you can read.",
+    "ts3": "Paste any text. Tap a word to hear it, see how it sounds and save it.",
+    "ts4": "Saved words come back just before you forget them. Reveal, then grade yourself.",
+    "ts5": "Choose the interface language, voice speed, theme and ambient background.",
+    "ts6t": "More to explore",
+    "ts6": "Conversations, stories, writing, sound pairs, the phrasebook and more are all in this menu.",
+    "tm_read1": "Paste or type text here, or open a file.",
+    "tm_read2": "Choose what a tap does: look up, mark as known, or add to learning. Known words are coloured.",
+    "tm_rev1": "Pick a review style: word to meaning, meaning to word, listening or fill the gap.",
+    "tm_rev2": "Reveal the answer, then grade yourself. Cards you miss come back sooner.",
+    "tm_wr1": "Choose translate, dictation or fill the gap, and a topic.",
+    "tm_wr2": "Type your answer. Script or romanization both count. Use the hint if you are stuck.",
+    "tour_replay": "Take the tour again",
+    "tour_help": "Guide for this page",
+    "set_ambient": "Ambient background",
+    "tw_close": "Close"
   };
   I.hi = {
     "skip": "सामग्री पर जाएँ",
@@ -2001,7 +2036,41 @@
     "d_delivery-visit": "डिलीवरी",
     "d_host-guest": "मेहमान का स्वागत",
     "d_landlord": "मकान मालिक से बात",
-    "d_hot-day": "गर्मी का दिन"
+    "d_hot-day": "गर्मी का दिन",
+    "tw_h1": "भाषा में आपका स्वागत है",
+    "tw_priv": "मुफ़्त, निजी और ऑफ़लाइन चलता है। आपके डिवाइस से कुछ बाहर नहीं जाता।",
+    "tw_pick": "आप कौन-सी भाषा सीख रहे हैं?",
+    "tw_goal": "रोज़ कितने नए शब्द?",
+    "tw_goalHint": "आप इसे कभी भी सेटिंग्स में बदल सकते हैं।",
+    "tw_first": "आप कहाँ से शुरू करना चाहेंगे?",
+    "tw_o_today": "आज का पाठ",
+    "tw_o_read": "कोई पाठ पढ़ें",
+    "tw_o_watch": "कोई वीडियो देखें",
+    "tw_o_talk": "बातचीत का अभ्यास",
+    "tw_next": "आगे",
+    "tw_back": "पीछे",
+    "tw_skip": "छोड़ें",
+    "tw_done": "पूरा हुआ",
+    "tw_of": "{m} में से {n}",
+    "tw_show": "मुझे घुमाकर दिखाइए",
+    "tw_later": "शायद बाद में",
+    "ts1": "रोज़ का छोटा पाठ: नए वाक्यांश, सुनने की क्विज़ और याद करने का दौर।",
+    "ts2": "अंग्रेज़ी वाक्य लिखें और उसे अपनी भाषा में सुनें, पढ़ने लायक अक्षरों के साथ।",
+    "ts3": "कोई भी पाठ चिपकाएँ। शब्द पर टैप करें, सुनें, उच्चारण देखें और सहेजें।",
+    "ts4": "सहेजे शब्द भूलने से ठीक पहले लौटते हैं। उत्तर देखें, फिर खुद को ग्रेड दें।",
+    "ts5": "इंटरफ़ेस की भाषा, आवाज़ की गति, थीम और बैकग्राउंड चुनें।",
+    "ts6t": "और बहुत कुछ",
+    "ts6": "बातचीत, कहानियाँ, लेखन, ध्वनि-जोड़े, वाक्यांश-पुस्तिका और बहुत कुछ इसी मेनू में है।",
+    "tm_read1": "यहाँ पाठ चिपकाएँ या टाइप करें, या फ़ाइल खोलें।",
+    "tm_read2": "चुनें कि टैप से क्या हो: अर्थ देखना, ज्ञात चिह्नित करना या सीखने में जोड़ना। ज्ञात शब्द रंगीन दिखते हैं।",
+    "tm_rev1": "समीक्षा का तरीक़ा चुनें: शब्द से अर्थ, अर्थ से शब्द, सुनना या खाली जगह भरना।",
+    "tm_rev2": "उत्तर देखें, फिर खुद को ग्रेड दें। जो कार्ड छूटते हैं वे जल्दी लौटते हैं।",
+    "tm_wr1": "अनुवाद, श्रुतलेख या खाली जगह भरना चुनें, और एक विषय।",
+    "tm_wr2": "अपना उत्तर लिखें। लिपि या रोमन रूप, दोनों मान्य हैं। अटकें तो संकेत लें।",
+    "tour_replay": "दौरा फिर से देखें",
+    "tour_help": "इस पेज की गाइड",
+    "set_ambient": "एम्बिएंट बैकग्राउंड",
+    "tw_close": "बंद करें"
   };
   I.te = {
     "skip": "కంటెంట్‌కు వెళ్లండి",
@@ -2618,7 +2687,41 @@
     "d_delivery-visit": "డెలివరీ",
     "d_host-guest": "అతిథికి స్వాగతం",
     "d_landlord": "ఇంటి యజమానితో మాట",
-    "d_hot-day": "వేడి రోజు"
+    "d_hot-day": "వేడి రోజు",
+    "tw_h1": "భాషకు స్వాగతం",
+    "tw_priv": "ఉచితం, గోప్యం, ఆఫ్‌లైన్‌లో పనిచేస్తుంది. మీ పరికరం నుంచి ఏదీ బయటకు వెళ్లదు.",
+    "tw_pick": "మీరు ఏ భాష నేర్చుకుంటున్నారు?",
+    "tw_goal": "రోజుకు ఎన్ని కొత్త పదాలు?",
+    "tw_goalHint": "దీన్ని ఎప్పుడైనా సెట్టింగ్స్‌లో మార్చుకోవచ్చు.",
+    "tw_first": "ఎక్కడ మొదలుపెట్టాలనుకుంటున్నారు?",
+    "tw_o_today": "నేటి పాఠం",
+    "tw_o_read": "ఒక పాఠ్యం చదవండి",
+    "tw_o_watch": "ఒక వీడియో చూడండి",
+    "tw_o_talk": "మాట్లాడటం సాధన",
+    "tw_next": "తదుపరి",
+    "tw_back": "వెనుకకు",
+    "tw_skip": "దాటవేయి",
+    "tw_done": "పూర్తయింది",
+    "tw_of": "{m}లో {n}",
+    "tw_show": "నాకు చూపించండి",
+    "tw_later": "తర్వాత చూస్తాను",
+    "ts1": "రోజూ ఒక చిన్న పాఠం: కొత్త వాక్యాలు, వినే క్విజ్, గుర్తు చేసుకునే రౌండ్.",
+    "ts2": "ఆంగ్ల వాక్యం టైప్ చేసి, చదవగలిగే అక్షరాలతో మీ భాషలో వినండి.",
+    "ts3": "ఏ పాఠ్యాన్నైనా అతికించండి. పదాన్ని తాకి వినండి, ఉచ్చారణ చూడండి, సేవ్ చేయండి.",
+    "ts4": "సేవ్ చేసిన పదాలు మరిచిపోయే ముందే తిరిగి వస్తాయి. జవాబు చూసి, మీరే గ్రేడ్ ఇవ్వండి.",
+    "ts5": "ఇంటర్‌ఫేస్ భాష, స్వర వేగం, థీమ్, నేపథ్యం ఎంచుకోండి.",
+    "ts6t": "ఇంకా చాలా ఉన్నాయి",
+    "ts6": "సంభాషణలు, కథలు, రాయడం, శబ్ద జంటలు, వాక్యాల పుస్తకం ఇంకా ఎన్నో ఈ మెనూలో ఉన్నాయి.",
+    "tm_read1": "ఇక్కడ పాఠ్యాన్ని అతికించండి లేదా టైప్ చేయండి, లేదా ఫైల్ తెరవండి.",
+    "tm_read2": "తాకితే ఏమి జరగాలో ఎంచుకోండి: అర్థం చూడటం, తెలిసినదిగా గుర్తించడం, నేర్చుకునే జాబితాలో చేర్చడం. తెలిసిన పదాలకు రంగు ఉంటుంది.",
+    "tm_rev1": "రివ్యూ శైలి ఎంచుకోండి: పదం నుంచి అర్థం, అర్థం నుంచి పదం, వినడం లేదా ఖాళీ నింపడం.",
+    "tm_rev2": "జవాబు చూసి మీరే గ్రేడ్ ఇవ్వండి. తప్పిన కార్డులు త్వరగా తిరిగి వస్తాయి.",
+    "tm_wr1": "అనువాదం, శ్రుతలేఖనం లేదా ఖాళీ నింపడం, ఒక అంశం ఎంచుకోండి.",
+    "tm_wr2": "మీ సమాధానం టైప్ చేయండి. లిపి లేదా రోమన్ రూపం రెండూ చెల్లుతాయి. ఇరుక్కుంటే సూచన వాడండి.",
+    "tour_replay": "టూర్‌ను మళ్లీ చూడండి",
+    "tour_help": "ఈ పేజీ గైడ్",
+    "set_ambient": "యాంబియంట్ నేపథ్యం",
+    "tw_close": "మూసివేయి"
   };
   I.kn = {
     "skip": "ವಿಷಯಕ್ಕೆ ಹೋಗಿ",
@@ -3235,7 +3338,41 @@
     "d_delivery-visit": "ಡೆಲಿವರಿ",
     "d_host-guest": "ಅತಿಥಿ ಸ್ವಾಗತ",
     "d_landlord": "ಮನೆ ಮಾಲೀಕರೊಂದಿಗೆ ಮಾತು",
-    "d_hot-day": "ಬಿಸಿಲಿನ ದಿನ"
+    "d_hot-day": "ಬಿಸಿಲಿನ ದಿನ",
+    "tw_h1": "ಭಾಷಾಗೆ ಸ್ವಾಗತ",
+    "tw_priv": "ಉಚಿತ, ಖಾಸಗಿ, ಆಫ್‌ಲೈನ್‌ನಲ್ಲಿ ಕೆಲಸ ಮಾಡುತ್ತದೆ. ನಿಮ್ಮ ಸಾಧನದಿಂದ ಏನೂ ಹೊರಹೋಗುವುದಿಲ್ಲ.",
+    "tw_pick": "ನೀವು ಯಾವ ಭಾಷೆ ಕಲಿಯುತ್ತಿದ್ದೀರಿ?",
+    "tw_goal": "ದಿನಕ್ಕೆ ಎಷ್ಟು ಹೊಸ ಪದಗಳು?",
+    "tw_goalHint": "ಇದನ್ನು ಯಾವಾಗ ಬೇಕಾದರೂ ಸೆಟ್ಟಿಂಗ್ಸ್‌ನಲ್ಲಿ ಬದಲಾಯಿಸಬಹುದು.",
+    "tw_first": "ನೀವು ಎಲ್ಲಿಂದ ಆರಂಭಿಸಲು ಬಯಸುತ್ತೀರಿ?",
+    "tw_o_today": "ಇಂದಿನ ಪಾಠ",
+    "tw_o_read": "ಒಂದು ಪಠ್ಯ ಓದಿ",
+    "tw_o_watch": "ಒಂದು ವೀಡಿಯೊ ನೋಡಿ",
+    "tw_o_talk": "ಮಾತನಾಡುವ ಅಭ್ಯಾಸ",
+    "tw_next": "ಮುಂದೆ",
+    "tw_back": "ಹಿಂದೆ",
+    "tw_skip": "ಬಿಟ್ಟುಬಿಡಿ",
+    "tw_done": "ಮುಗಿಯಿತು",
+    "tw_of": "{m}ರಲ್ಲಿ {n}",
+    "tw_show": "ನನಗೆ ತೋರಿಸಿ",
+    "tw_later": "ನಂತರ ನೋಡುತ್ತೇನೆ",
+    "ts1": "ದಿನದ ಚಿಕ್ಕ ಪಾಠ: ಹೊಸ ವಾಕ್ಯಗಳು, ಕೇಳುವ ರಸಪ್ರಶ್ನೆ ಮತ್ತು ನೆನಪಿನ ಸುತ್ತು.",
+    "ts2": "ಇಂಗ್ಲಿಷ್ ವಾಕ್ಯ ಟೈಪ್ ಮಾಡಿ, ಓದಬಹುದಾದ ಅಕ್ಷರಗಳೊಂದಿಗೆ ನಿಮ್ಮ ಭಾಷೆಯಲ್ಲಿ ಕೇಳಿ.",
+    "ts3": "ಯಾವುದೇ ಪಠ್ಯ ಅಂಟಿಸಿ. ಪದವನ್ನು ಒತ್ತಿ ಕೇಳಿ, ಉಚ್ಚಾರಣೆ ನೋಡಿ, ಉಳಿಸಿ.",
+    "ts4": "ಉಳಿಸಿದ ಪದಗಳು ಮರೆಯುವ ಮೊದಲೇ ಮರಳಿ ಬರುತ್ತವೆ. ಉತ್ತರ ನೋಡಿ, ನೀವೇ ಗ್ರೇಡ್ ನೀಡಿ.",
+    "ts5": "ಇಂಟರ್‌ಫೇಸ್ ಭಾಷೆ, ಧ್ವನಿ ವೇಗ, ಥೀಮ್, ಹಿನ್ನೆಲೆ ಆರಿಸಿ.",
+    "ts6t": "ಇನ್ನೂ ಹಲವು ಇವೆ",
+    "ts6": "ಸಂಭಾಷಣೆ, ಕಥೆ, ಬರವಣಿಗೆ, ಧ್ವನಿ ಜೋಡಿ, ವಾಕ್ಯ ಪುಸ್ತಕ ಮತ್ತು ಇನ್ನೂ ಹಲವು ಈ ಮೆನುವಿನಲ್ಲಿವೆ.",
+    "tm_read1": "ಇಲ್ಲಿ ಪಠ್ಯ ಅಂಟಿಸಿ ಅಥವಾ ಟೈಪ್ ಮಾಡಿ, ಅಥವಾ ಫೈಲ್ ತೆರೆಯಿರಿ.",
+    "tm_read2": "ಒತ್ತಿದಾಗ ಏನಾಗಬೇಕು ಆರಿಸಿ: ಅರ್ಥ ನೋಡುವುದು, ತಿಳಿದಿದೆ ಎಂದು ಗುರುತಿಸುವುದು, ಕಲಿಕೆಗೆ ಸೇರಿಸುವುದು. ತಿಳಿದ ಪದಗಳಿಗೆ ಬಣ್ಣ ಇರುತ್ತದೆ.",
+    "tm_rev1": "ರಿವ್ಯೂ ಶೈಲಿ ಆರಿಸಿ: ಪದದಿಂದ ಅರ್ಥ, ಅರ್ಥದಿಂದ ಪದ, ಕೇಳುವುದು ಅಥವಾ ಖಾಲಿ ತುಂಬುವುದು.",
+    "tm_rev2": "ಉತ್ತರ ನೋಡಿ, ನೀವೇ ಗ್ರೇಡ್ ನೀಡಿ. ತಪ್ಪಿದ ಕಾರ್ಡ್‌ಗಳು ಬೇಗ ಮರಳುತ್ತವೆ.",
+    "tm_wr1": "ಅನುವಾದ, ಶ್ರುತಲೇಖನ ಅಥವಾ ಖಾಲಿ ತುಂಬುವುದು, ಮತ್ತು ಒಂದು ವಿಷಯ ಆರಿಸಿ.",
+    "tm_wr2": "ನಿಮ್ಮ ಉತ್ತರ ಟೈಪ್ ಮಾಡಿ. ಲಿಪಿ ಅಥವಾ ರೋಮನ್ ರೂಪ ಎರಡೂ ಸರಿ. ಸಿಲುಕಿದರೆ ಸುಳಿವು ಬಳಸಿ.",
+    "tour_replay": "ಟೂರ್ ಮತ್ತೆ ನೋಡಿ",
+    "tour_help": "ಈ ಪುಟದ ಮಾರ್ಗದರ್ಶಿ",
+    "set_ambient": "ಆಂಬಿಯೆಂಟ್ ಹಿನ್ನೆಲೆ",
+    "tw_close": "ಮುಚ್ಚಿ"
   };
   I.ta = {
     "skip": "உள்ளடக்கத்துக்குச் செல்லவும்",
@@ -3852,7 +3989,41 @@
     "d_delivery-visit": "டெலிவரி",
     "d_host-guest": "விருந்தினர் வரவேற்பு",
     "d_landlord": "வீட்டு உரிமையாளருடன் பேச்சு",
-    "d_hot-day": "வெப்பமான நாள்"
+    "d_hot-day": "வெப்பமான நாள்",
+    "tw_h1": "பாஷாவுக்கு வரவேற்கிறோம்",
+    "tw_priv": "இலவசம், தனிப்பட்டது, ஆஃப்லைனிலும் வேலை செய்யும். உங்கள் சாதனத்தை விட்டு எதுவும் வெளியேறாது.",
+    "tw_pick": "நீங்கள் எந்த மொழியைக் கற்கிறீர்கள்?",
+    "tw_goal": "ஒரு நாளைக்கு எத்தனை புதிய சொற்கள்?",
+    "tw_goalHint": "இதை எப்போது வேண்டுமானாலும் அமைப்புகளில் மாற்றலாம்.",
+    "tw_first": "எங்கிருந்து தொடங்க விரும்புகிறீர்கள்?",
+    "tw_o_today": "இன்றைய பாடம்",
+    "tw_o_read": "ஒரு உரையைப் படியுங்கள்",
+    "tw_o_watch": "ஒரு காணொளியைப் பாருங்கள்",
+    "tw_o_talk": "பேசிப் பழகுங்கள்",
+    "tw_next": "அடுத்து",
+    "tw_back": "பின்",
+    "tw_skip": "தவிர்",
+    "tw_done": "முடிந்தது",
+    "tw_of": "{m} இல் {n}",
+    "tw_show": "சுற்றிக் காட்டுங்கள்",
+    "tw_later": "பிறகு பார்க்கிறேன்",
+    "ts1": "தினமும் ஒரு சிறு பாடம்: புதிய வாக்கியங்கள், கேட்டல் வினாடி வினா, நினைவு சுற்று.",
+    "ts2": "ஆங்கில வாக்கியத்தை எழுதி, படிக்கக்கூடிய எழுத்துகளுடன் உங்கள் மொழியில் கேளுங்கள்.",
+    "ts3": "எந்த உரையையும் ஒட்டுங்கள். சொல்லைத் தொட்டுக் கேளுங்கள், ஒலிப்பைப் பாருங்கள், சேமியுங்கள்.",
+    "ts4": "சேமித்த சொற்கள் மறப்பதற்கு முன்பே திரும்பி வரும். பதிலைப் பார்த்து, நீங்களே மதிப்பிடுங்கள்.",
+    "ts5": "இடைமுக மொழி, குரல் வேகம், தீம், பின்னணி ஆகியவற்றைத் தேர்ந்தெடுங்கள்.",
+    "ts6t": "மேலும் பல உள்ளன",
+    "ts6": "உரையாடல்கள், கதைகள், எழுத்து, ஒலி இணைகள், வாக்கியத் தொகுப்பு மற்றும் பல இந்த மெனுவில் உள்ளன.",
+    "tm_read1": "இங்கே உரையை ஒட்டுங்கள் அல்லது தட்டச்சு செய்யுங்கள், அல்லது கோப்பைத் திறக்கவும்.",
+    "tm_read2": "தொட்டால் என்ன நடக்க வேண்டும் என்பதைத் தேர்ந்தெடுங்கள்: பொருள் பார்த்தல், தெரியும் எனக் குறித்தல், கற்றலில் சேர்த்தல். தெரிந்த சொற்கள் வண்ணத்தில் இருக்கும்.",
+    "tm_rev1": "மதிப்பாய்வு முறையைத் தேர்ந்தெடுங்கள்: சொல்லிலிருந்து பொருள், பொருளிலிருந்து சொல், கேட்டல் அல்லது இடைவெளி நிரப்புதல்.",
+    "tm_rev2": "பதிலைப் பார்த்து, நீங்களே மதிப்பிடுங்கள். தவறவிட்ட அட்டைகள் விரைவில் திரும்பும்.",
+    "tm_wr1": "மொழிபெயர்ப்பு, கேட்டு எழுதுதல் அல்லது இடைவெளி நிரப்புதல், ஒரு தலைப்பைத் தேர்ந்தெடுங்கள்.",
+    "tm_wr2": "பதிலைத் தட்டச்சு செய்யுங்கள். எழுத்து அல்லது ரோமன் வடிவம் இரண்டும் ஏற்கப்படும். சிக்கினால் குறிப்பைப் பயன்படுத்துங்கள்.",
+    "tour_replay": "சுற்றுப்பயணத்தை மீண்டும் பாருங்கள்",
+    "tour_help": "இந்தப் பக்க வழிகாட்டி",
+    "set_ambient": "சூழல் பின்னணி",
+    "tw_close": "மூடு"
   };
   I.ml = {
     "skip": "ഉള്ളടക്കത്തിലേക്ക് പോകുക",
@@ -4469,7 +4640,41 @@
     "d_delivery-visit": "ഡെലിവറി",
     "d_host-guest": "അതിഥിയെ സ്വീകരിക്കൽ",
     "d_landlord": "വീട്ടുടമയോട് സംസാരം",
-    "d_hot-day": "ചൂടുള്ള ദിവസം"
+    "d_hot-day": "ചൂടുള്ള ദിവസം",
+    "tw_h1": "ഭാഷയിലേക്ക് സ്വാഗതം",
+    "tw_priv": "സൗജന്യം, സ്വകാര്യം, ഓഫ്‌ലൈനിലും പ്രവർത്തിക്കും. നിങ്ങളുടെ ഉപകരണത്തിൽ നിന്ന് ഒന്നും പുറത്തുപോകില്ല.",
+    "tw_pick": "നിങ്ങൾ ഏത് ഭാഷയാണ് പഠിക്കുന്നത്?",
+    "tw_goal": "ദിവസവും എത്ര പുതിയ വാക്കുകൾ?",
+    "tw_goalHint": "ഇത് എപ്പോൾ വേണമെങ്കിലും ക്രമീകരണങ്ങളിൽ മാറ്റാം.",
+    "tw_first": "എവിടെ നിന്ന് തുടങ്ങണം?",
+    "tw_o_today": "ഇന്നത്തെ പാഠം",
+    "tw_o_read": "ഒരു വാചകം വായിക്കൂ",
+    "tw_o_watch": "ഒരു വീഡിയോ കാണൂ",
+    "tw_o_talk": "സംസാരിച്ച് പരിശീലിക്കൂ",
+    "tw_next": "അടുത്തത്",
+    "tw_back": "തിരികെ",
+    "tw_skip": "ഒഴിവാക്കൂ",
+    "tw_done": "കഴിഞ്ഞു",
+    "tw_of": "{m}ൽ {n}",
+    "tw_show": "എനിക്ക് ചുറ്റി കാണിക്കൂ",
+    "tw_later": "പിന്നീടാകട്ടെ",
+    "ts1": "ദിവസവും ഒരു ചെറിയ പാഠം: പുതിയ വാക്യങ്ങൾ, കേൾവി ക്വിസ്, ഓർമ്മ റൗണ്ട്.",
+    "ts2": "ഇംഗ്ലീഷ് വാക്യം ടൈപ്പ് ചെയ്ത് വായിക്കാവുന്ന അക്ഷരങ്ങളോടെ നിങ്ങളുടെ ഭാഷയിൽ കേൾക്കൂ.",
+    "ts3": "ഏത് വാചകവും പേസ്റ്റ് ചെയ്യൂ. വാക്കിൽ തൊട്ട് കേൾക്കൂ, ഉച്ചാരണം കാണൂ, സേവ് ചെയ്യൂ.",
+    "ts4": "സേവ് ചെയ്ത വാക്കുകൾ മറക്കുന്നതിന് തൊട്ടുമുമ്പ് തിരിച്ചെത്തും. ഉത്തരം കണ്ട് സ്വയം ഗ്രേഡ് ചെയ്യൂ.",
+    "ts5": "ഇന്റർഫേസ് ഭാഷ, ശബ്ദ വേഗം, തീം, പശ്ചാത്തലം എന്നിവ തിരഞ്ഞെടുക്കൂ.",
+    "ts6t": "കൂടുതൽ കാണാനുണ്ട്",
+    "ts6": "സംഭാഷണങ്ങൾ, കഥകൾ, എഴുത്ത്, ശബ്ദ ജോടികൾ, വാക്യപുസ്തകം തുടങ്ങിയവ ഈ മെനുവിലുണ്ട്.",
+    "tm_read1": "ഇവിടെ വാചകം പേസ്റ്റ് ചെയ്യൂ, ടൈപ്പ് ചെയ്യൂ, അല്ലെങ്കിൽ ഫയൽ തുറക്കൂ.",
+    "tm_read2": "തൊട്ടാൽ എന്ത് സംഭവിക്കണമെന്ന് തിരഞ്ഞെടുക്കൂ: അർത്ഥം നോക്കുക, അറിയാം എന്ന് അടയാളപ്പെടുത്തുക, പഠനത്തിൽ ചേർക്കുക. അറിയാവുന്ന വാക്കുകൾക്ക് നിറമുണ്ടാകും.",
+    "tm_rev1": "റിവ്യൂ രീതി തിരഞ്ഞെടുക്കൂ: വാക്കിൽ നിന്ന് അർത്ഥം, അർത്ഥത്തിൽ നിന്ന് വാക്ക്, കേൾവി, അല്ലെങ്കിൽ വിട്ടത് നിറയ്ക്കൽ.",
+    "tm_rev2": "ഉത്തരം കണ്ട് സ്വയം ഗ്രേഡ് ചെയ്യൂ. തെറ്റിയ കാർഡുകൾ വേഗം തിരിച്ചുവരും.",
+    "tm_wr1": "വിവർത്തനം, ശ്രുതിലേഖനം, അല്ലെങ്കിൽ വിട്ടത് നിറയ്ക്കൽ, ഒരു വിഷയം എന്നിവ തിരഞ്ഞെടുക്കൂ.",
+    "tm_wr2": "ഉത്തരം ടൈപ്പ് ചെയ്യൂ. ലിപിയോ റോമൻ രൂപമോ രണ്ടും സ്വീകരിക്കും. കുടുങ്ങിയാൽ സൂചന ഉപയോഗിക്കൂ.",
+    "tour_replay": "ടൂർ വീണ്ടും കാണൂ",
+    "tour_help": "ഈ പേജിന്റെ ഗൈഡ്",
+    "set_ambient": "ആംബിയന്റ് പശ്ചാത്തലം",
+    "tw_close": "അടയ്ക്കൂ"
   };
   I.bn = {
     "skip": "মূল বিষয়ে যান",
@@ -5086,7 +5291,41 @@
     "d_delivery-visit": "ডেলিভারি",
     "d_host-guest": "অতিথি আপ্যায়ন",
     "d_landlord": "বাড়িওয়ালার সঙ্গে কথা",
-    "d_hot-day": "গরমের দিন"
+    "d_hot-day": "গরমের দিন",
+    "tw_h1": "ভাষায় স্বাগতম",
+    "tw_priv": "বিনামূল্যে, ব্যক্তিগত, অফলাইনেও চলে। আপনার ডিভাইস থেকে কিছুই বাইরে যায় না।",
+    "tw_pick": "আপনি কোন ভাষা শিখছেন?",
+    "tw_goal": "দিনে কতগুলো নতুন শব্দ?",
+    "tw_goalHint": "এটি যেকোনো সময় সেটিংসে বদলাতে পারবেন।",
+    "tw_first": "কোথা থেকে শুরু করবেন?",
+    "tw_o_today": "আজকের পাঠ",
+    "tw_o_read": "একটি লেখা পড়ুন",
+    "tw_o_watch": "একটি ভিডিও দেখুন",
+    "tw_o_talk": "কথা বলার অনুশীলন",
+    "tw_next": "পরবর্তী",
+    "tw_back": "পিছনে",
+    "tw_skip": "এড়িয়ে যান",
+    "tw_done": "শেষ",
+    "tw_of": "{m}-এর {n}",
+    "tw_show": "আমাকে ঘুরিয়ে দেখান",
+    "tw_later": "পরে দেখব",
+    "ts1": "প্রতিদিনের ছোট পাঠ: নতুন বাক্যাংশ, শোনার কুইজ ও মনে করার রাউন্ড।",
+    "ts2": "ইংরেজি বাক্য লিখুন, পড়ার মতো অক্ষরসহ নিজের ভাষায় শুনুন।",
+    "ts3": "যেকোনো লেখা পেস্ট করুন। শব্দে ট্যাপ করে শুনুন, উচ্চারণ দেখুন, সংরক্ষণ করুন।",
+    "ts4": "সংরক্ষিত শব্দ ভুলে যাওয়ার ঠিক আগে ফিরে আসে। উত্তর দেখে নিজেই গ্রেড দিন।",
+    "ts5": "ইন্টারফেসের ভাষা, কণ্ঠের গতি, থিম ও ব্যাকগ্রাউন্ড বেছে নিন।",
+    "ts6t": "আরও অনেক কিছু",
+    "ts6": "কথোপকথন, গল্প, লেখা, ধ্বনি-জোড়া, বাক্যাংশ-সংকলন এবং আরও অনেক কিছু এই মেনুতে আছে।",
+    "tm_read1": "এখানে লেখা পেস্ট বা টাইপ করুন, অথবা ফাইল খুলুন।",
+    "tm_read2": "ট্যাপে কী হবে বেছে নিন: অর্থ দেখা, জানা হিসেবে চিহ্নিত করা বা শেখায় যোগ করা। জানা শব্দ রঙিন থাকে।",
+    "tm_rev1": "রিভিউয়ের ধরন বেছে নিন: শব্দ থেকে অর্থ, অর্থ থেকে শব্দ, শোনা বা শূন্যস্থান পূরণ।",
+    "tm_rev2": "উত্তর দেখে নিজে গ্রেড দিন। ভুল কার্ড তাড়াতাড়ি ফিরে আসে।",
+    "tm_wr1": "অনুবাদ, শ্রুতিলিখন বা শূন্যস্থান পূরণ এবং একটি বিষয় বেছে নিন।",
+    "tm_wr2": "উত্তর টাইপ করুন। লিপি বা রোমান রূপ দুটোই চলবে। আটকে গেলে ইঙ্গিত নিন।",
+    "tour_replay": "ট্যুরটি আবার দেখুন",
+    "tour_help": "এই পাতার গাইড",
+    "set_ambient": "অ্যাম্বিয়েন্ট ব্যাকগ্রাউন্ড",
+    "tw_close": "বন্ধ করুন"
   };
   I.mr = {
     "skip": "मुख्य मजकुराकडे जा",
@@ -5703,7 +5942,41 @@
     "d_delivery-visit": "डिलिव्हरी",
     "d_host-guest": "पाहुण्याचे स्वागत",
     "d_landlord": "घरमालकाशी बोलणे",
-    "d_hot-day": "उन्हाळी दिवस"
+    "d_hot-day": "उन्हाळी दिवस",
+    "tw_h1": "भाषामध्ये स्वागत",
+    "tw_priv": "मोफत, खाजगी आणि ऑफलाइन चालते. तुमच्या डिव्हाइसमधून काहीही बाहेर जात नाही.",
+    "tw_pick": "तुम्ही कोणती भाषा शिकत आहात?",
+    "tw_goal": "दररोज किती नवीन शब्द?",
+    "tw_goalHint": "हे तुम्ही केव्हाही सेटिंग्जमध्ये बदलू शकता.",
+    "tw_first": "कुठून सुरुवात करायची?",
+    "tw_o_today": "आजचा धडा",
+    "tw_o_read": "एक मजकूर वाचा",
+    "tw_o_watch": "एक व्हिडिओ पाहा",
+    "tw_o_talk": "बोलण्याचा सराव",
+    "tw_next": "पुढे",
+    "tw_back": "मागे",
+    "tw_skip": "वगळा",
+    "tw_done": "पूर्ण",
+    "tw_of": "{m} पैकी {n}",
+    "tw_show": "मला फिरवून दाखवा",
+    "tw_later": "नंतर पाहतो",
+    "ts1": "रोजचा छोटा धडा: नवीन वाक्ये, ऐकण्याची प्रश्नमंजुषा आणि आठवण्याची फेरी.",
+    "ts2": "इंग्रजी वाक्य टाइप करा आणि वाचता येतील अशा अक्षरांसह तुमच्या भाषेत ऐका.",
+    "ts3": "कोणताही मजकूर पेस्ट करा. शब्दावर टॅप करा, ऐका, उच्चार पाहा आणि जतन करा.",
+    "ts4": "जतन केलेले शब्द विसरण्यापूर्वीच परत येतात. उत्तर पाहा, मग स्वतःला श्रेणी द्या.",
+    "ts5": "इंटरफेसची भाषा, आवाजाचा वेग, थीम आणि पार्श्वभूमी निवडा.",
+    "ts6t": "आणखी बरेच काही",
+    "ts6": "संभाषणे, गोष्टी, लेखन, ध्वनी-जोड्या, वाक्यसंग्रह आणि बरेच काही या मेनूमध्ये आहे.",
+    "tm_read1": "येथे मजकूर पेस्ट किंवा टाइप करा, किंवा फाइल उघडा.",
+    "tm_read2": "टॅप केल्यावर काय होईल ते निवडा: अर्थ पाहणे, माहीत म्हणून चिन्हांकित करणे किंवा शिकण्यात जोडणे. माहीत शब्द रंगीत दिसतात.",
+    "tm_rev1": "उजळणीची पद्धत निवडा: शब्दावरून अर्थ, अर्थावरून शब्द, ऐकणे किंवा गाळलेली जागा भरणे.",
+    "tm_rev2": "उत्तर पाहा, मग स्वतःला श्रेणी द्या. चुकलेली कार्डे लवकर परत येतात.",
+    "tm_wr1": "भाषांतर, श्रुतलेखन किंवा गाळलेली जागा भरणे आणि एक विषय निवडा.",
+    "tm_wr2": "उत्तर टाइप करा. लिपी किंवा रोमन रूप दोन्ही चालतात. अडल्यास सूचना वापरा.",
+    "tour_replay": "दौरा पुन्हा पाहा",
+    "tour_help": "या पानाची मार्गदर्शिका",
+    "set_ambient": "अॅम्बियंट पार्श्वभूमी",
+    "tw_close": "बंद करा"
   };
   I.ko = {
     "skip": "본문으로 건너뛰기",
@@ -6320,7 +6593,41 @@
     "d_delivery-visit": "배달",
     "d_host-guest": "손님 맞이",
     "d_landlord": "집주인과 대화",
-    "d_hot-day": "더운 날"
+    "d_hot-day": "더운 날",
+    "tw_h1": "Bhasha에 오신 것을 환영합니다",
+    "tw_priv": "무료이고, 비공개이며, 오프라인에서도 작동해요. 기기 밖으로 아무것도 나가지 않아요.",
+    "tw_pick": "어떤 언어를 배우고 있나요?",
+    "tw_goal": "하루에 새 단어 몇 개?",
+    "tw_goalHint": "설정에서 언제든지 바꿀 수 있어요.",
+    "tw_first": "어디서 시작할까요?",
+    "tw_o_today": "오늘의 학습",
+    "tw_o_read": "글 읽기",
+    "tw_o_watch": "영상 보기",
+    "tw_o_talk": "대화 연습",
+    "tw_next": "다음",
+    "tw_back": "이전",
+    "tw_skip": "건너뛰기",
+    "tw_done": "완료",
+    "tw_of": "{m}개 중 {n}",
+    "tw_show": "둘러보기",
+    "tw_later": "나중에",
+    "ts1": "매일 짧은 학습: 새 표현, 듣기 퀴즈, 기억 확인 라운드.",
+    "ts2": "영어 문장을 입력하면 읽기 쉬운 글자와 함께 내 언어로 들려줘요.",
+    "ts3": "아무 글이나 붙여 넣으세요. 단어를 눌러 듣고, 발음을 보고, 저장하세요.",
+    "ts4": "저장한 단어는 잊기 직전에 다시 나와요. 정답을 보고 스스로 평가하세요.",
+    "ts5": "화면 언어, 음성 속도, 테마, 배경 효과를 고르세요.",
+    "ts6t": "더 둘러보기",
+    "ts6": "대화, 이야기, 쓰기, 소리 쌍, 표현집 등이 모두 이 메뉴에 있어요.",
+    "tm_read1": "여기에 글을 붙여 넣거나 입력하거나 파일을 여세요.",
+    "tm_read2": "단어를 눌렀을 때의 동작을 고르세요: 뜻 찾기, 아는 단어로 표시, 학습에 추가. 아는 단어는 색으로 표시돼요.",
+    "tm_rev1": "복습 방식을 고르세요: 단어→뜻, 뜻→단어, 듣기, 빈칸 채우기.",
+    "tm_rev2": "정답을 확인하고 스스로 평가하세요. 틀린 카드는 더 빨리 다시 나와요.",
+    "tm_wr1": "번역, 받아쓰기, 빈칸 채우기 중 하나와 주제를 고르세요.",
+    "tm_wr2": "답을 입력하세요. 문자나 로마자 모두 인정돼요. 막히면 힌트를 쓰세요.",
+    "tour_replay": "둘러보기 다시 보기",
+    "tour_help": "이 페이지 안내",
+    "set_ambient": "분위기 배경",
+    "tw_close": "닫기"
   };
   I.es = {
     "skip": "Saltar al contenido",
@@ -6937,7 +7244,41 @@
     "d_delivery-visit": "Una entrega",
     "d_host-guest": "Recibir a un invitado",
     "d_landlord": "Hablar con el casero",
-    "d_hot-day": "Un día caluroso"
+    "d_hot-day": "Un día caluroso",
+    "tw_h1": "Te damos la bienvenida a Bhasha",
+    "tw_priv": "Gratis, privado y funciona sin conexión. Nada sale de tu dispositivo.",
+    "tw_pick": "¿Qué idioma estás aprendiendo?",
+    "tw_goal": "¿Cuántas palabras nuevas al día?",
+    "tw_goalHint": "Puedes cambiarlo cuando quieras en Ajustes.",
+    "tw_first": "¿Por dónde quieres empezar?",
+    "tw_o_today": "La lección de hoy",
+    "tw_o_read": "Leer un texto",
+    "tw_o_watch": "Ver un vídeo",
+    "tw_o_talk": "Practicar conversación",
+    "tw_next": "Siguiente",
+    "tw_back": "Atrás",
+    "tw_skip": "Omitir",
+    "tw_done": "Hecho",
+    "tw_of": "{n} de {m}",
+    "tw_show": "Muéstrame todo",
+    "tw_later": "Quizá luego",
+    "ts1": "Una lección corta al día: frases nuevas, un quiz de escucha y una ronda de repaso.",
+    "ts2": "Escribe una frase en inglés y escúchala en tu idioma, con letras que puedes leer.",
+    "ts3": "Pega cualquier texto. Toca una palabra para oírla, ver cómo suena y guardarla.",
+    "ts4": "Las palabras guardadas vuelven justo antes de olvidarlas. Muestra la respuesta y califícate.",
+    "ts5": "Elige el idioma de la interfaz, la velocidad de voz, el tema y el fondo ambiental.",
+    "ts6t": "Más por explorar",
+    "ts6": "Conversaciones, historias, escritura, pares de sonidos, el libro de frases y más están en este menú.",
+    "tm_read1": "Pega o escribe texto aquí, o abre un archivo.",
+    "tm_read2": "Elige qué hace un toque: consultar, marcar como conocida o añadir al aprendizaje. Las palabras conocidas se colorean.",
+    "tm_rev1": "Elige el estilo de repaso: palabra a significado, significado a palabra, escucha o completar.",
+    "tm_rev2": "Muestra la respuesta y califícate. Las tarjetas falladas vuelven antes.",
+    "tm_wr1": "Elige traducir, dictado o completar el hueco, y un tema.",
+    "tm_wr2": "Escribe tu respuesta. Vale la escritura original o la romanización. Usa la pista si te atascas.",
+    "tour_replay": "Repetir el recorrido",
+    "tour_help": "Guía de esta página",
+    "set_ambient": "Fondo ambiental",
+    "tw_close": "Cerrar"
   };
   I.de = {
     "skip": "Zum Inhalt springen",
@@ -7554,7 +7895,41 @@
     "d_delivery-visit": "Eine Lieferung",
     "d_host-guest": "Gast empfangen",
     "d_landlord": "Gespräch mit dem Vermieter",
-    "d_hot-day": "Ein heißer Tag"
+    "d_hot-day": "Ein heißer Tag",
+    "tw_h1": "Willkommen bei Bhasha",
+    "tw_priv": "Kostenlos, privat und offline nutzbar. Nichts verlässt Ihr Gerät.",
+    "tw_pick": "Welche Sprache lernen Sie?",
+    "tw_goal": "Wie viele neue Wörter pro Tag?",
+    "tw_goalHint": "Sie können das jederzeit in den Einstellungen ändern.",
+    "tw_first": "Wo möchten Sie anfangen?",
+    "tw_o_today": "Die heutige Lektion",
+    "tw_o_read": "Einen Text lesen",
+    "tw_o_watch": "Ein Video ansehen",
+    "tw_o_talk": "Sprechen üben",
+    "tw_next": "Weiter",
+    "tw_back": "Zurück",
+    "tw_skip": "Überspringen",
+    "tw_done": "Fertig",
+    "tw_of": "{n} von {m}",
+    "tw_show": "Zeig mir alles",
+    "tw_later": "Vielleicht später",
+    "ts1": "Eine kurze Tageslektion: neue Sätze, ein Hörquiz und eine Wiederholungsrunde.",
+    "ts2": "Geben Sie einen englischen Satz ein und hören Sie ihn in Ihrer Sprache, mit lesbarer Umschrift.",
+    "ts3": "Fügen Sie einen beliebigen Text ein. Tippen Sie ein Wort an, hören Sie es, sehen Sie die Aussprache und speichern Sie es.",
+    "ts4": "Gespeicherte Wörter kommen kurz vor dem Vergessen wieder. Antwort aufdecken, dann selbst bewerten.",
+    "ts5": "Wählen Sie Oberflächensprache, Sprechtempo, Design und Hintergrund.",
+    "ts6t": "Mehr zu entdecken",
+    "ts6": "Gespräche, Geschichten, Schreiben, Klangpaare, das Satzbuch und mehr finden Sie in diesem Menü.",
+    "tm_read1": "Fügen Sie hier Text ein, tippen Sie ihn oder öffnen Sie eine Datei.",
+    "tm_read2": "Wählen Sie, was ein Tippen bewirkt: nachschlagen, als bekannt markieren oder zum Lernen hinzufügen. Bekannte Wörter sind farbig.",
+    "tm_rev1": "Wählen Sie die Wiederholungsart: Wort zu Bedeutung, Bedeutung zu Wort, Hören oder Lückentext.",
+    "tm_rev2": "Antwort aufdecken, dann selbst bewerten. Verpasste Karten kommen früher wieder.",
+    "tm_wr1": "Wählen Sie Übersetzen, Diktat oder Lückentext und ein Thema.",
+    "tm_wr2": "Tippen Sie Ihre Antwort. Schrift oder Umschrift zählen beide. Nutzen Sie den Hinweis, wenn Sie nicht weiterkommen.",
+    "tour_replay": "Rundgang wiederholen",
+    "tour_help": "Anleitung für diese Seite",
+    "set_ambient": "Ambiente-Hintergrund",
+    "tw_close": "Schließen"
   };
   I.fr = {
     "skip": "Aller au contenu",
@@ -8171,7 +8546,41 @@
     "d_delivery-visit": "Une livraison",
     "d_host-guest": "Accueillir un invité",
     "d_landlord": "Parler au propriétaire",
-    "d_hot-day": "Journée chaude"
+    "d_hot-day": "Journée chaude",
+    "tw_h1": "Bienvenue sur Bhasha",
+    "tw_priv": "Gratuit, privé et utilisable hors ligne. Rien ne quitte votre appareil.",
+    "tw_pick": "Quelle langue apprenez-vous ?",
+    "tw_goal": "Combien de nouveaux mots par jour ?",
+    "tw_goalHint": "Vous pouvez le modifier à tout moment dans les réglages.",
+    "tw_first": "Par où voulez-vous commencer ?",
+    "tw_o_today": "La leçon du jour",
+    "tw_o_read": "Lire un texte",
+    "tw_o_watch": "Regarder une vidéo",
+    "tw_o_talk": "S’exercer à parler",
+    "tw_next": "Suivant",
+    "tw_back": "Retour",
+    "tw_skip": "Passer",
+    "tw_done": "Terminé",
+    "tw_of": "{n} sur {m}",
+    "tw_show": "Faites-moi visiter",
+    "tw_later": "Peut-être plus tard",
+    "ts1": "Une courte leçon par jour : nouvelles phrases, quiz d’écoute et tour de rappel.",
+    "ts2": "Tapez une phrase en anglais et écoutez-la dans votre langue, avec des lettres lisibles.",
+    "ts3": "Collez un texte. Touchez un mot pour l’entendre, voir sa prononciation et l’enregistrer.",
+    "ts4": "Les mots enregistrés reviennent juste avant l’oubli. Révélez, puis notez-vous.",
+    "ts5": "Choisissez la langue de l’interface, la vitesse de la voix, le thème et l’arrière-plan.",
+    "ts6t": "À découvrir aussi",
+    "ts6": "Conversations, histoires, écriture, paires de sons, recueil de phrases et plus encore sont dans ce menu.",
+    "tm_read1": "Collez ou tapez du texte ici, ou ouvrez un fichier.",
+    "tm_read2": "Choisissez l’effet d’un toucher : chercher, marquer comme connu ou ajouter à l’apprentissage. Les mots connus sont colorés.",
+    "tm_rev1": "Choisissez le type de révision : mot vers sens, sens vers mot, écoute ou texte à trous.",
+    "tm_rev2": "Révélez la réponse, puis notez-vous. Les cartes ratées reviennent plus vite.",
+    "tm_wr1": "Choisissez traduire, dictée ou texte à trous, et un thème.",
+    "tm_wr2": "Tapez votre réponse. L’écriture d’origine ou la romanisation sont acceptées. Utilisez l’indice si vous bloquez.",
+    "tour_replay": "Refaire la visite",
+    "tour_help": "Guide de cette page",
+    "set_ambient": "Arrière-plan d’ambiance",
+    "tw_close": "Fermer"
   };
   I.gu = {
     "skip": "મુખ્ય સામગ્રી પર જાઓ",
@@ -8788,7 +9197,41 @@
     "d_delivery-visit": "ડિલિવરી",
     "d_host-guest": "મહેમાનનું સ્વાગત",
     "d_landlord": "મકાનમાલિક સાથે વાત",
-    "d_hot-day": "ગરમીનો દિવસ"
+    "d_hot-day": "ગરમીનો દિવસ",
+    "tw_h1": "ભાષામાં આપનું સ્વાગત છે",
+    "tw_priv": "મફત, ખાનગી અને ઑફલાઇન ચાલે છે. તમારા ડિવાઇસમાંથી કંઈ બહાર જતું નથી.",
+    "tw_pick": "તમે કઈ ભાષા શીખી રહ્યા છો?",
+    "tw_goal": "દરરોજ કેટલા નવા શબ્દો?",
+    "tw_goalHint": "તમે આ ગમે ત્યારે સેટિંગ્સમાં બદલી શકો છો.",
+    "tw_first": "તમે ક્યાંથી શરૂ કરવા માંગો છો?",
+    "tw_o_today": "આજનો પાઠ",
+    "tw_o_read": "એક લખાણ વાંચો",
+    "tw_o_watch": "એક વિડિયો જુઓ",
+    "tw_o_talk": "વાતચીતનો અભ્યાસ",
+    "tw_next": "આગળ",
+    "tw_back": "પાછળ",
+    "tw_skip": "છોડો",
+    "tw_done": "પૂરું",
+    "tw_of": "{m}માંથી {n}",
+    "tw_show": "મને ફરવીને બતાવો",
+    "tw_later": "કદાચ પછી",
+    "ts1": "રોજનો નાનો પાઠ: નવાં વાક્યો, સાંભળવાની ક્વિઝ અને યાદ કરવાનો રાઉન્ડ.",
+    "ts2": "અંગ્રેજી વાક્ય લખો અને વાંચી શકાય એવા અક્ષરો સાથે તમારી ભાષામાં સાંભળો.",
+    "ts3": "કોઈ પણ લખાણ પેસ્ટ કરો. શબ્દ પર ટૅપ કરી સાંભળો, ઉચ્ચાર જુઓ અને સાચવો.",
+    "ts4": "સાચવેલા શબ્દો ભૂલી જાઓ તે પહેલાં જ પાછા આવે છે. જવાબ જુઓ, પછી જાતે ગ્રેડ આપો.",
+    "ts5": "ઇન્ટરફેસની ભાષા, અવાજની ઝડપ, થીમ અને પૃષ્ઠભૂમિ પસંદ કરો.",
+    "ts6t": "વધુ શોધવા જેવું",
+    "ts6": "વાતચીત, વાર્તાઓ, લેખન, ધ્વનિ-જોડીઓ, વાક્યસંગ્રહ અને ઘણું બધું આ મેનુમાં છે.",
+    "tm_read1": "અહીં લખાણ પેસ્ટ કરો કે ટાઇપ કરો, અથવા ફાઇલ ખોલો.",
+    "tm_read2": "ટૅપથી શું થાય તે પસંદ કરો: અર્થ જોવો, જાણીતું ચિહ્નિત કરવું કે શીખવામાં ઉમેરવું. જાણીતા શબ્દો રંગીન દેખાય છે.",
+    "tm_rev1": "રિવ્યૂની રીત પસંદ કરો: શબ્દથી અર્થ, અર્થથી શબ્દ, સાંભળવું કે ખાલી જગ્યા ભરવી.",
+    "tm_rev2": "જવાબ જુઓ, પછી જાતે ગ્રેડ આપો. ચૂકેલાં કાર્ડ જલદી પાછાં આવે છે.",
+    "tm_wr1": "અનુવાદ, શ્રુતલેખન કે ખાલી જગ્યા ભરવી અને એક વિષય પસંદ કરો.",
+    "tm_wr2": "તમારો જવાબ ટાઇપ કરો. લિપિ કે રોમન રૂપ બંને માન્ય છે. અટકો તો સંકેત વાપરો.",
+    "tour_replay": "ટૂર ફરી જુઓ",
+    "tour_help": "આ પાનાની માર્ગદર્શિકા",
+    "set_ambient": "એમ્બિયન્ટ પૃષ્ઠભૂમિ",
+    "tw_close": "બંધ કરો"
   };
   I.as = {
     "skip": "মূল বিষয়লৈ যাওক",
@@ -9405,7 +9848,41 @@
     "d_delivery-visit": "ডেলিভাৰী",
     "d_host-guest": "অতিথিক আদৰা",
     "d_landlord": "ঘৰৰ গৰাকীৰ সৈতে কথা",
-    "d_hot-day": "গৰম দিন"
+    "d_hot-day": "গৰম দিন",
+    "tw_h1": "ভাষালৈ স্বাগতম",
+    "tw_priv": "বিনামূলীয়া, ব্যক্তিগত আৰু অফলাইনতো চলে। আপোনাৰ ডিভাইচৰ পৰা একো বাহিৰলৈ নাযায়।",
+    "tw_pick": "আপুনি কোনটো ভাষা শিকি আছে?",
+    "tw_goal": "দিনটোত কিমান নতুন শব্দ?",
+    "tw_goalHint": "আপুনি এইটো যিকোনো সময়তে ছেটিংছত সলনি কৰিব পাৰে।",
+    "tw_first": "আপুনি ক'ৰ পৰা আৰম্ভ কৰিব বিচাৰে?",
+    "tw_o_today": "আজিৰ পাঠ",
+    "tw_o_read": "এটা লেখা পঢ়ক",
+    "tw_o_watch": "এটা ভিডিঅ' চাওক",
+    "tw_o_talk": "কথা পাতি অনুশীলন",
+    "tw_next": "পৰৱৰ্তী",
+    "tw_back": "পিছলৈ",
+    "tw_skip": "এৰি যাওক",
+    "tw_done": "শেষ",
+    "tw_of": "{m}ৰ ভিতৰত {n}",
+    "tw_show": "মোক ঘূৰাই দেখুৱাওক",
+    "tw_later": "পাছত চাম",
+    "ts1": "দৈনিক চমু পাঠ: নতুন বাক্যাংশ, শুনা কুইজ আৰু সোঁৱৰণী ৰাউণ্ড।",
+    "ts2": "ইংৰাজী বাক্য লিখক আৰু পঢ়িব পৰা আখৰৰ সৈতে নিজৰ ভাষাত শুনক।",
+    "ts3": "যিকোনো লেখা পেষ্ট কৰক। শব্দত টেপ কৰি শুনক, উচ্চাৰণ চাওক আৰু সংৰক্ষণ কৰক।",
+    "ts4": "সংৰক্ষিত শব্দ পাহৰাৰ ঠিক আগতে ঘূৰি আহে। উত্তৰ চাওক, তাৰ পিছত নিজে গ্ৰেড দিয়ক।",
+    "ts5": "ইণ্টাৰফেচৰ ভাষা, মাতৰ গতি, থীম আৰু পটভূমি বাছনি কৰক।",
+    "ts6t": "আৰু বহুতো আছে",
+    "ts6": "কথোপকথন, কাহিনী, লিখা, ধ্বনি-যোৰা, বাক্যাংশ-সংকলন আৰু আৰু বহুতো এই মেনুত আছে।",
+    "tm_read1": "ইয়াত লেখা পেষ্ট বা টাইপ কৰক, বা ফাইল খুলক।",
+    "tm_read2": "টেপ কৰিলে কি হ'ব বাছক: অৰ্থ চোৱা, জনা বুলি চিহ্নিত কৰা বা শিকাত যোগ কৰা। জনা শব্দবোৰ ৰঙীন হয়।",
+    "tm_rev1": "পুনৰীক্ষণৰ ধৰণ বাছক: শব্দৰ পৰা অৰ্থ, অৰ্থৰ পৰা শব্দ, শুনা বা খালী ঠাই পূৰণ।",
+    "tm_rev2": "উত্তৰ চাওক, তাৰ পিছত নিজে গ্ৰেড দিয়ক। ভুল কাৰ্ড সোনকালে ঘূৰি আহে।",
+    "tm_wr1": "অনুবাদ, শ্ৰুতিলিখন বা খালী ঠাই পূৰণ আৰু এটা বিষয় বাছক।",
+    "tm_wr2": "আপোনাৰ উত্তৰ টাইপ কৰক। লিপি বা ৰোমান ৰূপ দুয়োটা চলিব। আটকিলে ইংগিত ল'ক।",
+    "tour_replay": "ভ্ৰমণ পুনৰ চাওক",
+    "tour_help": "এই পৃষ্ঠাৰ গাইড",
+    "set_ambient": "এম্বিয়েণ্ট পটভূমি",
+    "tw_close": "বন্ধ কৰক"
   };
 })(window.B = window.B || {});
 
@@ -10815,6 +11292,233 @@
 })(window.B);
 
 ;
+/* Guided tour: a first-run welcome, a spotlight tour of the main screens, and short per-page tours.
+   Everything is local. The only things stored are two small flags ("tour done" and "which page tours were seen"). */
+(function (B) {
+  'use strict';
+  var U = B.ui, h = U.h, t = U.t, set = U.set, $ = U.$;
+  var tour = B.tour = {}, KEY = 'bh-tour', SEEN = 'bh-tours', cur = null;
+  function lget(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lset(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+  function seen() { try { return JSON.parse(lget(SEEN) || '{}') || {}; } catch (e) { return {}; } }
+  function markSeen(k) { var s = seen(); s[k] = 1; lset(SEEN, JSON.stringify(s)); }
+  function reduced() { return !!(B.fx && B.fx.reduced()); }
+  function visible(el) { return !!(el && el.getClientRects().length); }
+
+  var MAIN = [
+    { sel: '#mnav a[data-k="today"]', title: 'nav_today', body: 'ts1' },
+    { sel: '#mnav a[data-k="say"]', title: 'nav_say', body: 'ts2' },
+    { sel: '#mnav a[data-k="read"]', title: 'nav_read', body: 'ts3' },
+    { sel: '#mnav a[data-k="review"]', title: 'nav_review', body: 'ts4' },
+    { sel: '.pop > button', title: 'settings', body: 'ts5' },
+    { sel: '#mnav', title: 'ts6t', body: 'ts6' }
+  ];
+  var MINI = {
+    read: [{ sel: '#app textarea', title: 'nav_read', body: 'tm_read1' }, { sel: '#rd-mode', title: 'nav_read', body: 'tm_read2' }],
+    review: [{ sel: '#rv-mode', title: 'nav_review', body: 'tm_rev1' }, { sel: '#app .panel', title: 'nav_review', body: 'tm_rev2' }],
+    write: [{ sel: '#wr-lang', title: 'nav_write', body: 'tm_wr1' }, { sel: '#wr-box', title: 'nav_write', body: 'tm_wr2' }]
+  };
+
+  // ---------- spotlight
+  tour.close = function () { if (cur) { cur.end(false); } };
+  tour.run = function (steps, key) {
+    tour.close();
+    steps = steps.filter(function (s) { return visible($(s.sel)); });
+    if (!steps.length) return;
+    var opener = document.activeElement, i = 0;
+    var hole = h('div', { class: 'tour-hole', 'aria-hidden': 'true' });
+    var title = h('div', { class: 'tour-t', id: 'tour-t' }), body = h('p', { class: 'tour-b', id: 'tour-b' }), count = h('span', { class: 'tour-n' });
+    var dots = h('div', { class: 'tour-dots', 'aria-hidden': 'true' }, steps.map(function () { return h('i'); }));
+    var skip = h('button', { type: 'button', class: 'abtn tour-skip', 'data-quiet': '1', text: t('tw_skip'), onclick: function () { end(true); } });
+    var back = h('button', { type: 'button', class: 'abtn', 'data-quiet': '1', text: t('tw_back'), onclick: function () { go(i - 1); } });
+    var next = h('button', { type: 'button', class: 'abtn gold', 'data-quiet': '1', onclick: function () { if (i >= steps.length - 1) end(true); else go(i + 1); } });
+    var bub = h('div', { class: 'tour-bub' }, [h('div', { class: 'tour-top' }, [dots, count]), title, body, h('div', { class: 'tour-acts' }, [skip, h('span', { class: 'grow' }), back, next])]);
+    var ov = h('div', { class: 'tour', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'tour-t', 'aria-describedby': 'tour-b' }, [hole, bub]);
+    document.body.appendChild(ov); document.documentElement.classList.add('tour-on');
+    function place() {
+      var s = steps[i], el = $(s.sel); if (!visible(el)) return;
+      var r = el.getBoundingClientRect(), pad = 8, vw = window.innerWidth, vh = window.innerHeight;
+      hole.style.left = (r.left - pad) + 'px'; hole.style.top = (r.top - pad) + 'px'; hole.style.width = (r.width + pad * 2) + 'px'; hole.style.height = (r.height + pad * 2) + 'px';
+      if (vw <= 640) { bub.style.left = ''; bub.style.top = ''; return; }
+      var w = bub.offsetWidth, bh = bub.offsetHeight, top = r.bottom + pad + 14;
+      if (top + bh > vh - 12) top = r.top - pad - 14 - bh;
+      if (top < 12) top = Math.max(12, vh - bh - 12);
+      var left = Math.min(Math.max(12, r.left + r.width / 2 - w / 2), vw - w - 12);
+      bub.style.left = left + 'px'; bub.style.top = top + 'px';
+    }
+    function go(n) {
+      i = Math.max(0, Math.min(steps.length - 1, n)); var s = steps[i], el = $(s.sel);
+      try { el.scrollIntoView({ block: 'center', inline: 'nearest' }); } catch (e) { }
+      title.textContent = t(s.title); body.textContent = t(s.body); count.textContent = t('tw_of', { n: i + 1, m: steps.length });
+      [].forEach.call(dots.children, function (d, k) { d.className = k === i ? 'on' : (k < i ? 'done' : ''); });
+      back.hidden = i === 0; next.textContent = i >= steps.length - 1 ? t('tw_done') : t('tw_next');
+      bub.classList.remove('swap'); if (!reduced()) { void bub.offsetWidth; bub.classList.add('swap'); }
+      place(); requestAnimationFrame(place); next.focus();
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); end(true); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); if (i < steps.length - 1) go(i + 1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); if (i > 0) go(i - 1); }
+      else if (e.key === 'Tab') { var f = [].filter.call(bub.querySelectorAll('button'), function (b) { return !b.hidden; }), a = document.activeElement, k = f.indexOf(a); e.preventDefault(); f[(k + (e.shiftKey ? f.length - 1 : 1)) % f.length].focus(); }
+    }
+    function end(mark) {
+      document.removeEventListener('keydown', onKey, true); window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true);
+      if (ov.parentNode) ov.parentNode.removeChild(ov); document.documentElement.classList.remove('tour-on'); cur = null;
+      if (mark && key) { if (key === 'main') lset(KEY, '1'); else markSeen(key); }
+      try { if (opener && opener.focus && document.contains(opener)) opener.focus(); } catch (e) { }
+    }
+    document.addEventListener('keydown', onKey, true); window.addEventListener('resize', place); window.addEventListener('scroll', place, true);
+    cur = { end: end }; go(0);
+  };
+
+  // ---------- welcome (first run only)
+  tour.welcome = function () {
+    var step = 0, host = h('div', { class: 'wel', role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': 'wel-h' }), opener = document.activeElement;
+    function finish(then) {
+      lset(KEY, '1'); document.removeEventListener('keydown', onKey, true);
+      if (host.parentNode) host.parentNode.removeChild(host); document.documentElement.classList.remove('tour-on');
+      U.saveSet(); if (B.route) B.route();
+      if (then) then(); else { try { if (opener && opener.focus) opener.focus(); } catch (e) { } }
+    }
+    function onKey(e) { if (e.key === 'Escape') { e.preventDefault(); finish(); } }
+    function dotsEl() { return h('div', { class: 'tour-dots wel-dots', 'aria-hidden': 'true' }, [0, 1, 2].map(function (k) { return h('i', { class: k === step ? 'on' : (k < step ? 'done' : '') }); })); }
+    function draw() {
+      host.textContent = '';
+      var card = h('div', { class: 'wel-card' }), pane = h('div', { class: 'wel-pane' });
+      card.appendChild(h('div', { class: 'wel-top' }, [dotsEl(), h('button', { type: 'button', class: 'abtn', 'data-quiet': '1', 'aria-label': t('tw_close'), text: '✕', onclick: function () { finish(); } })]));
+      if (step === 0) {
+        var sel = h('select', { id: 'wel-lang', 'aria-label': t('tw_pick') }, B.INDIC.map(function (l) { return h('option', { value: l, text: U.langNative(l) + ' · ' + U.langName(l) }); })); sel.value = set.focus;
+        sel.addEventListener('change', function () { set.focus = sel.value; });
+        pane.appendChild(h('div', { class: 'wel-logo', 'aria-hidden': 'true', text: 'भा' })); pane.appendChild(h('h2', { id: 'wel-h', text: t('tw_h1') }));
+        pane.appendChild(h('p', { class: 'wel-priv', text: '🔒 ' + t('tw_priv') })); pane.appendChild(h('label', { for: 'wel-lang', text: t('tw_pick') })); pane.appendChild(sel);
+      } else if (step === 1) {
+        pane.appendChild(h('h2', { id: 'wel-h', text: t('tw_goal') }));
+        var seg = h('div', { class: 'seg wel-seg', role: 'group', 'aria-label': t('tw_goal') });
+        [5, 10, 20, 40].forEach(function (n) { seg.appendChild(h('button', { type: 'button', class: 'abtn', 'data-quiet': '1', 'aria-pressed': String(set.perDay === n), text: String(n), onclick: function () { set.perDay = n; [].forEach.call(seg.children, function (b) { b.setAttribute('aria-pressed', String(b === this)); }, this); } })); });
+        pane.appendChild(seg); pane.appendChild(h('p', { class: 'wel-hint', text: t('tw_goalHint') }));
+      } else {
+        pane.appendChild(h('h2', { id: 'wel-h', text: t('tw_first') }));
+        var grid = h('div', { class: 'wel-go' });
+        [['/today/', '📅', 'tw_o_today'], ['/read/', '📖', 'tw_o_read'], ['/watch/', '🎬', 'tw_o_watch'], ['/talk/', '💬', 'tw_o_talk']].forEach(function (o) { grid.appendChild(h('button', { type: 'button', class: 'abtn wel-opt', 'data-quiet': '1', onclick: function () { finish(function () { U.go(o[0]); }); } }, [h('span', { 'aria-hidden': 'true', text: o[1] }), h('span', { text: t(o[2]) })])); });
+        pane.appendChild(grid);
+        pane.appendChild(h('div', { class: 'wel-last' }, [h('button', { type: 'button', class: 'abtn gold', 'data-quiet': '1', text: '🧭 ' + t('tw_show'), onclick: function () { finish(function () { setTimeout(function () { tour.run(MAIN, 'main'); }, 250); }); } }), h('button', { type: 'button', class: 'abtn', 'data-quiet': '1', text: t('tw_later'), onclick: function () { finish(); } })]));
+      }
+      card.appendChild(pane);
+      if (step < 2) card.appendChild(h('div', { class: 'tour-acts' }, [h('button', { type: 'button', class: 'abtn', 'data-quiet': '1', text: t('tw_skip'), onclick: function () { finish(); } }), h('span', { class: 'grow' }), step ? h('button', { type: 'button', class: 'abtn', 'data-quiet': '1', text: t('tw_back'), onclick: function () { step--; draw(); } }) : null, h('button', { type: 'button', class: 'abtn gold', id: 'wel-next', 'data-quiet': '1', text: t('tw_next'), onclick: function () { step++; draw(); } })]));
+      host.appendChild(card);
+      var f = $('#wel-next', host) || $('.wel-opt', host); if (f) f.focus();
+    }
+    document.body.appendChild(host); document.documentElement.classList.add('tour-on'); document.addEventListener('keydown', onKey, true); draw();
+  };
+  tour.maybeWelcome = function () { if (!lget(KEY) && !lget('bh-set') && !lget('bh-words')) tour.welcome(); };
+
+  // ---------- per-page help button and first-visit hint
+  tour.afterRoute = function (view) {
+    var old = $('.tour-fab'); if (old) old.parentNode.removeChild(old);
+    var steps = view === 'home' || view === 'today' ? MAIN : MINI[view]; if (!steps || document.documentElement.classList.contains('tour-on')) return;
+    var key = view === 'home' || view === 'today' ? 'main' : view;
+    document.body.appendChild(h('button', { type: 'button', class: 'tour-fab', 'data-quiet': '1', 'aria-label': t('tour_help'), title: t('tour_help'), text: '?', onclick: function () { tour.run(steps, key); } }));
+    if (MINI[view] && lget(KEY) === '1' && !seen()[view]) setTimeout(function () { if (!document.documentElement.classList.contains('tour-on') && $('#app')) tour.run(MINI[view], view); }, 700);
+  };
+  tour.start = function () { var p = $('#setp'); if (p) p.hidden = true; U.go('/'); setTimeout(function () { tour.run(MAIN, 'main'); }, 300); };
+})(window.B);
+
+;
+/* Motion layer: page transitions, staggered cards, nav indicator, counters, streak flame and confetti,
+   review flip and swipe, word-tap ripple, speaker pulse, and a quiet ambient background.
+   Pure CSS plus a little JS. Nothing is fetched. All of it stays off when the system asks for reduced motion. */
+(function (B) {
+  'use strict';
+  var U = B.ui, h = U.h, set = U.set, $ = U.$, M = B.motion = {}, mo = null, amb = null, tmr = null;
+  function reduced() { return !!(B.fx && B.fx.reduced()); }
+  function lget(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lset(k, v) { try { localStorage.setItem(k, v); } catch (e) { } }
+
+  // sliding underline under the current nav item
+  function indicator() {
+    var nav = $('#mnav'); if (!nav) return;
+    var ind = $('.nav-ind', nav); if (!ind) { ind = h('i', { class: 'nav-ind', 'aria-hidden': 'true' }); nav.appendChild(ind); }
+    var a = $('a[aria-current]', nav);
+    if (!a) { ind.style.opacity = '0'; return; }
+    ind.style.opacity = '1'; ind.style.width = a.offsetWidth + 'px'; ind.style.transform = 'translate(' + a.offsetLeft + 'px,' + (a.offsetTop + a.offsetHeight - 3) + 'px)';
+  }
+
+  function count(el) {
+    var n = parseInt(el.textContent, 10); if (!(n > 0) || el.getAttribute('data-r')) return;
+    el.setAttribute('data-r', '1'); if (reduced()) return;
+    var t0 = null, dur = 700;
+    function step(ts) { if (t0 == null) t0 = ts; var p = Math.min(1, (ts - t0) / dur), e = 1 - Math.pow(1 - p, 3); el.textContent = String(Math.round(n * e)); if (p < 1) requestAnimationFrame(step); else el.textContent = String(n); }
+    el.textContent = '0'; requestAnimationFrame(step);
+  }
+
+  function milestones() {
+    var st = $('.stats .stat:last-child b'); if (!st) return;
+    var n = parseInt(st.getAttribute('data-n') || st.textContent, 10);
+    if (!(n > 0)) return;
+    var box = st.parentNode; if (!$('.flame', box)) box.insertBefore(h('span', { class: 'flame', 'aria-hidden': 'true', text: '🔥' }), box.firstChild);
+    var seen = (lget('bh-ms') || '').split(',');
+    [30, 7, 3].some(function (m) { if (n >= m) { if (seen.indexOf(String(m)) < 0) { seen.push(String(m)); lset('bh-ms', seen.join(',')); if (B.fx && B.fx.celebrate) B.fx.celebrate(); } return true; } return false; });
+  }
+
+  function decorate() {
+    var app = $('#app'); if (!app) return;
+    [].forEach.call(app.querySelectorAll('.cards > *, .stats > *, .ph-list > *'), function (el, i) { if (el.hasAttribute('data-m')) return; el.setAttribute('data-m', '1'); el.style.setProperty('--i', Math.min(i, 14)); el.classList.add('rise'); });
+    var sb = app.querySelectorAll('.stat b'); [].forEach.call(sb, function (b, i) { if (i === sb.length - 1) b.setAttribute('data-n', b.textContent); count(b); });
+    var card = app.querySelector('.rv-card');
+    if (card && !card.hasAttribute('data-m')) {
+      card.setAttribute('data-m', '1'); var shown = !!card.querySelector('.rv-grades');
+      if (shown) card.classList.add('flip'); else card.classList.add('slide');
+      var x0 = null, dx = 0;
+      card.addEventListener('pointerdown', function (e) { if (e.pointerType === 'mouse' || e.target.closest('button,select,a')) { x0 = null; return; } x0 = e.clientX; dx = 0; });
+      card.addEventListener('pointermove', function (e) { if (x0 == null || !card.querySelector('.rv-grades')) return; dx = e.clientX - x0; card.style.transform = 'translateX(' + dx + 'px) rotate(' + dx / 40 + 'deg)'; card.style.transition = 'none'; });
+      function up() { if (x0 == null) return; x0 = null; card.style.transition = ''; card.style.transform = ''; if (Math.abs(dx) > 90) { var b = card.querySelector('[data-g="' + (dx > 0 ? 2 : 0) + '"]'); if (b) b.click(); } dx = 0; }
+      card.addEventListener('pointerup', up); card.addEventListener('pointercancel', up);
+    }
+    milestones();
+  }
+
+  var pend = false;
+  function observe() {
+    var app = $('#app'); if (!app || mo || !window.MutationObserver) return;
+    mo = new MutationObserver(function () { if (pend) return; pend = true; requestAnimationFrame(function () { pend = false; if (!reduced()) decorate(); }); });
+    mo.observe(app, { childList: true, subtree: true });
+  }
+
+  // word-tap ripple and speaker pulse
+  function bindGlobal() {
+    document.addEventListener('click', function (e) {
+      if (reduced()) return;
+      var tk = e.target.closest && e.target.closest('.tk'); if (tk) { tk.classList.remove('pulse'); void tk.offsetWidth; tk.classList.add('pulse'); }
+    }, true);
+    var speak = U.speak;
+    U.speak = function (text, lang, onend, rate, fixed) {
+      var b = document.activeElement && document.activeElement.closest ? document.activeElement.closest('button.abtn') : null;
+      var ret = speak.apply(this, arguments);
+      if (b && !reduced()) { b.classList.add('speaking'); setTimeout(function () { b.classList.remove('speaking'); }, Math.min(6000, 700 + String(text || '').length * 70)); }
+      return ret;
+    };
+    window.addEventListener('resize', indicator);
+    document.addEventListener('visibilitychange', function () { if (amb) amb.classList.toggle('paused', document.hidden); });
+  }
+
+  // ambient layer: a few large script glyphs drifting slowly behind the Home page
+  M.ambient = function () {
+    var on = set.ambient !== false && !reduced() && !(navigator.connection && navigator.connection.saveData) && !(navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 2);
+    var home = !!$('#app .cards');
+    if (amb && (!on || !home)) { amb.remove(); amb = null; document.documentElement.classList.remove('amb-on'); }
+    if (!on || !home || amb) return;
+    var g = (B.SCRIPTS && B.SCRIPTS[set.focus]) || {}, chars = [].concat(g.vowels || [], g.cons || []).filter(function (c) { return c && String(c).trim(); });
+    if (chars.length < 4) chars = ['अ', 'आ', 'క', 'க', 'ক', 'ಕ', 'മ', 'ગ'];
+    amb = h('div', { class: 'amb', 'aria-hidden': 'true' });
+    for (var i = 0; i < 9; i++) amb.appendChild(h('span', { text: chars[(i * 7 + 3) % chars.length], style: 'left:' + ((i * 11 + 4) % 92) + '%;font-size:' + (60 + (i * 23) % 90) + 'px;animation-duration:' + (26 + (i * 5) % 22) + 's;animation-delay:-' + ((i * 7) % 30) + 's' }));
+    document.body.insertBefore(amb, document.body.firstChild); document.documentElement.classList.add('amb-on');
+  };
+
+  M.after = function () { requestAnimationFrame(function () { indicator(); M.ambient(); }); var app = $('#app'); if (app && !reduced()) { app.classList.remove('pg'); void app.offsetWidth; app.classList.add('pg'); decorate(); } };
+  M.init = function () { observe(); bindGlobal(); indicator(); };
+})(window.B);
+
+;
 /* Bhasha shell: routing, header, settings, footer. */
 (function (B) {
   'use strict';
@@ -10827,6 +11531,7 @@
   var app;
   function mark() { var NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg'), p = document.createElementNS(NS, 'path'); s.setAttribute('viewBox', '14 14 36 36'); s.setAttribute('width', '22'); s.setAttribute('height', '22'); s.setAttribute('aria-hidden', 'true'); p.setAttribute('d', MARK); p.setAttribute('fill', 'currentColor'); s.appendChild(p); return s; }
   function pathKey() { var p = location.pathname.replace(/index\.html$/, '').replace(/^\/+|\/+$/g, ''); return p; }
+  B.route = function () { route(); };
   U.go = function (url) { history.pushState(null, '', url); route(); window.scrollTo(0, 0); };
 
   function buildChrome() {
@@ -10850,6 +11555,8 @@
     seg(t('kdMode'), [['1', t('on')], ['0', t('off')]], set.kids ? '1' : '0', function (v) { set.kids = v === '1'; U.saveSet(); U.applyKids(); buildChrome(); route(); });
     seg(t('setSound'), [['1', t('on')], ['0', t('off')]], set.sound ? '1' : '0', function (v) { set.sound = v === '1'; U.saveSet(); if (set.sound && B.fx) B.fx.good(); });
     seg(t('setHaptic'), [['1', t('on')], ['0', t('off')]], set.haptic ? '1' : '0', function (v) { set.haptic = v === '1'; U.saveSet(); if (set.haptic && B.fx) B.fx.tap(); });
+    seg(t('set_ambient'), [['1', t('on')], ['0', t('off')]], set.ambient !== false ? '1' : '0', function (v) { set.ambient = v === '1'; U.saveSet(); if (B.motion) B.motion.ambient(); });
+    panel.appendChild(h('button', { type: 'button', class: 'abtn', style: 'margin-top:12px;margin-right:8px', text: '🧭 ' + t('tour_replay'), onclick: function () { close(false); B.tour.start(); } }));
     panel.appendChild(h('button', { type: 'button', class: 'abtn', style: 'margin-top:12px', text: '🔊 ' + t('voiceCheck'), onclick: function () { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); U.openVoiceCheck(); } }));
     function close(f) { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); if (f) btn.focus(); }
     btn.addEventListener('click', function () { var o = panel.hidden; panel.hidden = !o; btn.setAttribute('aria-expanded', String(o)); if (o) $('select', panel).focus(); });
@@ -10870,6 +11577,8 @@
     B.views[view](app);
     document.title = (k ? t('nav_' + k) + ' · ' : '') + 'Bhasha · EknathaLabs';
     [].forEach.call(document.querySelectorAll('#mnav a'), function (a) { if (a.getAttribute('data-k') === k) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    if (B.motion) B.motion.after(view);
+    if (B.tour) B.tour.afterRoute(view);
   }
 
   function init() {
@@ -10877,6 +11586,8 @@
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a[data-nav]'); if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); U.go(a.getAttribute('href')); });
     window.addEventListener('popstate', route);
     route();
+    if (B.motion) B.motion.init();
+    if (B.tour) B.tour.maybeWelcome();
     if (('serviceWorker' in navigator) && (location.protocol === 'https:' || location.hostname === 'localhost')) { try { navigator.serviceWorker.register('/sw.js'); } catch (e) { } }
   }
   B.init = init;

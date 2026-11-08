@@ -98,3 +98,11 @@ English, Odia, Nepali and Japanese as learning languages (17 in all); 40 more ph
 
 ## Phrases and conversations, round 2
 100 more phrases (560 in all, in 17 languages) and 100 more conversation drills (156 in all, across social, food, travel, shop, health, work and home). Data: `src/phrases4.js` (phrases and drills); drill titles are the `d_*` interface strings. All new text is a draft for native-speaker review.
+
+## Guided tour, motion and ambient background
+- **First-run welcome** (language, daily goal, where to start) and a 6-step spotlight **tour**. Replay it from Settings → "Take the tour again". Short page tours run once on Read, Review and Write; the **?** button re-opens them. Only two small flags are stored locally (`bh-tour`, `bh-tours`).
+- **Motion**: page transitions, staggered cards, hover lift, sliding nav underline, counter roll-ups, streak flame with confetti at 3/7/30 days, review card flip and swipe (touch), word-tap ripple, speaker pulse.
+- **Ambient background** (Home only): slow drifting script letters. Settings → Background on/off. Auto-off for reduced motion, data saver and low-core devices.
+- **Themes**: soft gradients for Dark and New, an elevation scale, light paper grain. Colours and contrast are unchanged.
+- Everything is CSS or small JS, works offline, and honours "reduce motion".
+- Tests: `node tests/tour.js`. Other tests pre-set `bh-tour` so the welcome does not block them.

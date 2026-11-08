@@ -1,6 +1,6 @@
 // Offline-voice fallback: every learning language must produce audible audio when the device has no voices.
 const {chromium}=require('playwright');
-(async()=>{const b=await chromium.launch(),ctx=await b.newContext(),p=await ctx.newPage();let fails=0;
+(async()=>{const b=await chromium.launch(),ctx=await b.newContext();await ctx.addInitScript(()=>{try{localStorage.setItem('bh-tour','1')}catch(e){}});const p=await ctx.newPage();let fails=0;
 await p.addInitScript(()=>{localStorage.setItem('bh-set',JSON.stringify({ui:'en',ov:'yes'}));
  window.__plays=[];const pl=HTMLMediaElement.prototype.play;HTMLMediaElement.prototype.play=function(){window.__plays.push(this.src);return pl.apply(this,arguments).catch(()=>{});};});
 const errs=[];p.on('pageerror',e=>errs.push(e.message));

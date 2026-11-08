@@ -10,6 +10,7 @@
   var app;
   function mark() { var NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg'), p = document.createElementNS(NS, 'path'); s.setAttribute('viewBox', '14 14 36 36'); s.setAttribute('width', '22'); s.setAttribute('height', '22'); s.setAttribute('aria-hidden', 'true'); p.setAttribute('d', MARK); p.setAttribute('fill', 'currentColor'); s.appendChild(p); return s; }
   function pathKey() { var p = location.pathname.replace(/index\.html$/, '').replace(/^\/+|\/+$/g, ''); return p; }
+  B.route = function () { route(); };
   U.go = function (url) { history.pushState(null, '', url); route(); window.scrollTo(0, 0); };
 
   function buildChrome() {
@@ -33,6 +34,8 @@
     seg(t('kdMode'), [['1', t('on')], ['0', t('off')]], set.kids ? '1' : '0', function (v) { set.kids = v === '1'; U.saveSet(); U.applyKids(); buildChrome(); route(); });
     seg(t('setSound'), [['1', t('on')], ['0', t('off')]], set.sound ? '1' : '0', function (v) { set.sound = v === '1'; U.saveSet(); if (set.sound && B.fx) B.fx.good(); });
     seg(t('setHaptic'), [['1', t('on')], ['0', t('off')]], set.haptic ? '1' : '0', function (v) { set.haptic = v === '1'; U.saveSet(); if (set.haptic && B.fx) B.fx.tap(); });
+    seg(t('set_ambient'), [['1', t('on')], ['0', t('off')]], set.ambient !== false ? '1' : '0', function (v) { set.ambient = v === '1'; U.saveSet(); if (B.motion) B.motion.ambient(); });
+    panel.appendChild(h('button', { type: 'button', class: 'abtn', style: 'margin-top:12px;margin-right:8px', text: '🧭 ' + t('tour_replay'), onclick: function () { close(false); B.tour.start(); } }));
     panel.appendChild(h('button', { type: 'button', class: 'abtn', style: 'margin-top:12px', text: '🔊 ' + t('voiceCheck'), onclick: function () { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); U.openVoiceCheck(); } }));
     function close(f) { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); if (f) btn.focus(); }
     btn.addEventListener('click', function () { var o = panel.hidden; panel.hidden = !o; btn.setAttribute('aria-expanded', String(o)); if (o) $('select', panel).focus(); });
@@ -53,6 +56,8 @@
     B.views[view](app);
     document.title = (k ? t('nav_' + k) + ' · ' : '') + 'Bhasha · EknathaLabs';
     [].forEach.call(document.querySelectorAll('#mnav a'), function (a) { if (a.getAttribute('data-k') === k) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    if (B.motion) B.motion.after(view);
+    if (B.tour) B.tour.afterRoute(view);
   }
 
   function init() {
@@ -60,6 +65,8 @@
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a[data-nav]'); if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); U.go(a.getAttribute('href')); });
     window.addEventListener('popstate', route);
     route();
+    if (B.motion) B.motion.init();
+    if (B.tour) B.tour.maybeWelcome();
     if (('serviceWorker' in navigator) && (location.protocol === 'https:' || location.hostname === 'localhost')) { try { navigator.serviceWorker.register('/sw.js'); } catch (e) { } }
   }
   B.init = init;

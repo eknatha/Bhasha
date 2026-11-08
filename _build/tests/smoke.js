@@ -1,5 +1,5 @@
 const {chromium}=require('playwright');
-(async()=>{const b=await chromium.launch(),p=await b.newPage({viewport:{width:1100,height:900}});
+(async()=>{const b=await chromium.launch(),p=await b.newPage({viewport:{width:1100,height:900}});await p.addInitScript(()=>{try{localStorage.setItem('bh-tour','1');localStorage.setItem('bh-tours','{"read":1,"review":1,"write":1}')}catch(e){}});
 const errs=[];p.on('pageerror',e=>errs.push('PAGEERR '+e.message));p.on('console',m=>{if(m.type()==='error')errs.push('CONSOLE '+m.text());});
 const reqs=[];p.on('request',r=>{const u=new URL(r.url());if(u.hostname!=='localhost')reqs.push(r.url());});
 for(const path of ['/','/read/','/watch/','/words/','/review/','/scripts/','/phrases/']){

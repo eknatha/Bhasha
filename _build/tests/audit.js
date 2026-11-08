@@ -34,7 +34,7 @@ for(const theme of ['light','dark','new']){const ctx=await b.newContext({viewpor
  if(ext.length)F('external requests '+ext.join(','));
  // fonts: English-only page should not pull Indic fonts when no Indic text is rendered (words page empty)
  await ctx.close();}
-{const ctx=await b.newContext({viewport:{width:1100,height:800}});const p=await ctx.newPage();await p.goto(BASE+'/');await p.waitForTimeout(500);
+{const ctx=await b.newContext({viewport:{width:1100,height:800}});await ctx.addInitScript(()=>{try{localStorage.setItem('bh-tour','1');localStorage.setItem('bh-tours','{"read":1,"review":1,"write":1}')}catch(e){}});const p=await ctx.newPage();await p.goto(BASE+'/');await p.waitForTimeout(500);
  await p.evaluate(()=>navigator.serviceWorker.ready);await p.waitForTimeout(1500);await ctx.setOffline(true);
  for(const r of ['/','/read/','/watch/','/scripts/']){await p.goto(BASE+r).catch(e=>F('offline nav '+r+' '+e.message));const h=await p.$eval('h1',e=>e.textContent).catch(()=>null);if(!h)F('offline no h1 '+r);}
  await ctx.close();}
