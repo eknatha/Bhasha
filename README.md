@@ -106,3 +106,13 @@ English, Odia, Nepali and Japanese as learning languages (17 in all); 40 more ph
 - **Themes**: soft gradients for Dark and New, an elevation scale, light paper grain. Colours and contrast are unchanged.
 - Everything is CSS or small JS, works offline, and honours "reduce motion".
 - Tests: `node tests/tour.js`. Other tests pre-set `bh-tour` so the welcome does not block them.
+
+## Listen fix, why notes, tone, night reading, songs, number drills
+- **Listen fix:** speech is cleaned before it reaches the voice. Emoji and stray symbols are removed, and any piece with no letters or digits (a lone "?" or "!") is dropped or joined to the sentence before it, so a voice can no longer read "question mark" aloud. Covered by `tests/learn2.js` with a deliberately bad sentence splitter.
+- **Why this way?** 21 short cultural and usage notes under key phrases (Phrases and Today), written in all 14 interface languages.
+- **Tone** (`/tone/`): formal and casual forms of six everyday sentences in all 17 languages, side by side with sound and romanization.
+- **Night reading:** Settings → Night reading (Off, On, Auto in the evening), or the 🌙 button on Read. Warm dark palette, roomier line spacing.
+- **Songs and verses** (`/songs/`): two short original verses (Morning, Rain) in all 17 languages. They are written for practice, not traditional songs. Tap words, play a line or the whole verse.
+- **Numbers and money** (`/numbers/`): listen-and-pick drills for numbers (up to 100,000), money (₹, ₩, ¥, €, $), clock times and dates (weekday, day, month). Numbers are read by the device voice or the offline voice.
+- All new text for Odia, Nepali, Japanese and the other new strings are drafts for native review.
+- Tests: `node tests/learn2.js`.

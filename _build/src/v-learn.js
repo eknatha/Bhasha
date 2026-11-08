@@ -87,7 +87,7 @@
         var txt = p[PH.lang], tgt = h('div', { class: 'ph-t', lang: PH.lang }); tgt.appendChild(U.renderText(txt, PH.lang, { roman: false }));
         U.bindWords(tgt, function () { return PH.lang; }, function () { return txt; }, function () { draw(); });
         var row = h('div', { class: 'ph' }, [h('div', { class: 'ph-main' }, [tgt, (B.isBrahmic(txt) ? h('div', { class: 'ph-r', text: B.translit(txt, set.scheme, PH.lang) }) : null), h('div', { class: 'ph-n', text: U.mn(p, PH.lang) })]), h('div', { class: 'ph-a' }, [h('button', { type: 'button', class: 'abtn', 'aria-label': t('speak') + ': ' + p.en, text: '🔊', onclick: function () { U.speak(txt, PH.lang, null, set.rate); } }), h('button', { type: 'button', class: 'abtn', 'aria-label': t('slow') + ': ' + p.en, text: '🐢', onclick: function () { U.speak(txt, PH.lang, null, 0.55); } })])]);
-        row.querySelector('.ph-a').appendChild(U.pronToggle(row, txt, PH.lang));
+        row.querySelector('.ph-a').appendChild(U.pronToggle(row, txt, PH.lang)); U.addWhy(row, p.id);
         var al = B.ALTS && B.ALTS[p.id] && B.ALTS[p.id][PH.lang];
         if (al) {
           var altBox = h('div', { class: 'alts', hidden: true }), altBtn = h('button', { type: 'button', class: 'abtn alt-btn', 'aria-expanded': 'false', text: '≈ ' + t('altBtn'), onclick: function () { altBox.hidden = !altBox.hidden; altBtn.setAttribute('aria-expanded', String(!altBox.hidden)); } });

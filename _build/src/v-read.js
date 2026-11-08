@@ -84,7 +84,8 @@
       h('div', { class: 'tf chk' }, [colorCb, h('label', { for: 'rd-col', text: t('colorWords') })]),
       h('div', { class: 'tf chk' }, [dimCb, h('label', { for: 'rd-dim', text: t('rdDim') })]),
       h('div', { class: 'tf' }, [h('label', { for: 'rd-mode', text: t('rdMode') }), modeSel]),
-      h('div', { class: 'tf' }, [h('label', { for: 'rd-size', text: t('fontSize') }), size])
+      h('div', { class: 'tf' }, [h('label', { for: 'rd-size', text: t('fontSize') }), size]),
+      h('div', { class: 'tf' }, [U.nightButton()])
     ]);
     var actions = h('div', { class: 'acts' }, [btnRead,
       h('button', { type: 'button', class: 'abtn', text: t('sample'), onclick: function () { var l = B.INDIC.indexOf(R.lang) >= 0 ? R.lang : set.focus; R.lang = l; langSel.value = l; ta.value = B.sampleText(l); draw(); } }),

@@ -71,7 +71,7 @@ for(const l of ['ko','as','fr']){const p=await page({focus:l},420);await p.goto(
  ok(await p.isVisible('.ph-list')&&!(await p.$('.kdword')),'kids: timer does not repaint another page');await p.ctx.close();}
 // ---- kids mode
 {const p=await page({focus:'hi'});await p.goto(BASE+'/');await p.waitForTimeout(300);
- ok((await p.$$('#mnav a')).length===13,'kids mode off: 13 menu items');
+ ok((await p.$$('#mnav a')).length===16,'kids mode off: 16 menu items');
  await p.click('[aria-controls=setp]');await p.click('#setp .seg[aria-label="Kids mode"] button:has-text("On")');await p.waitForTimeout(250);
  ok(await p.evaluate(()=>document.documentElement.hasAttribute('data-kids')),'kids mode: attribute set');ok((await p.$$('#mnav a')).length===4,'kids mode: simple 4-item menu');
  ok(await p.isVisible('h1:has-text("Kids corner")'),'kids mode: home is the kids corner');
@@ -79,7 +79,7 @@ for(const l of ['ko','as','fr']){const p=await page({focus:l},420);await p.goto(
  ok(await p.evaluate(()=>JSON.parse(localStorage.getItem('bh-set')).kids===true),'kids mode: remembered');
  await p.reload();await p.waitForTimeout(250);ok((await p.$$('#mnav a')).length===4&&await p.evaluate(()=>document.documentElement.hasAttribute('data-kids')),'kids mode: survives reload');
  await p.click('[aria-controls=setp]');await p.click('#setp .seg[aria-label="Kids mode"] button:has-text("Off")');await p.waitForTimeout(250);
- ok((await p.$$('#mnav a')).length===13&&!(await p.evaluate(()=>document.documentElement.hasAttribute('data-kids'))),'kids mode: back to normal');
+ ok((await p.$$('#mnav a')).length===16&&!(await p.evaluate(()=>document.documentElement.hasAttribute('data-kids'))),'kids mode: back to normal');
  ok(p.errs.length===0,'kids mode: no page errors '+p.errs.join(';'));await p.ctx.close();}
 // ---- themes on the new pages
 for(const th of ['light','dark','new']){const p=await page({focus:'te'},390);await p.goto(BASE+'/');await p.click('[aria-controls=setp]');await p.click('#setp .seg[aria-label="Theme"] button:nth-child('+({light:1,dark:2,new:3}[th])+')');

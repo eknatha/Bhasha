@@ -4,8 +4,8 @@
   var U = B.ui, h = U.h, t = U.t, set = U.set, $ = U.$;
   var ORIGIN = 'https://eknathalabs.com', MARK = 'M29.2 23.2V35.5Q29.2 37.5 28.4 38.4Q27.6 39.4 26.1 39.4Q25 39.4 23.8 38.7Q22.6 38.1 21.6 37Q20.7 36 20 34.8Q19.4 33.6 19.4 32.5Q19.4 31.2 20.1 30.4Q20.9 29.6 22.9 29.6L23 29.7V23.2H18V18.2H46V23.2H41.9V45.8H35.7V23.2Z';
   B.MARK = MARK; B.base = '/';
-  var ROUTES = { '': 'home', today: 'today', talk: 'talk', kids: 'kids', proverbs: 'proverbs', twisters: 'twisters', privacy: 'privacy', read: 'read', say: 'say', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases', stories: 'stories', write: 'write', pairs: 'pairs', manage: 'manage' };
-  var NAV = [['today', '📅'], ['say', '🗣'], ['talk', '💬'], ['watch', '🎬'], ['read', '📖'], ['words', '🗂'], ['review', '🧠'], ['manage', '⚙'], ['stories', '📖'], ['write', '✍'], ['pairs', '👂'], ['scripts', 'अ'], ['phrases', '📚']];
+  var ROUTES = { '': 'home', today: 'today', talk: 'talk', kids: 'kids', proverbs: 'proverbs', twisters: 'twisters', privacy: 'privacy', read: 'read', say: 'say', watch: 'watch', words: 'words', review: 'review', scripts: 'scripts', phrases: 'phrases', stories: 'stories', write: 'write', pairs: 'pairs', manage: 'manage', numbers: 'numbers', tone: 'tone', songs: 'songs' };
+  var NAV = [['today', '📅'], ['say', '🗣'], ['talk', '💬'], ['watch', '🎬'], ['read', '📖'], ['words', '🗂'], ['review', '🧠'], ['manage', '⚙'], ['stories', '📖'], ['write', '✍'], ['pairs', '👂'], ['scripts', 'अ'], ['phrases', '📚'], ['numbers', '🔢'], ['tone', '🎭'], ['songs', '🎵']];
   var KIDNAV = [['kids', '🧒'], ['today', '📅'], ['talk', '💬'], ['phrases', '📚']];
   var app;
   function mark() { var NS = 'http://www.w3.org/2000/svg', s = document.createElementNS(NS, 'svg'), p = document.createElementNS(NS, 'path'); s.setAttribute('viewBox', '14 14 36 36'); s.setAttribute('width', '22'); s.setAttribute('height', '22'); s.setAttribute('aria-hidden', 'true'); p.setAttribute('d', MARK); p.setAttribute('fill', 'currentColor'); s.appendChild(p); return s; }
@@ -34,6 +34,7 @@
     seg(t('kdMode'), [['1', t('on')], ['0', t('off')]], set.kids ? '1' : '0', function (v) { set.kids = v === '1'; U.saveSet(); U.applyKids(); buildChrome(); route(); });
     seg(t('setSound'), [['1', t('on')], ['0', t('off')]], set.sound ? '1' : '0', function (v) { set.sound = v === '1'; U.saveSet(); if (set.sound && B.fx) B.fx.good(); });
     seg(t('setHaptic'), [['1', t('on')], ['0', t('off')]], set.haptic ? '1' : '0', function (v) { set.haptic = v === '1'; U.saveSet(); if (set.haptic && B.fx) B.fx.tap(); });
+    seg(t('set_night'), [['off', t('off')], ['on', t('on')], ['auto', t('night_auto')]], set.night, function (v) { set.night = v; U.saveSet(); U.applyNight(); });
     seg(t('set_ambient'), [['1', t('on')], ['0', t('off')]], set.ambient !== false ? '1' : '0', function (v) { set.ambient = v === '1'; U.saveSet(); if (B.motion) B.motion.ambient(); });
     panel.appendChild(h('button', { type: 'button', class: 'abtn', style: 'margin-top:12px;margin-right:8px', text: '🧭 ' + t('tour_replay'), onclick: function () { close(false); B.tour.start(); } }));
     panel.appendChild(h('button', { type: 'button', class: 'abtn', style: 'margin-top:12px', text: '🔊 ' + t('voiceCheck'), onclick: function () { panel.hidden = true; btn.setAttribute('aria-expanded', 'false'); U.openVoiceCheck(); } }));
@@ -61,7 +62,7 @@
   }
 
   function init() {
-    app = $('#app'); U.applyTheme(); U.applyLang(); U.applyKids(); buildChrome();
+    app = $('#app'); U.applyTheme(); U.applyNight(); U.applyLang(); U.applyKids(); buildChrome();
     document.addEventListener('click', function (e) { var a = e.target.closest && e.target.closest('a[data-nav]'); if (!a || e.defaultPrevented || e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); U.go(a.getAttribute('href')); });
     window.addEventListener('popstate', route);
     route();

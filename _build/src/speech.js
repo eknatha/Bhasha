@@ -109,8 +109,17 @@
     }).catch(function () { U.toast(t('ovFail')); fin(); });
   }
   // ---- native path with chunking and a watchdog
+  // Never hand a voice a piece that has no letters or digits in it: engines read a lone "?" or "!" aloud as "question mark".
+  var LETTER = /[\p{L}\p{N}\p{M}]/u;
+  function clean(text) {
+    return String(text == null ? '' : text).replace(/[\u200B\u2060\uFEFF]/g, '').replace(/[\p{Extended_Pictographic}\uFE0F]/gu, ' ').replace(/\s+/g, ' ').trim();
+  }
+  U.speakable = clean;
   function chunks(text, lang) {
-    var out = [], cur = ''; B.sentences(text, lang).forEach(function (s) { if ((cur + s).length > 180 && cur) { out.push(cur); cur = s; } else cur += s; }); if (cur.trim()) out.push(cur); return out.length ? out : [text];
+    var out = [], cur = '', segs = B.sentences(text, lang), rest = [];
+    segs.forEach(function (s) { if (LETTER.test(s)) rest.push(s); else if (rest.length) rest[rest.length - 1] += s; });   // punctuation-only pieces join the sentence before
+    rest.forEach(function (s) { if ((cur + s).length > 180 && cur) { out.push(cur); cur = s; } else cur += s; }); if (cur.trim()) out.push(cur);
+    return out.length ? out : [text];
   }
   function nativeSpeak(v, text, lang, onend, rate, my) {
     var parts = chunks(text, lang), i = 0;
@@ -127,7 +136,8 @@
     next();
   }
   U.speak = function (text, lang, onend, rate, fixed) {
-    if (!text) { if (onend) onend(); return false; }
+    text = clean(text);
+    if (!text || !LETTER.test(text)) { if (onend) onend(); return false; }
     var my = ++tok; if (audioEl) { try { audioEl.pause(); } catch (e) { } }
     if (!fixed && (rate == null || rate === set.rate)) rate = U.rateFor(lang);
     if (!U.canSpeak()) { fallback(text, lang, onend, rate, my); return true; }

@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path'), crypto = require('crypto');
 const SRC = path.join(__dirname, 'src'), OUT = path.resolve(process.env.BHASHA_OUT || path.join(__dirname, '..'));
 const BASE = process.env.BHASHA_BASE || 'https://bhasha.eknathalabs.com';
-const FILES = ['core', 'data', 'ui', 'fx', 'pron', 'speech', 'i18n', 'phrases2', 'phrases3', 'phrases4', 'v-read', 'v-say', 'v-today', 'v-talk', 'fundata', 'fundata2', 'alts', 'pairs', 'fun', 'v-privacy', 'v-watch', 'v-words', 'v-listen', 'v-write', 'v-learn', 'tour', 'motion', 'app'];
+const FILES = ['core', 'data', 'ui', 'fx', 'pron', 'speech', 'i18n', 'phrases2', 'phrases3', 'phrases4', 'v-read', 'v-say', 'v-today', 'v-talk', 'fundata', 'fundata2', 'alts', 'pairs', 'fun', 'v-privacy', 'v-watch', 'v-words', 'v-listen', 'v-write', 'v-learn', 'learn2', 'v-learn2', 'tour', 'motion', 'app'];
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const MARK = fs.readFileSync(path.join(__dirname, 'icons', 'icon.svg'), 'utf8').match(/d="(M29\.2[^"]+)"/)[1];
 const ROUTES = [
@@ -22,6 +22,9 @@ const ROUTES = [
   ['write', 'Write it', 'Type instead of tapping', 'Output practice: type the translation, type what you hear, or fill in the missing word. Script, romanization and polite or casual alternatives all count.'],
   ['pairs', 'Sound pairs', 'Minimal-pair listening', 'Hear one word and pick which of two similar-sounding words it was. Train your ear for sounds that are easy to confuse.'],
   ['manage', 'Review manager', 'Manage your cards', 'See every saved card by state, find weak spots, and mark, pause, reset, delete or practise many cards at once. Stays in your browser.'],
+  ['numbers', 'Numbers and money', 'Numbers, money, time and dates', 'Listen and pick what you heard: numbers, prices, clock times and dates in your language. Works offline, no sign-up.'],
+  ['tone', 'Tone variants', 'Formal and casual forms side by side', 'See how the same sentence changes with who you talk to, in 17 languages, with sound and romanization.'],
+  ['songs', 'Songs and verses', 'Short verses for learners', 'Original short verses in 17 languages. Tap a word to hear it, play a line or the whole verse.'],
   ['privacy', 'Free and private', 'Free, private and offline', 'Bhasha is free, has no accounts, no ads and no tracking. See exactly what is saved in your browser, download it, restore it or delete it.'],
   ['phrases', 'Phrases', 'Everyday phrases', 'A phrasebook of 560 everyday phrases (greetings, conversation, travel, shopping, health, work and numbers) in seventeen languages with romanization and audio.']
 ];
